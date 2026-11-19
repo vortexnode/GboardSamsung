@@ -1,6 +1,8 @@
 name: Stage 5.3 Patch JUnit and MPP Artifact
 
 on:
+  push:
+    branches: [ci/stage-5.3-gradle-verification]
   workflow_dispatch:
 
 permissions:
