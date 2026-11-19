@@ -54,7 +54,7 @@ jobs:
           chmod +x ./gradlew
           ./gradlew --version
 
-      - name: Compile patch main and test sources; generate target admission; verify capability wiring
+      - name: Compile patch production sources; generate target admission; verify capability wiring
         env:
           GITHUB_ACTOR: ${{ github.actor }}
           GITHUB_TOKEN: ${{ github.token }}
@@ -75,4 +75,4 @@ jobs:
       - name: Confirm no package or APK tasks were requested
         run: |
           echo "This workflow does not invoke :patches:test, :patches:jar, assemble, bundle, package, or release tasks."
-          echo "Patch JUnit execution is intentionally deferred because :patches:test is wired to the .mpp-producing jar task."
+          echo "Patch JUnit execution and compileTestKotlin are intentionally deferred because their task graph can invoke the .mpp-producing jar task."
