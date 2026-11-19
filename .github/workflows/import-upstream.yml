@@ -43,7 +43,19 @@ jobs:
           BRANCH="import/upstream-${GITHUB_RUN_ID}"
 
           git switch -c "$BRANCH"
-          git merge --allow-unrelated-histories --no-edit upstream/main
+          # The two repositories both have a README.md. Resolve that one known
+          # add/add conflict in favor of the downstream README; stop on every
+          # other conflict so upstream source changes are never silently discarded.
+          if ! git merge --allow-unrelated-histories --no-edit upstream/main; then
+            mapfile -t CONFLICTS < <(git diff --name-only --diff-filter=U)
+            if [[ "${CONFLICTS[*]}" != "README.md" ]]; then
+              echo "::error::Unexpected upstream merge conflicts: ${CONFLICTS[*]}"
+              exit 1
+            fi
+            git checkout --ours -- README.md
+            git add README.md
+            git commit --no-edit
+          fi
 
           # Preserve the downstream project README and keep the upstream README separately.
           git show "$DOWNSTREAM_SHA:README.md" > README.md
