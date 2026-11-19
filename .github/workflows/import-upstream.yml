@@ -1,0 +1,72 @@
+name: Import upstream source
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  import:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout downstream repository
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Fetch and merge upstream history
+        id: merge
+        shell: bash
+        run: |
+          set -euo pipefail
+          git remote add upstream https://github.com/jasonwu1994/Gboard-patches.git
+          git fetch --no-tags upstream main
+
+          UPSTREAM_SHA="$(git rev-parse upstream/main)"
+          BRANCH="import/upstream-${GITHUB_RUN_ID}"
+
+          git switch -c "$BRANCH"
+          git merge --allow-unrelated-histories --no-edit -X ours upstream/main
+
+          # Keep the downstream project README; preserve the upstream README separately.
+          git show upstream/main:README.md > UPSTREAM_README.md
+          printf '%s\n' "$UPSTREAM_SHA" > UPSTREAM_COMMIT.txt
+
+          git add UPSTREAM_README.md UPSTREAM_COMMIT.txt
+          if ! git diff --cached --quiet; then
+            git commit -m "docs: record imported upstream README and commit"
+          fi
+
+          echo "branch=$BRANCH" >> "$GITHUB_OUTPUT"
+          echo "upstream_sha=$UPSTREAM_SHA" >> "$GITHUB_OUTPUT"
+
+      - name: Push import branch
+        env:
+          BRANCH: ${{ steps.merge.outputs.branch }}
+        run: git push origin "HEAD:refs/heads/$BRANCH"
+
+      - name: Open pull request
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BRANCH: ${{ steps.merge.outputs.branch }}
+          UPSTREAM_SHA: ${{ steps.merge.outputs.upstream_sha }}
+        run: |
+          gh pr create \
+            --repo "$GITHUB_REPOSITORY" \
+            --base main \
+            --head "$BRANCH" \
+            --title "Import Gboard Patches upstream" \
+            --body "Imports the complete upstream Git history from https://github.com/jasonwu1994/Gboard-patches.
+
+          Upstream commit: $UPSTREAM_SHA
+
+          The downstream README and project documentation are preserved. The upstream README is retained as UPSTREAM_README.md. Review the diff and merge this PR to complete the import."
