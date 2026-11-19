@@ -9,13 +9,14 @@
 
 ## Confirmed bytecode-level leads
 
-1. The exact identifiers `space_lang_change_next` and `space_lang_change_prev` both occur in the language gesture path. They are loaded by `Li90/b.e()Lk90/a;` and `Lrd0/m.r(Lnd0/a;)Lfd0/b;`.
-2. `Lrd0/m.r(...)` also loads the log string `sendLanguageChangeToAction: inputText = `. Its call references include `Li90/b.e()`, `Lqf/f.d(...)`, `Lqb0/j.d(...)`, and `Lag/a.m(...)`. This is strong evidence that the next/previous identifiers are translated into a language-change action.
-3. The actual view class `com.samsung.android.honeyboard.textboard.keyboard.view.SpaceCursorControlLayout` has `onTouchEvent(MotionEvent)`. That method calls `Lvd0/a.f()`, `Lvd0/j.h()`, and `Lvd0/a.e(Lqf/h;)`, tying the dedicated space cursor layout into the cursor-control path.
-4. `Lvd0/a.d(I)V` references `InputConnection.getTextAfterCursor(...)` and `getTextBeforeCursor(...)`, and invokes `Lyd0/j.a(III)` repeatedly.
-5. `Lyd0/j.a(III)V` constructs an Android `KeyEvent`, calls `setSource(I)`, and invokes `InputConnection.sendKeyEvent(KeyEvent)`. This confirms the cursor path uses editor key events, rather than only drawing a cursor overlay.
-6. `Lvd0/i.onTouch(View, MotionEvent)` is a large touch handler. Its code references `cursor_control_move`, `MotionEvent.getAction/getActionMasked/getPointerCount/getX/getY/getHistorySize/getHistoricalX/getHistoricalY`, direction/gesture helpers, and `InputConnection.getTextBeforeCursor/getTextAfterCursor`.
-7. `Lx80/b.onAppPrivateCommand(String, Bundle)` references the exact identifier `Func_LanguageChange`. This is an input-method private-command path; its exact semantics still require full instruction-level review.
+1. The exact identifiers `space_lang_change_next` and `space_lang_change_prev` both occur in the language gesture path. Both are referenced by `Lrd0/m.r(Lnd0/a;)Lfd0/b;`.
+2. `Li90/b.e()Lk90/a;` references `space_lang_change_prev` and constructs/returns the enum-like `k90/a` key/bubble result. Its invocation references include `Ll90/h.e()`, `Ll90/f.e()`, `Ll90/g.b()`, `Lk90/a.<init>(...)`, and key-view/key-code accessors.
+3. `Lrd0/m.r(...)` also loads the log string `sendLanguageChangeToAction: inputText = `. Its call references include `Li90/b.e()`, `Lqf/f.d(...)`, `Lqb0/j.d(...)`, and `Lag/a.m(...)`. This is strong evidence that the next/previous identifiers are translated into a language-change action.
+4. The actual view class `com.samsung.android.honeyboard.textboard.keyboard.view.SpaceCursorControlLayout` has `onTouchEvent(MotionEvent)`. That method calls `Lvd0/a.f()`, `Lvd0/j.h()`, and `Lvd0/a.e(Lqf/h;)`, tying the dedicated space cursor layout into the cursor-control path.
+5. `Lvd0/a.d(I)V` references `InputConnection.getTextAfterCursor(...)` and `getTextBeforeCursor(...)`, and invokes `Lyd0/j.a(III)` repeatedly.
+6. `Lyd0/j.a(III)V` constructs an Android `KeyEvent`, calls `setSource(I)`, and invokes `InputConnection.sendKeyEvent(KeyEvent)`. This confirms the cursor path uses editor key events, rather than only drawing a cursor overlay.
+7. `Lvd0/i.onTouch(View, MotionEvent)` is a large touch handler. Its code references `cursor_control_move`, `MotionEvent.getAction/getActionMasked/getPointerCount/getX/getY/getHistorySize/getHistoricalX/getHistoricalY`, direction/gesture helpers, and `InputConnection.getTextBeforeCursor/getTextAfterCursor`.
+8. `Lx80/b.onAppPrivateCommand(String, Bundle)` references the exact identifier `Func_LanguageChange`. This is an input-method private-command path; its exact semantics still require full instruction-level review.
 
 ## Relevant methods and their call references
 
@@ -23,14 +24,12 @@
 
 **DEX:** `classes2.dex`
 
-- `Li90/b.e()Lk90/a;` — 298 code units; string references include `space_lang_change_prev` (the paired `next` identifier is also in this method's string table/code reference set). Invocation references include:
+- `Li90/b.e()Lk90/a;` — 298 code units; string reference: `space_lang_change_prev`. Invocation references include:
   - `Ll90/h.e()`
   - `Ll90/f.e()`
   - `Ll90/g.b()`
   - `Lk90/a.<init>(...)`
-  - `Lr90/b.b(I)`
-  - `Lr90/e.getKeyCode()`
-  - `Lr90/g.getKeyCode()`
+  - `R90 key/bubble view and key-code accessors` (obfuscated classes: `Lr90/b`, `Lr90/e`, `Lr90/g`)
 - `Lrd0/m.r(Lnd0/a;)Lfd0/b;` — 178 code units; string references:
   - `touchInfo`
   - `no match pointer id`
