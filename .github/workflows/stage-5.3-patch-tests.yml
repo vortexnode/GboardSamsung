@@ -50,25 +50,36 @@ jobs:
         run: |
           ./gradlew --no-daemon --stacktrace :patches:test
 
-      - name: Verify exactly one MPP was produced
+      # Always inspect the output: Gradle can create the MPP before a later test fails.
+      - name: Locate MPP even when tests fail
         id: mpp
-        if: success()
+        if: always()
         shell: bash
         run: |
           mapfile -t files < <(find patches/build/libs -maxdepth 1 -type f -name '*.mpp' -print 2>/dev/null | sort)
-          if [ "${#files[@]}" -ne 1 ]; then
-            echo "Expected exactly one .mpp, found ${#files[@]}."
-            printf '%s\n' "${files[@]}"
-            exit 1
+          if [ "${#files[@]}" -eq 1 ]; then
+            echo "path=${files[0]}" >> "$GITHUB_OUTPUT"
+            ls -lh "${files[0]}"
+          else
+            echo "No unique MPP found; found ${#files[@]} file(s). Artifact upload will be skipped."
+            printf '%s\\n' "${files[@]}"
+            echo "path=" >> "$GITHUB_OUTPUT"
           fi
-          echo "path=${files[0]}" >> "$GITHUB_OUTPUT"
-          ls -lh "${files[0]}"
 
-      - name: Upload tested MPP artifact
+      - name: Upload MPP build output (tests may have failed)
         uses: actions/upload-artifact@v4
-        if: success()
+        if: always() && steps.mpp.outputs.path != ''
         with:
-          name: gboard-samsung-stage-5.3-mpp
+          name: gboard-samsung-stage-5.3-mpp-build
           path: ${{ steps.mpp.outputs.path }}
           if-no-files-found: error
+          retention-days: 7
+
+      - name: Upload patch JUnit reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: gboard-samsung-stage-5.3-junit-reports
+          path: patches/build/reports/tests/test/
+          if-no-files-found: warn
           retention-days: 7
