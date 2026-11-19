@@ -1,642 +1,596 @@
-# Архитектура переключения языка свайпом по пробелу (Этап 2)
+# Архитектура Samsung-подобного управления пробелом в Gboard (Этап 3)
 
 - **Репозиторий:** `vortexnode/GboardSamsung`
 - **Целевое приложение:** Google Gboard (`com.google.android.inputmethod.latin`)
 - **Целевая версия Gboard:** `18.5.4.993608717-release-arm64-v8a` (`versionCode = 180698026`)
+- **Эталон пользовательского поведения:** Samsung Keyboard (`com.samsung.android.honeyboard`, One UI 8)
 - **Целевое устройство:** Samsung Galaxy S22 5G (`SM-S901U1`), Android 16 (SDK 36), One UI 8
-- **Формат артефакта сборки:** Morphe patch bundle (`.mpp`) для оригинального APK Gboard
-- **Статус документа:** Техническая спецификация и верификация аудита (код проекта на данном этапе не изменялся)
+- **Формат результата сборки:** Morphe patch bundle (`.mpp`) для оригинального APK Gboard
+- **Статус документа:** Исследование и финальная архитектурная спецификация Этапа 3 (исходный код, bindings, Gradle и workflows не изменялись)
 
-> **Принцип верификации:** Каждое утверждение о существующем коде подтверждено прямым чтением исходников репозитория с точным путём, классом, методом и номерами строк. Всё, что отсутствует в репозитории и требует декомпиляции/проверки на целевом APK `18.5.4.993608717-release-arm64-v8a` или тестирования на устройстве, явно помечено как **«Не подтверждено в репозитории — требует проверки на APK Gboard 18.5.4»**.
+> **Стандарт достоверности документа:** каждое утверждение в тексте явно маркируется категорией доказательности:
+> - **[ПОДТВЕРЖДЕНО В КОДЕ]** — проверено напрямую в файлах репозитория `vortexnode/GboardSamsung` (с указанием файла, класса, метода и строк) или в официальной документации Android / Samsung One UI.
+> - **[ОБОСНОВАННОЕ ПРЕДПОЛОЖЕНИЕ / ИНЖЕНЕРНАЯ МОДЕЛЬ]** — выведено из наблюдаемого поведения Samsung Keyboard / стандартной архитектуры Android `InputMethodService`, но не проверено по декомпилированному APK.
+> - **[НЕ ИССЛЕДОВАНО — ТРЕБУЕТ APK]** — отсутствует в рабочей среде и требует прямой инспекции APK Gboard `18.5.4.993608717-release-arm64-v8a` и/или Samsung Keyboard (`com.samsung.android.honeyboard`) с One UI 8.
 
 ---
 
-## 1. Проверенные факты о текущей реализации Gboard
+## 1. Исследование Samsung Keyboard
 
-### 1.1. Ревизия и уточнения к `docs/TECHNICAL_AUDIT.md`
+### 1.1. Проверка доступных материалов в рабочей среде
 
-Повторная проверка выводов `docs/TECHNICAL_AUDIT.md` непосредственно по исходному коду выявила **четыре существенных уточнения и исправления**, критически влияющих на архитектуру:
+**[ПОДТВЕРЖДЕНО В КОДЕ]** По результатам проверки корневого дерева репозитория `vortexnode/GboardSamsung` (`/`):
+- Оригинальный APK Samsung Keyboard (`com.samsung.android.honeyboard`), его декомпилированные исходники, Smali-файлы, XML-ресурсы и системные библиотеки One UI **отсутствуют в рабочей среде**.
+- Оригинальный APK Google Gboard `18.5.4.993608717-release-arm64-v8a` также отсутствует в репозитории (что соответствует правилу из `docs/PROJECT_SCOPE.md:47` и `AGENTS.md`).
+- Доступными источниками для данного этапа являются:
+  1. Полный исходный код downstream-репозитория `vortexnode/GboardSamsung` (`patches/`, `extensions/`, `gboard-version-bindings.json`, `gboard-port-product-catalog.json`).
+  2. Официальная пользовательская документация Samsung One UI по Samsung Keyboard (`com.samsung.android.honeyboard`) и публичная документация Android IME (`InputMethodService`, `InputConnection`, `ViewConfiguration`, `MotionEvent`).
 
-| № | Утверждение в `docs/TECHNICAL_AUDIT.md` | Результат проверки по коду | Влияние на архитектуру |
+### 1.2. Материалы, необходимые для полного исследования (если потребуется точность до миллисекунд/пикселей Samsung)
+
+Для верификации внутренних констант и Smali-реализации **непосредственно из кода** (без коммита проприетарных файлов в репозиторий) потребуются:
+1. **APK Google Gboard `18.5.4.993608717-release-arm64-v8a`** (критический блокер для Этапа 4):
+   - проверка обфусцированного менеджера `InputMethodEntry`, обработчика `-0x271b`, конструктора `Lohe;`, поведения `ScrubMoveMotionEventHandler` и `GestureMotionEventHandler` (Glide Typing).
+2. **APK Samsung Keyboard (`com.samsung.android.honeyboard`) с устройства `SM-S901U1` (Android 16 / One UI 8)** (опционально — для точной калибровки порогов и кривой ускорения курсора):
+   - извлечение точных констант таймаута удержания, dead-zone, порога свайпа и шага перемещения курсора в One UI 8.
+
+---
+
+## 2. Подтверждённые сведения о поведении Samsung Keyboard
+
+### 2.1. Три базовых сценария эталонного поведения
+
+**[ПОДТВЕРЖДЕНО ПО ДОКУМЕНТАЦИИ SAMSUNG ONE UI]** В Samsung Keyboard (`com.samsung.android.honeyboard`) на устройствах Galaxy (One UI 6/7/8) управление клавишей пробела строится вокруг трёх взаимоисключающих действий, задаваемых в настройках:
+- `Languages and types → Language switching method` (`Language key and space bar swipe` / `Space bar swipe only`);
+- `Swipe, touch, and feedback → Touch and hold space bar → Cursor control`.
+
+Поведение пользователя в этом режиме:
+1. **Короткое нажатие (`TAP`):** быстрое касание и отпускание пробела вставляет ровно один пробел (`KEYCODE_SPACE`), без смены языка и без входа в режим курсора.
+2. **Горизонтальный свайп (`SWIPE`):** немедленное горизонтальное скольжение по пробелу слева направо переключает язык вперёд (следующий язык), справа налево — назад (предыдущий язык). Пробел не вставляется. Переключение происходит циклически по упорядоченному списку настроенных языков.
+3. **Долгое удержание пробела (`LONG_PRESS_CURSOR`):** удержание пальца на пробеле без немедленного горизонтального свайпа переводит клавиатуру в режим управления курсором: срабатывает тактильный отклик, клавиши клавиатуры визуально приглушаются / очищаются (превращая всю область клавиатуры в сенсорную панель), и дальнейшее перемещение пальца влево/вправо (а также по площади клавиатуры) точно перемещает текстовый курсор. При отпускании пальца режим завершается; пробел не вставляется, язык не переключается.
+
+### 2.2. Ответы на 15 контрольных вопросов по Samsung Keyboard
+
+| № | Вопрос | Статус | Технический ответ |
 |---|---|---|---|
-| 1 | `docs/TECHNICAL_AUDIT.md:140, 167`: упоминалось отключение `enable_scrub_move` через `GboardCursorTrackpadRuntime` для устранения конфликта со свайпом по пробелу при сохранении `free_cursor`. | **Опровергнуто / критическое уточнение.** `GboardCursorTrackpadPreferencePatch.kt:24-59` и `GboardCursorTrackpadRuntime.java:11-30` **никогда не возвращают `false`** — они форсируют `enable_scrub_move` (`Lqvt;->am(String, Z, Z)Z`) и ресурс `0x7f14096b` (`Lcht;->x(I, Z)Z`) в `true` (`stock \|\| GboardCursorTrackpadSettings.readEnabled(prefs)`). В Gboard `18.5.4` режим `free_cursor` / `free_cursor_lock_mode` структурно зависит от включённой настройки `enable_scrub_move`. | **Нельзя** слепо форсировать `enable_scrub_move = false`, иначе с высокой вероятностью сломается long-press cursor trackpad (`free_cursor`). Арбитраж жестов обязан строиться через приоритет системных жестов и перехват на уровне `MotionEvent` (либо явную политику совместимости с `enable_scrub_move`). |
-| 2 | `docs/TECHNICAL_AUDIT.md:170`: указано, что отправка `Lohe;` с keycode `-0x271b` через `Lphr;->aw(Lohe;)Z` подтверждена для переключения на следующий язык. | **Частично неточно (нужно разделять чтение и синтез).** В коде подтверждено, что `Lphr;->aw(Lohe;)Z` **принимает** входящие события `Lohe;`, а стоковая кнопка Globe генерирует `PRESS` с `entry.c == -0x271b` (`-10011`), `entry.e == "globe"` (`GboardLongPressQuickActionsReflectionHandles.java:223-230`, `GboardGlobeDragAdapter.java:10, 78-96`, `GboardLongPressQuickActionsInputEventPatch.kt:62-66`). Однако **ни один класс в репозитории не конструирует новый объект `Lohe;`** и не вызывает `Lphr;->aw(Lohe;)Z` синтетически; конструктор/фабрика `Lohe;` отсутствует в `gboard-version-bindings.json`. | Для синтетического переключения языка потребуется либо проверка конструктора/фабрики `Lohe;` и внутреннего менеджера `InputMethodEntry` на APK `18.5.4`, либо подтверждённый вызов через `Lqij;->o(...)V` (сигнатура и конструктор `Lqbc;` уже есть в коде — см. раздел 2). |
-| 3 | `docs/TECHNICAL_AUDIT.md:122-123`: указано `View ID: 0x7f0b05b5 (GboardSpacebarLogoAdapter.java:17)` и `Keycode: 62 (GboardSpacebarLogoAdapter.java:18)`. | **Незначительная перестановка номеров строк.** В `GboardSpacebarLogoAdapter.java:17-19`: строка **17** — `KEYCODE_SPACE = 62`, строка **18** — `SPACEBAR_VIEW_ID = 0x7f0b05b5`, строка **19** — `PRIMARY_LABEL_VIEW_ID = 0x7f0b05f5`. | Не влияет на логику, исправлено для точности ссылок. |
-| 4 | `docs/TECHNICAL_AUDIT.md:155-156`: `KeyboardViewHolder.dispatchTouchEvent(MotionEvent)` указана как готовая точка перехвата наряду с `GboardSwipeDismissBytecodePatch.kt`. | **Критическая деталь реализации Morphe.** `GboardSwipeDismissBytecodePatch.kt:38-44` жёстко проверяет, что **первая инструкция** `KeyboardViewHolder.dispatchTouchEvent(MotionEvent)Z` ещё не переписана (`instructions.first().isMethodReference(SWIPE_DISMISS_RUNTIME_ON_HEADER_TOUCH)`), и при совпадении тихо завершает работу; а второй независимый патч на тот же метод сломал бы порядок/регистры и идемпотентность. | Для совместной работы `GboardSwipeDismiss` и перехвата свайпа по пробелу в `KeyboardViewHolder.dispatchTouchEvent(MotionEvent)Z` необходимо ввести пятый компоновщик — **`GboardTouchDispatchFamilyComposer`** (по аналогии с четырьмя существующими Family Composers). |
+| 1 | Как определяется короткое нажатие пробела? | **[ПОДТВЕРЖДЕНО / МОДЕЛЬ]** | `ACTION_DOWN` в границах пробела + `ACTION_UP` до истечения порога удержания и без выхода за порог горизонтального свайпа. Пробел отправляется на `ACTION_UP`. |
+| 2 | Как определяется горизонтальный свайп? | **[ПОДТВЕРЖДЕНО / МОДЕЛЬ]** | Горизонтальное смещение `\|dx\|` от точки `ACTION_DOWN` на пробеле, начатое **до** срабатывания таймера удержания, с преобладанием оси X над осью Y и преодолением порога дистанции. |
+| 3 | Используется временной порог, дистанция или скорость? | **[ОБОСНОВАННОЕ ПРЕДПОЛОЖЕНИЕ]** | **Комбинация времени (окно до активации удержания) и дистанции (`dx` относительно `touchSlop`/ширины пробела с ограничением `dy`)**. Чистая модель «только по времени» не позволяет отличить удержание от свайпа без задержки; точные константы HoneyBoard One UI 8 — **[НЕ ИССЛЕДОВАНО — ТРЕБУЕТ APK]**. |
+| 4 | Как определяется долгое удержание? | **[ПОДТВЕРЖДЕНО / МОДЕЛЬ]** | Таймер удержания (`Handler`/отложенная задача), запускаемый на `ACTION_DOWN` и отменяемый при выходе пальца за радиус удержания (dead-zone) или при `ACTION_UP`/`ACTION_CANCEL`. Точная длительность в One UI 8 (обычно `~300–400ms`, близко к системному `ViewConfiguration.getLongPressTimeout()`) — **[НЕ ИССЛЕДОВАНО — ТРЕБУЕТ APK]**. |
+| 5 | В какой момент начинается управление курсором? | **[ПОДТВЕРЖДЕНО ПО ONE UI]** | **В момент срабатывания таймера удержания** (ещё до начала движения пальца): пользователь получает тактильный отклик и визуальное переключение клавиатуры в режим трекпада, после чего начинает двигать палец. |
+| 6 | Как предотвращается конфликт между свайпом и управлением курсором? | **[ПОДТВЕРЖДЕНО ПО ONE UI / МОДЕЛЬ]** | **Взаимоисключающая развилка на этапе `POSSIBLE_SPACE_TAP`:**<br>• Движение `\|dx\| >= swipeStartThreshold` **до** срабатывания таймера удержания → отмена таймера → только смена языка.<br>• Срабатывание таймера удержания пока палец неподвижен → переход в `LONG_PRESS_CURSOR` → горизонтальное движение двигает только курсор, смена языка заблокирована до `ACTION_UP`.<br>*(В пользовательских отзывах One UI отмечается, что слишком резкая пауза перед свайпом иногда активирует курсор, а слишком быстрое движение до срабатывания таймера — смену языка; корректно подобранный таймер `~320ms` и радиус удержания минимизируют оба случая.)* |
+| 7 | Как обрабатываются небольшие случайные движения пальца? | **[ОБОСНОВАННОЕ ПРЕДПОЛОЖЕНИЕ]** | Через мёртвую зону (`touchSlop` / `holdSlop`): микродрожание пальца в пределах `~8–12dp` не отменяет ни обычный `TAP`, ни таймер `LONG_PRESS_CURSOR`. |
+| 8 | Как обрабатываются вертикальные движения? | **[ОБОСНОВАННОЕ ПРЕДПОЛОЖЕНИЕ]** | До входа в курсор: значительное вертикальное смещение `\|dy\|` дисквалифицирует свайп языка и отменяет удержание (исключает конфликт с соседним рядом букв). После входа в `LONG_PRESS_CURSOR`: вертикальное движение допускается (пользователь может водить пальцем по всей площади клавиатуры без сброса режима). |
+| 9 | Что происходит при мультитач-жестах? | **[ОБОСНОВАННОЕ ПРЕДПОЛОЖЕНИЕ]** | Второй палец (`ACTION_POINTER_DOWN`) до подтверждения жеста отменяет свайп и удержание, позволяя продолжить быстрый двуручный набор текста. |
+| 10 | Как Samsung предотвращает вставку пробела после распознавания жеста? | **[ОБОСНОВАННОЕ ПРЕДПОЛОЖЕНИЕ]** | Событие `TAP` (вставка `KEYCODE_SPACE`) отправляется только на `ACTION_UP` при отсутствии захваченного жеста; при переходе в `SWIPE` или `LONG_PRESS_CURSOR` внутреннее состояние нажатой клавиши пробела сбрасывается/отменяется (`ACTION_CANCEL`). |
+| 11 | Как осуществляется переключение между языками? | **[ПОДТВЕРЖДЕНО ПО ONE UI / МОДЕЛЬ]** | Циклический переход вперёд (`+1`) при свайпе L→R и назад (`-1`) при свайпе R→L по упорядоченному списку включённых языков HoneyBoard без закрытия клавиатуры. |
+| 12 | Как система получает список доступных языков и текущий язык? | **[ОБОСНОВАННОЕ ПРЕДПОЛОЖЕНИЕ]** | Внутренний менеджер языковых профилей HoneyBoard (хранит активный список `Locale`/раскладок и индекс текущего языка, независимый от системного списка сторонних IME). Точные классы HoneyBoard — **[НЕ ИССЛЕДОВАНО — ТРЕБУЕТ APK]**. |
+| 13 | Как обрабатываются случаи, когда настроен только один язык? | **[ПОДТВЕРЖДЕНО ПО ONE UI]** | Стрелки-индикаторы на пробеле скрыты, свайп по пробелу не выполняет переключение языка; короткое нажатие и удержание для курсора работают в штатном режиме. |
+| 14 | Как ведёт себя клавиатура при быстром повторном выполнении жеста? | **[ОБОСНОВАННОЕ ПРЕДПОЛОЖЕНИЕ]** | Один непрерывный свайп переключает язык **ровно один раз**; новый свайп после отпускания пальца сразу переключает на следующий/предыдущий язык (допускает серию быстрых свайпов подряд: EN → RU → UK). |
+| 15 | Как реализована визуальная обратная связь? | **[ПОДТВЕРЖДЕНО ПО ONE UI]** | • **Язык на пробеле:** отображается название активного языка с боковыми стрелками-шевронами `‹ Русский ›` (при `>= 2` языках); при свайпе текст языка плавно смещается/обновляется на новый.<br>• **Управление курсором:** при активации удержания клавиши клавиатуры приглушаются/скрываются (эффект «чистой сенсорной панели»), сопровождаемый тактильным откликом. |
 
 ---
 
-### 1.2. Подтверждённые точки обработки касаний, клавиш и жестов
+## 3. Доступные сведения о внутренней реализации Samsung Keyboard
 
-#### A. Уровень Android View (`MotionEvent`): `KeyboardViewHolder.dispatchTouchEvent(MotionEvent)Z`
-- **Патч:** `patches/src/main/kotlin/dev/jason/gboardpatches/patches/gboard/features/swipedismiss/GboardSwipeDismissBytecodePatch.kt:23-68`
-- **Runtime:** `extensions/extension/src/main/java/dev/jason/gboardpatches/extension/swipedismiss/GboardSwipeDismissRuntime.java:29-125` и `GboardSwipeDismissGesture.java:3-118`
-- **Целевой метод Gboard (необфусцированный класс):** `Lcom/google/android/libraries/inputmethod/keyboard/impl/KeyboardViewHolder;->dispatchTouchEvent(Landroid/view/MotionEvent;)Z` (`gboard-version-bindings.json`, ключ `swipe_dismiss_dispatch_touch`).
-- **Как работает сейчас:**
-  1. Инструкция в прологе `dispatchTouchEvent(MotionEvent)` (до `super`/оригинальной логики) вызывает `GboardSwipeDismissRuntime.onHeaderTouch(p0, p1):Z` (`GboardSwipeDismissBytecodePatch.kt:46-55`). При возврате `true` метод немедленно возвращает `true`, полностью поглощая `MotionEvent`.
-  2. `GboardSwipeDismissRuntime.java:37` фильтрует экземпляры `KeyboardViewHolder` по `holder.getId() == headerHolderId` (`keyboard_header_view_holder`). При этом `KeyboardViewHolder` — это общий контейнер Gboard и для шапки, и для тела клавиатуры (`keyboard_body_view_holder` — точное имя ID тела клавиатуры требует подтверждения на APK `18.5.4`, но проверка принадлежности касания пробелу надёжнее делать через зарегистрированный `SoftKeyView` пробела, а не только через ID контейнера).
-  3. Проверенный механизм отмены уже доставленного дочерним View нажатия (`GboardSwipeDismissRuntime.java:92-100`): при подтверждении жеста отправляется синтетический `MotionEvent.obtain(event)` с `MotionEvent.ACTION_CANCEL` через `holder.dispatchTouchEvent(cancelEvent)` под защитой `ThreadLocal<Boolean> CANCELLING`, чтобы избежать рекурсии.
-  4. `GboardSwipeDismissRuntime.resolveInputMethodService(View)` (`lines 108-124`) извлекает активный `InputMethodService` (`Lphr;`) из любого `View` через обход `ContextWrapper` без reflection.
+**[ПОДТВЕРЖДЕНО ПО ПУБЛИЧНОЙ ДОКУМЕНТАЦИИ ANDROID / SAMSUNG]**
+- Идентификатор пакета: `com.samsung.android.honeyboard`.
+- Базовая архитектура: наследник `android.inputmethodservice.InputMethodService` (`HoneyBoardService`) с собственной иерархией View раскладок и конвейером обработки `MotionEvent`.
+- Перемещение текстового курсора в Android IME выполняется через публичный контракт `InputConnection` (завершение композиции `finishComposingText()` и отправка направленных событий `KEYCODE_DPAD_LEFT`/`KEYCODE_DPAD_RIGHT` через `sendKeyEvent`, либо `setSelection` в зависимости от редактора).
 
-#### B. Уровень привязки `SoftKeyView` и `SoftKeyDef`: `GboardSoftKeyFamilyComposer.kt`
-- **Компоновщик:** `patches/src/main/kotlin/dev/jason/gboardpatches/patches/gboard/shared/GboardSoftKeyFamilyComposer.kt:1-471`
-- **Целевой метод Gboard:** `Lcom/google/android/libraries/inputmethod/widgets/SoftKeyView;->s()V` (`softkey_view_bind` в `gboard-version-bindings.json`).
-- **Контракт вызовов:** оборачивает `SoftKeyView.s()` двумя хуками — `beforeSoftKeyBound(SoftKeyView)` в начале метода (`GboardSoftKeyFamilyComposer.kt:356-369`) и `afterSoftKeyBound(SoftKeyView)` перед каждым `return-void` (`lines 370-390`). Поддерживает цепной вызов выбранных фич (`selected_only_call_chain = true`).
-- **Подтверждённая идентификация пробела:**
-  - `extensions/extension/src/main/java/dev/jason/gboardpatches/extension/spacebarlogo/GboardSpacebarLogoAdapter.java:17-19`:
-    - `KEYCODE_SPACE = 62` (строка 17);
-    - `SPACEBAR_VIEW_ID = 0x7f0b05b5` (строка 18);
-    - `PRIMARY_LABEL_VIEW_ID = 0x7f0b05f5` (строка 19).
-  - `GboardSpacebarLogoAdapter.java:53-77` (`isSpacebarKey`): проверяет `softKeyView.getId() == 0x7f0b05b5` **и** извлекает `SoftKeyDef` из `SoftKeyView` (`field c` через `GboardSoftKeyDefReflectionHandles`), проверяя, что `PRESS` action имеет `keyCode == 62` (`lines 79-118`).
-  - `GboardSpacebarLogoAdapter.java:149-165` (`findPrimaryLabelView`): находит дочерний `TextView` с ID `0x7f0b05f5` внутри `SoftKeyView` пробела, где Gboard отображает название текущего языка.
-  - `GboardTopRowSwipeRuntimeSupport.java:398-405, 518-553` дополнительно подтверждает поля `SoftKeyDef`: `f` (`int` keyId), `h` (массив `ActionDef`), `i` (`List<CharSequence>` тексты меток), `j` (`int[]` ID дочерних View меток).
-
-#### C. Уровень владения указателями (`PointerTracker`): `GboardPointerOwnerTransformation.kt`
-- **Трансформация:** `patches/src/main/kotlin/dev/jason/gboardpatches/patches/gboard/shared/GboardPointerOwnerTransformation.kt:1-960`
-- **Контракт регистров:** `patches/src/main/kotlin/dev/jason/gboardpatches/patches/gboard/shared/GboardPointerOwnerRegisterContract.kt:7-37` (`stockRegisterCount = 21`, `expandedRegisterCount = 28`; делегаты `p0`/`p1` или `v14`/`v15`).
-- **Целевой класс и методы Gboard (`gboard-version-bindings.json`, `18.5.4`):**
-  - `Lqin;->B(Lcom/google/android/libraries/inputmethod/widgets/SoftKeyView;FFJI)V` (`pointer_owner_update`): обновление владельца указателя; параметры `p1` = входящий `SoftKeyView`, `v0`/`v1` = координаты `x`/`y`, `v3` = вычисленный hit `SoftKeyView` (`GboardPointerOwnerTransformation.kt:642`, `GboardTopRowSwipePointerPatch.kt:88`).
-  - `Lqin;->m:Lcom/google/android/libraries/inputmethod/widgets/SoftKeyView;` (`pointer_owner_field`, `GboardZhuyinSlideRuntimeSupport.java:67`): текущий `SoftKeyView` владельца указателя.
-  - `Lqin;->r(JI)V` (`pointer_finish`): завершение касания, внутри вызывает `Lqio;->f(...)V` (`GboardPointerOwnerTransformation.kt:202-214`).
-  - `Lqin;->s(J)V` (`pointer_cancel`): отмена касания; верифицированное 8-инструкционное тело в `18.5.4` вызывает `Lqsl;->a(J)V`, `Lqio;->k()V`, сбрасывает `Lqin;->O:Z` (`GboardPointerOwnerTransformation.kt:219-234`).
-  - `Lqin;->C()V` (`pointer_reset`): вызывает `s(J)V` и `ac()V` (`lines 236-248`).
-  - `Lqin;->ac()V` (`pointer_pre_reset`).
-  - `Lqin;->y()V` (`scheduleLongPress`) и поле `Lqin;->A:Ljava/util/concurrent/Future;` (`longPressFutureField`) — подтверждено в `GboardLongPressQuickActionsReflectionHandles.java:114, 361` (используется `GboardGlobeDragRuntime.java:365-372` для отмены запланированного long-press!).
-  - `Lqin;->i()Lqae;` (`currentAction`) и `Lqin;->h(FFLqae;)Lqae;` (`resolveGestureAction`) — `GboardZhuyinSlideRuntimeSupport.java:90-92`.
-- **Важное ограничение `Lqin;->B` для пробела:** `Lqin` относится к базовому обработчику клавиш (`BasicMotionEventHandler`). По исходникам репозитория **не подтверждено**, вызывается ли `Lqin;->B` на каждом шаге `ACTION_MOVE`, пока палец остаётся внутри одного и того же широкого `SoftKeyView` пробела, и перехватывает ли `ScrubMoveMotionEventHandler` события раньше `Lqin`. Напротив, `KeyboardViewHolder.dispatchTouchEvent(MotionEvent)` гарантированно получает **каждый** `ACTION_DOWN`, `ACTION_MOVE`, `ACTION_POINTER_DOWN`, `ACTION_UP`, `ACTION_CANCEL` до любых `MotionEventHandler` Gboard.
-
-#### D. Уровень диспетчеризации жестов: `GboardGestureFamilyComposer.kt`
-- **Компоновщик:** `patches/src/main/kotlin/dev/jason/gboardpatches/patches/gboard/shared/GboardGestureFamilyComposer.kt:1-670`
-- **Целевой метод Gboard:** `Lqil;->f(Lqin;Lqae;Lqbc;Lcom/google/android/libraries/inputmethod/metadata/SoftKeyDef;JZZIZJI)V` (`gesture_dispatch` в `gboard-version-bindings.json`).
-- **Стоковое поведение:** пробрасывает все аргументы в поле `Lqil;->n:Lqij;` методом `Lqij;->o(...)V` (`GboardGestureFamilyComposer.kt:334-361`).
-- **Роль в проекте:** позволяет на уровне Gboard подавить/переписать действие (например, не допустить случайную отправку `KEYCODE_SPACE = 62` при завершении распознанного свайпа по пробелу) и предоставляет доступ к полям `Lqil;->b:Landroid/content/Context;` (`GboardTopRowSwipeRuntimeSupport.java:452`) и `Lqil;->c:Lqvt;` (`GboardZhuyinTraditionalSimplifiedToggleRuntimeSupport.java:96`).
-
-#### E. Уровень событий IME и жизненного цикла `InputMethodService`: `Lphr;`
-- **Подтверждённые биндинги `Lphr;` в `gboard-version-bindings.json` (`18.5.4`):**
-  - `Lphr;->aw(Lohe;)Z` (`long_press_input_event_handler`, `latin_globe_key_ignore_interval_event_handler`);
-  - `Lphr;->onCreate()V`, `onStartInput(EditorInfo, Z)V`, `onStartInputView(EditorInfo, Z)V`, `onFinishInput()V`, `onFinishInputView(Z)V`, `onWindowShown()V`, `onWindowHidden()V`, `onDestroy()V`, `onUpdateSelection(IIIIII)V`, `onConfigureWindow(Window, Z, Z)V`;
-  - `Lphr;->at(Z)V` (`swipe_dismiss_request_hide` — скрытие клавиатуры);
-  - `Lphr;->i:Lcom/google/android/libraries/inputmethod/inputview/InputView;` (`calculator_input_view`).
-- **Подтверждение типа:** `InputMethodService.class.isAssignableFrom(Lphr;)` проверяется в `GboardLongPressQuickActionsReflectionHandles.java:457`.
-
-#### F. Уровень `RuntimeAbi.kt` и реестра патчей `GboardPatchRegistry.kt` / `GboardContributionWiring.kt`
-- `patches/src/main/kotlin/dev/jason/gboardpatches/patches/gboard/shared/runtimeabi/RuntimeAbi.kt:1-215`: централизованный контракт всех Java-методов extension-модуля, вызываемых из сгенерированного Smali-байткода (классы, имена методов, точные дескрипторы). Все новые байткод-хуки обязаны декларировать целевые Java-методы здесь и проходить проверку целостности ABI.
-- `patches/src/main/kotlin/dev/jason/gboardpatches/patches/gboard/registry/GboardContributionWiring.kt:1-222`: единая таблица привязки `feature_id` → `contribution_id` → байткод-/ресурс-патчи, сверяемая с `gboard-port-product-catalog.json` и `gboard-version-bindings.json`.
-- `patches/src/main/kotlin/dev/jason/gboardpatches/patches/gboard/registry/GboardPatchRegistry.kt:175-989`: публичные патчи регистрируются через `gboardPublicResourcePatch(...)` и включаются в `GboardPublishedPatchCatalog.morpheRegistrations`.
-
-#### G. Анализ `GboardLatinGlobeKeyIgnoreIntervalBytecodePatch.kt` и `GboardLatinGlobeKeyIgnoreIntervalRuntime.java`
-- **Патч:** `patches/src/main/kotlin/dev/jason/gboardpatches/patches/gboard/features/latinglobe/GboardLatinGlobeKeyIgnoreIntervalBytecodePatch.kt:1-217`
-- **Runtime:** `extensions/extension/src/main/java/dev/jason/gboardpatches/extension/keyboard/GboardLatinGlobeKeyIgnoreIntervalRuntime.java:1-221`
-- **Что реально делает патч:**
-  - Хукает `Lphr;->aw(Lohe;)Z` (событие ввода) и `Lcom/google/android/apps/inputmethod/libs/latin5/LatinIme;->N()Lyrt;` (получение объекта состояния/таймера LatinIme).
-  - Сбрасывает дебаунс/интервал игнорирования клавиши Globe сразу после набора текста в LatinIme, чтобы быстрое нажатие Globe срабатывало без задержки.
-  - **Вывод для нашей задачи:** этот патч **не реализует** само переключение языка (не содержит ссылок на менеджер `InputMethodEntry` и не вызывает `switchToNext/Previous`), но подтверждает, что события с `-0x271b` проходят через `Lphr;->aw(Lohe;)Z` и что на `Lphr;->aw(Lohe;)Z` уже есть два потребителя (`GboardLongPressQuickActionsInputEventPatch` и `GboardLatinGlobeKeyIgnoreIntervalBytecodePatch`), которые **нельзя конфликтно перезаписывать**.
+**[НЕ ИССЛЕДОВАНО — ТРЕБУЕТ APK]** Ввиду отсутствия APK `com.samsung.android.honeyboard` в репозитории, точные имена внутренних Java/Kotlin-классов HoneyBoard, точные миллисекундные пороги One UI 8, таблица коэффициентов ускорения курсора и внутренний API смены раскладок HoneyBoard **не верифицированы по байткоду** и в данном документе за факты не выдаются.
 
 ---
 
-### 1.3. Ответы на ключевые вопросы Части 1
+## 4. Сравнение архитектуры Samsung Keyboard и Gboard (`18.5.4`)
 
-1. **Где именно Gboard получает события касания пробела?**
-   - Сначала в `KeyboardViewHolder.dispatchTouchEvent(MotionEvent)Z` (Android View hierarchy, подтверждено: `GboardSwipeDismissBytecodePatch.kt:23-68`).
-   - Затем внутри `SoftKeyboardView` события распределяются между зарегистрированными `MotionEventHandler` (включая `ScrubMove`, `GlideTyping`, `BasicMotionEventHandler`/`Lqin`).
-2. **Как определяется нажатие и отпускание пробела?**
-   - На уровне `MotionEvent`: `ACTION_DOWN` в координатах видимого `SoftKeyView` пробела (`id == 0x7f0b05b5`, `pressKeycode == 62`, подтверждено `GboardSpacebarLogoAdapter.java:17-18, 53-118`) и завершение `ACTION_UP` / `ACTION_CANCEL`.
-   - На уровне движка Gboard: `Lqin;->B(...)V` (привязка указателя), `Lqin;->r(J, I)V` (завершение), `Lqin;->s(J)V` (отмена), `Lqil;->f(...)V` → `Lqij;->o(...)V` (диспетчеризация `PRESS`/`LONG_PRESS` с `keyCode == 62`).
-3. **Можно ли безопасно перехватить горизонтальный свайп, не нарушая существующую обработку?**
-   - **Да**, при перехвате в `KeyboardViewHolder.dispatchTouchEvent(MotionEvent)Z` через новый компоновщик `GboardTouchDispatchFamilyComposer`: в состоянии `POSSIBLE_SPACE_TAP` события **пропускаются дальше** в Gboard без модификации (tap-to-space, long-press и вертикальные/короткие движения работают нативно), а при строгом переходе в `TRACKING_HORIZONTAL_SWIPE` / `LANGUAGE_SWITCHED` в дочерние View Gboard отправляется синтетический `ACTION_CANCEL` (уже проверенный механизм `GboardSwipeDismissRuntime.java:92-100`), сбрасывающий `Lqin` и отменяющий запланированный long-press.
-4. **Что доступно через reflection, а что требует bytecode/Smali-патча?**
-   - **Доступно без нового байткода (через существующие API / reflection):**
-     - получение `InputMethodService` (`Lphr;`) через `ContextWrapper` (`GboardSwipeDismissRuntime.resolveInputMethodService`);
-     - чтение `SoftKeyDef`, `ActionDef`, `keyCode == 62`, текста и `TextView 0x7f0b05f5` пробела (`GboardSpacebarLogoAdapter`, `GboardTopRowSwipeRuntimeSupport`);
-     - `InputMethodService.switchToNextInputMethod(boolean)` / `switchToPreviousInputMethod()` (публичные API Android, но см. ограничения в разделе 2);
-     - `Lqbc` конструктор `(int, Lqbb;, Object, int)` и поля `Lqin` / `Lohe` (`GboardLongPressQuickActionsReflectionHandles.java:98-123`).
-   - **Требует bytecode/Smali-патча:**
-     - перехват `KeyboardViewHolder.dispatchTouchEvent(MotionEvent)Z` (через `GboardTouchDispatchFamilyComposer`);
-     - регистрация пробела и отрисовка индикатора в `SoftKeyView.s()` (через `GboardSoftKeyFamilyComposer`);
-     - сброс состояния при скрытии/смене окна в `Lphr;->onWindowHidden()`, `onFinishInputView(Z)`, `onStartInputView(EditorInfo, Z)`, `onDestroy()`;
-     - (после проверки APK `18.5.4`) привязка внутреннего менеджера `InputMethodEntry` / обработчика переключения языка для точного циклического перехода Next и Previous.
+| Архитектурный аспект | Samsung Keyboard (`com.samsung.android.honeyboard`) | Штатный Gboard (`18.5.4.993608717`) **[ПОДТВЕРЖДЕНО В КОДЕ]** | Целевое решение в `GboardSamsung` |
+|---|---|---|---|
+| **Перехват `MotionEvent`** | Единый пайплайн перехвата на уровне клавиатурного окна до оценки нажатия клавиш **[МОДЕЛЬ]** | `KeyboardViewHolder.dispatchTouchEvent(MotionEvent)Z` (`GboardSwipeDismissBytecodePatch.kt:23-68`), затем `SoftKeyboardView` и `MotionEventHandler` (`ScrubMove`, `Glide`, `Lqin`) | Перехват на уровне `KeyboardViewHolder.dispatchTouchEvent` через единый `GboardTouchDispatchFamilyComposer` |
+| **Идентификация пробела** | Внутренняя модель клавиши пробела **[МОДЕЛЬ]** | `SoftKeyView` с `id == 0x7f0b05b5`, `pressKeycode == 62`, метка `TextView 0x7f0b05f5` (`GboardSpacebarLogoAdapter.java:17-19, 53-118`) | Отслеживание активного `SoftKeyView` пробела через `GboardSoftKeyFamilyComposer` (`SoftKeyView.s()`) |
+| **Горизонтальный свайп по пробелу** | Циклическое переключение языка L→R / R→L | **Конфликт:** `enable_scrub_move` (движение курсора при немедленном свайпе по пробелу, `GboardCursorTrackpadRuntime.java:12`) | **Отключаем `enable_scrub_move` и штатный `free_cursor`**, отдаём горизонтальный свайп по пробелу переключению языка |
+| **Долгое удержание пробела** | Активация режима управления курсором (`Cursor control`) с визуальным приглушением клавиш и тактильным откликом | Либо диалог выбора языка (стандартно), либо штатный `free_cursor` Trackpad (`GboardCursorTrackpadPolicy.java:4-5`), зависящий от `enable_scrub_move` | **Собственный `LONG_PRESS_CURSOR`:** таймер удержания → `ACTION_CANCEL` в Gboard → тактильный + визуальный отклик → собственный контроллер курсора через `InputConnection` |
+| **Перемещение курсора** | Внутренний контроллер через `InputConnection` **[МОДЕЛЬ]** | `ScrubMoveMotionEventHandler` / `free_cursor` (внутренний, закрытый) | Собственный `GboardSpacebarCursorController` через `service.getCurrentInputConnection()` (`finishComposingText()` + `KEYCODE_DPAD_LEFT/RIGHT` + нелинейное ускорение + auto-repeat у краёв) |
+| **Переключение языка** | Внутренний циклический список языков (`+1` / `-1`) | Globe tap `-0x271b` (`PRESS`), Globe long-press `-0x2726` (`LONG_PRESS`) через `Lqil;->f` / `Lphr;->aw(Lohe;)Z` (`GboardGlobeDragAdapter.java:10, 78-96`) | Прямой циклический переход по `InputMethodEntry` Gboard (`(i ± 1 + N) % N`) после верификации биндингов APK `18.5.4` |
+| **Индикатор языка на пробеле** | Название языка с боковыми шевронами `‹ Язык ›` | Штатный `TextView 0x7f0b05f5` с названием языка (при `>= 2` языках), управляемый через `SoftKeyView.s()` | Наследование стиля `TextView 0x7f0b05f5` + неинтерактивные шевроны `‹` / `›` + мягкий сдвиг при свайпе |
 
 ---
 
-## 2. Результаты исследования переключения языков
+## 5. Подтверждённый механизм переключения языка в Gboard
 
-### 2.1. Что строго подтверждено в репозитории
+### 5.1. Факты, строго подтверждённые в коде репозитория
 
-1. **Keycode переключения на следующий язык (Globe tap):**
-   - Константа `KEYCODE_SWITCH_TO_NEXT_LANGUAGE = -0x271b` (`-10011`), payload `"globe"`, действие `qae.PRESS`.
-   - Подтверждено в:
-     - `extensions/extension/src/main/java/dev/jason/gboardpatches/extension/longpressquickactions/GboardGlobeDragAdapter.java:10, 78-96`;
-     - `extensions/extension/src/main/java/dev/jason/gboardpatches/extension/longpressquickactions/GboardLongPressQuickActionsReflectionHandles.java:27, 223-230`.
-2. **Keycode диалога выбора языка (Globe long-press):**
-   - Константа `KEYCODE_SHOW_LANGUAGE_PICKER = -0x2726` (`-10022`), payload `"globe"`, действие `qae.LONG_PRESS`.
-   - Подтверждено в `GboardLongPressQuickActionsReflectionHandles.java:28, 223-230`.
-3. **Точки прохождения события:**
-   - На уровне жестов клавиш: `Lqil;->f(Lqin;Lqae;Lqbc;SoftKeyDef;JZZIZJI)V` → `Lqil;->n:Lqij;` → `Lqij;->o(...)V` (`GboardGestureFamilyComposer.kt:334-361`).
-   - На уровне IME: `Lphr;->aw(Lohe;)Z` (`GboardLongPressQuickActionsInputEventPatch.kt:62-66`), где `Lohe;` содержит поля `a` (`qae` action), `b` (`qbc[]` keyDatas), `c` (`SoftKeyDef`), `w` (`int` subtype/source).
-   - Конструктор `Lqbc(int keyCode, Lqbb intention, Object data, int unused)` подтверждён в `GboardLongPressQuickActionsReflectionHandles.java:102-103`.
+1. **Идентификаторы событий Globe `[ПОДТВЕРЖДЕНО В КОДЕ]`:**
+   - `KEYCODE_SWITCH_TO_NEXT_LANGUAGE = -0x271b` (`-10011`), `action = qae.PRESS`, `payload = "globe"` — `extensions/extension/src/main/java/dev/jason/gboardpatches/extension/longpressquickactions/GboardGlobeDragAdapter.java:10, 78-96` и `GboardLongPressQuickActionsReflectionHandles.java:27, 223-230`.
+   - `KEYCODE_SHOW_LANGUAGE_PICKER = -0x2726` (`-10022`), `action = qae.LONG_PRESS`, `payload = "globe"` — `GboardLongPressQuickActionsReflectionHandles.java:28, 223-230`.
+2. **Путь доставки событий `[ПОДТВЕРЖДЕНО В КОДЕ]`:**
+   - Диспетчер жестов клавиш: `Lqil;->f(Lqin;Lqae;Lqbc;SoftKeyDef;JZZIZJI)V` → `Lqil;->n:Lqij;` → `Lqij;->o(...)V` (`patches/src/main/kotlin/dev/jason/gboardpatches/patches/gboard/shared/GboardGestureFamilyComposer.kt:334-361`).
+   - Входящий диспетчер событий `InputMethodService`: `Lphr;->aw(Lohe;)Z` (`patches/src/main/kotlin/dev/jason/gboardpatches/patches/gboard/features/longpressquickactions/GboardLongPressQuickActionsInputEventPatch.kt:62-66`, `GboardLatinGlobeKeyIgnoreIntervalBytecodePatch.kt:21-217`).
+   - Конструктор `Lqbc(int keyCode, Lqbb intention, Object data, int unused)` и поля `Lohe;` (`a: qae`, `b: qbc[]`, `c: SoftKeyDef`, `w: int`) подтверждены в `GboardLongPressQuickActionsReflectionHandles.java:98-123`.
+   - Тип `Lphr;`: наследник `android.inputmethodservice.InputMethodService` (`GboardLongPressQuickActionsReflectionHandles.java:457`). Живой экземпляр `InputMethodService` получается без reflection через `GboardSwipeDismissRuntime.resolveInputMethodService(View)` (`GboardSwipeDismissRuntime.java:108-124`).
+3. **Роль `GboardLatinGlobeKeyIgnoreIntervalBytecodePatch.kt` `[ПОДТВЕРЖДЕНО В КОДЕ]`:**
+   - Патч (`lines 1-217`) и `GboardLatinGlobeKeyIgnoreIntervalRuntime.java` (`lines 1-221`) хукают `Lphr;->aw(Lohe;)Z` и `LatinIme;->N()Lyrt;`, сбрасывая таймер защиты от случайного нажатия Globe после ввода символов.
+   - Они **не содержат** логики выбора языка и не обращаются к списку `InputMethodEntry`, но доказывают, что на `Lphr;->aw(Lohe;)Z` уже висят два независимых хука (`GboardLongPressQuickActionsInputEventPatch` и `GboardLatinGlobeKeyIgnoreIntervalBytecodePatch`).
 
-### 2.2. Что НЕ подтверждено в репозитории (требует проверки на APK Gboard `18.5.4.993608717-release-arm64-v8a`)
+### 5.2. Что НЕ подтверждено в репозитории (обязательная проверка на APK `18.5.4.993608717-release-arm64-v8a`)
 
-Честная фиксация пробелов (выдумывание символов и keycodes запрещено):
-
-1. **Механизм переключения на предыдущий язык (`Previous Language`) в репозитории НЕ найден.**
-   - Поиск по всему репозиторию (`patches/src/main`, `extensions/extension/src/main/java`) подтвердил отсутствие констант/ссылок на `SWITCH_TO_PREVIOUS_LANGUAGE`, `-0x271c` (`-10012`), `InputMethodEntryManager`, `getEnabledInputMethodEntries`, `switchToPreviousLanguage`.
-2. **Класс-менеджер активных языков Gboard (`InputMethodEntryManager` / `IInputMethodEntryManager`) в `gboard-version-bindings.json` отсутствует.**
-   - В Gboard языки/раскладки управляются внутренним списком `InputMethodEntry` (а не только системными `InputMethodSubtype` Android!).
-   - Системные методы `InputMethodService.switchToNextInputMethod(boolean)` и `switchToPreviousInputMethod()` работают **только на уровне системных IME/subtypes Android** и в современном Gboard (где несколько языков/раскладок хранятся внутри одного IME без регистрации отдельных системных подтипов или с ограниченной синхронизацией) **часто переключают на другую клавиатуру (например, Samsung Keyboard / Voice) вместо следующего/предыдущего языка внутри Gboard**. Поэтому полагаться на системные методы `InputMethodService` как на основной механизм **недопустимо**.
-3. **Внутренний порядок активных языков и поведение при 2, 3, 4+ языках:**
-   - В стоковом Gboard переключение по Globe (`-0x271b`) часто использует **MRU-логику (most recently used)** или последовательный обход с учётом времени с последнего переключения (если пауза > N секунд — переключение на предыдущий использованный язык, если быстрые повторные нажатия — цикл по списку). Точный алгоритм в `18.5.4` **не подтверждён в репозитории — требует проверки на APK Gboard 18.5.4**.
-   - **Критично для UX Samsung:** в Samsung Keyboard свайп вправо всегда идёт к `entries[(index + 1) % N]`, а свайп влево — к `entries[(index - 1 + N) % N]` по **стабильному упорядоченному списку** активных языков (детерминированный цикл, а не MRU!).
-4. **Одинаковая раскладка с разными языками (например, English (US) QWERTY + Deutsch QWERTY или Español QWERTY):**
-   - В Gboard один и тот же `KeyboardLayout` (`qwerty`) может быть привязан к разным `InputMethodEntry` (различаются `languageTag` / `locale`, словарями и меткой на пробеле) либо объединён в мультиязычную запись (`multilingual`). При переключении через внутренний список `InputMethodEntry` смена происходит по **индексу `InputMethodEntry`**, а не по имени раскладки — это гарантирует корректную работу с одинаковыми раскладками разных языков, если список записей получен напрямую из менеджера `InputMethodEntry`. Поведение при включённой мультиязычной печати (1 `InputMethodEntry` с дополнительными языками) необходимо явно проверить на APK `18.5.4`.
-5. **Конструктор/фабрика `Lohe;`:**
-   - В репозитории описаны только поля `Lohe;` (`a`, `b`, `c`, `w`), но не конструктор/метод-фабрика (`Lohe;->d()` / `Event.create(...)`). Требуется проверка на APK `18.5.4`.
-
-### 2.3. Архитектурное решение: трёхуровневый адаптер переключения языка (`GboardLanguageSwitcher`)
-
-Чтобы архитектура была полностью детерминированной для 2, 3, 4+ языков и одинаковых раскладок, проектируется изолированный интерфейс `GboardLanguageSwitchBridge` с тремя уровнями (используется наивысший верифицированный уровень):
-
-1. **Уровень 1 (Целевой, основной — обязательный к верификации на APK `18.5.4`): прямой вызов внутреннего менеджера `InputMethodEntry` Gboard.**
-   - При инспекции APK `18.5.4` находятся точные обфусцированные символы менеджера записей ввода (аналог `InputMethodEntryManager` в AOSP/Gboard):
-     - получение текущего упорядоченного списка активных `InputMethodEntry` (`List<Entry>`),
-     - получение текущего активного `InputMethodEntry` (`currentEntry`),
-     - метод активации конкретной записи `switchToInputMethodEntry(entry)` (или `switchToNext/Previous` с фиксированным порядком).
-   - **Логика переключения:**
-     - Если `entries.size() < 2`: переключение не выполняется (свайп не должен перехватываться вообще — см. раздел 3.1).
-     - `DIRECTION_NEXT` (слева направо): `targetIndex = (currentIndex + 1) % entries.size()`.
-     - `DIRECTION_PREVIOUS` (справа налево): `targetIndex = (currentIndex - 1 + entries.size()) % entries.size()`.
-   - **Преимущества:**
-     - Истинно симметричное переключение в обе стороны для 2, 3, 4+ языков (детерминированный цикл как в Samsung One UI, без MRU-скачков).
-     - Безупречная работа с одинаковыми раскладками разных языков (переключаются `InputMethodEntry`, а не раскладки).
-     - Не переключает на сторонние системные клавиатуры (Samsung Keyboard / Voice IME).
-     - Даёт мгновенное знание `enabledLanguageCount >= 2` ещё **до** начала свайпа (при 1 языке жест не активируется).
-     - Позволяет мгновенно получить локализованное имя следующего/текущего языка для индикатора на пробеле.
-
-2. **Уровень 2 (Резервный при наличии подтверждённых keycode в APK `18.5.4`): синтетическая отправка внутреннего события Gboard (`Lohe;` / `Lqij;->o`).**
-   - Для `DIRECTION_NEXT`: отправка `qbc(keyCode = -0x271b, intention = null, data = "globe", ...)` с `qae.PRESS`.
-   - Для `DIRECTION_PREVIOUS`: **только если** в APK `18.5.4` подтверждён отдельный keycode предыдущего языка (например, в таблице `KeyCode` рядом с `-0x271b`).
-   - **Ограничение:** если в `18.5.4` отсутствует отдельный keycode для `Previous`, Уровень 2 **не может** самостоятельно обеспечить требование «свайп справа налево — предыдущий язык» при 3+ языках (цикл `N-1` раз через `-0x271b` недопустим из-за возможной MRU-логики и мерцания UI). Следовательно, **Уровень 1 является обязательным целевым путём** перед началом реализации.
-
-3. **Уровень 3 (Запрещён как основной; только диагностический fallback):**
-   - `InputMethodService.switchToNextInputMethod(true)` / `switchToPreviousInputMethod()` **не используется** в продакшн-логике свайпа по пробелу, так как в Gboard может переключить IME целиком за пределы Gboard и не видит внутренние `InputMethodEntry`.
-
-**Вывод-гейт для Этапа 3:** реализация кода **не начинается**, пока на APK `18.5.4.993608717-release-arm64-v8a` не будут верифицированы биндинги Уровня 1 (менеджер `InputMethodEntry` + метод переключения на конкретный `InputMethodEntry`).
+**[НЕ ИССЛЕДОВАНО — ТРЕБУЕТ APK]** По текущему дереву исходников репозитория **невозможно** установить без декомпиляции целевого APK `18.5.4`:
+1. Какой конкретный класс в `18.5.4` обрабатывает `-0x271b` внутри `Lphr;->aw(Lohe;)Z` и где находятся все его call-sites.
+2. Использует ли `-0x271b` в `18.5.4` **MRU-порядок** (переключение на последний использованный язык при паузе) или строго последовательный обход списка языков.
+3. Обфусцированные имена классов/методов внутреннего менеджера языков Gboard (`InputMethodEntryManager` / `IInputMethodEntryManager`):
+   - получение упорядоченного списка активных `InputMethodEntry` (`List<Entry>`);
+   - получение текущего активного `InputMethodEntry`;
+   - вызов прямого переключения на выбранный `InputMethodEntry` (`switchToInputMethodEntry(entry)`).
+4. Существует ли в таблице `KeyCode` версии `18.5.4` отдельный keycode для переключения на предыдущий язык (наличие `-0x271c` **НЕ предполагается** и требует строгого доказательства по байткоду).
+5. Конструктор / статическая фабрика `Lohe;` (в репозитории задекларированы только поля `Lohe;`).
+6. Как представлены языки в режиме мультиязычного ввода (Multilingual Typing: одна запись `InputMethodEntry` с дополнительными подтипами или отдельные записи).
 
 ---
 
-## 3. Точная архитектура конечного автомата
+## 6. Механизм обратного переключения языка (`PREVIOUS`) и работа с `N` языками
 
-Конечный автомат (`GboardSpacebarSwipeStateMachine`) — **чистая Java-логика без зависимости от Android-фреймворка** (для 100% покрытия быстрыми JVM unit-тестами). Работает поверх одного активного указателя (`activePointerId`) и строго детерминированных геометрических и временных инвариантов.
+### 6.1. Почему системные API Android и имитация UI непригодны
 
-### 3.1. Предусловия активации (Pre-flight Guard в `IDLE`)
+- **`InputMethodService.switchToNextInputMethod(boolean)` / `switchToPreviousInputMethod()` — ЗАПРЕЩЕНЫ как основной механизм:** Gboard хранит пользовательские языки и раскладки во внутреннем списке `InputMethodEntry`, а не только как системные `InputMethodSubtype`. Вызов системных методов на устройствах Samsung часто переключает пользователя за пределы Gboard (на Samsung Keyboard или Google Voice Typing) вместо смены языка внутри Gboard.
+- **Имитация клика по клавише Globe — ЗАПРЕЩЕНА:** ненадёжна (клавиша Globe может быть скрыта пользователем в настройках Gboard), не поддерживает обратное направление (Previous) и может подвергнуться MRU-перестановке.
+- **Многократный вызов `-0x271b` (`N - 1` раз) — ЗАПРЕЩЁН:** ломается при MRU-алгоритме, вызывает визуальное мерцание `N - 1` промежуточных раскладок и деградирует на 3+ языках.
 
-Автомат может покинуть состояние `IDLE` при `ACTION_DOWN` **только если одновременно выполняются все условия**:
-1. Фича включена в настройках пользователя (`GboardSpacebarSwipeSettings.isEnabled(prefs)`).
-2. Устройство не в Direct Boot locked-режиме (`GboardDirectBootSupport.isUserUnlocked(context)`).
-3. Количество активных языков Gboard `>= 2` (если установлен 1 язык, касание мгновенно пропускается в Gboard, состояние остаётся `IDLE`).
-4. Политика совместимости с `enable_scrub_move` разрешает перехват (см. раздел 6.5).
-5. `event.getPointerCount() == 1` (нет других нажатых пальцев).
-6. Зарегистрированный `SoftKeyView` пробела валиден, `isShown() == true`, имеет ненулевые размеры и `pressKeycode == 62`.
-7. Точка `(rawX, rawY)` попадает внутрь видимого прямоугольника пробела (`spacebarRectOnScreen`) с учётом безопасного нижнего отступа от системной панели жестов One UI 8 (`bottomEdgeExclusionPx`, см. ниже).
-8. Не активны конфликтующие состояния: `GboardSwipeDismiss` не активен, `GboardGlobeDrag` не активен, режим `free_cursor` / `free_cursor_lock_mode` не активен, голосовой ввод не активен.
+### 6.2. Приоритетная архитектура двунаправленного переключения (`GboardSpacebarLanguageSwitchBridge`)
 
-Если хотя бы одно предусловие не выполнено → автомат остаётся в `IDLE`, событие полностью отдаётся в Gboard без вмешательства.
+Переключение проектируется через изолированный интерфейс с жёсткой иерархией приоритетов (проверяется на APK `18.5.4` до начала Этапа 4):
 
-### 3.2. Состояния автомата
+#### Приоритет 1 (Целевой и основной): прямой вызов внутреннего менеджера `InputMethodEntry` Gboard
+После нахождения обфусцированных дескрипторов менеджера `InputMethodEntry` в APK `18.5.4`:
+1. Запросить текущий упорядоченный список активных записей `List<InputMethodEntry> entries` и текущую активную запись `currentEntry`.
+2. **Случай `entries.size() < 2` (1 язык):** переключение не выполняется; `canSwitchLanguage()` возвращает `false` (свайп языка не активируется, на пробеле не рисуются шевроны).
+3. **Случай `entries.size() >= 2` (2, 3, 4+ языков):**
+   - Определить `currentIndex = indexOf(entries, currentEntry)`.
+   - `DIRECTION_NEXT` (L→R): `targetIndex = (currentIndex + 1) % entries.size()`.
+   - `DIRECTION_PREVIOUS` (R→L): `targetIndex = (currentIndex - 1 + entries.size()) % entries.size()`.
+   - Вызвать внутренний метод Gboard `switchToInputMethodEntry(entries.get(targetIndex))`.
+4. **Гарантии этого пути:**
+   - **2 языка (EN, RU):** L→R и R→L оба циклически переключают EN ↔ RU.
+   - **3+ языков (EN, RU, UK, DE):** L→R идёт строго `EN → RU → UK → DE → EN`; R→L идёт строго `EN → DE → UK → RU → EN` (детерминированно, как в Samsung Keyboard, без MRU-скачков).
+   - **Одинаковая раскладка с разными языками (EN QWERTY + DE QWERTY + ES QWERTY):** переход идёт по индексу `InputMethodEntry`, а не по имени раскладки — корректно меняются словарь, автокоррекция и метка языка на пробеле.
+   - **Работает при скрытой клавише Globe** и не зависит от наличия кнопки глобуса в нижней строке.
+   - **Активация при активном вводе текста:** внутренний метод переключения `InputMethodEntry` в Gboard штатно завершает/фиксирует текущую композицию и обновляет раскладку, словари и предсказания.
 
-| Состояние | Назначение | Пропуск `MotionEvent` в Gboard |
+#### Приоритет 2 (Запасной — только если в `18.5.4` обнаружен и доказан симметричный линейный внутренний обработчик `NEXT` и `PREVIOUS`)
+- Если при инспекции APK `18.5.4` выяснится, что Gboard имеет два подтверждённых не-MRU внутренних действия/метода `switchToNextLanguage()` и `switchToPreviousLanguage()` (или подтверждённый keycode для Previous наряду с `-0x271b`), они могут использоваться через `GboardSpacebarLanguageSwitchBridge`.
+- Если отдельного метода/keycode для Previous в `18.5.4` нет, **единственно допустимым надёжным решением остаётся Приоритет 1** (прямой вызов переключения по индексу `InputMethodEntry`).
+
+---
+
+## 7. Архитектура распознавания жестов: `TAP` / `SWIPE` / `LONG_PRESS_CURSOR`
+
+### 7.1. Сравнение моделей распознавания: Вариант A vs Вариант B vs Гибридная модель с таймером (как в Samsung)
+
+| Критерий | Вариант A (разделение преимущественно по времени) | Вариант B (время + дистанция + характер движения только в `ACTION_MOVE`) | **Выбранная модель: Гибридный автомат с активным таймером удержания (Samsung-модель)** |
+|---|---|---|---|
+| **Принцип работы** | При `ACTION_DOWN` ждём `T` мс; если палец двигался раньше `T` — свайп, иначе курсор. | Решение принимается при поступлении `ACTION_MOVE` по `dt`, `\|dx\|`, `\|dy\|` и скорости. | На `ACTION_DOWN` запускается **реальный `Handler`-таймер `longPressHoldMs`**. Решение принимает **гонка событий**: либо палец успевает уйти горизонтально `>= swipeStartThreshold` до истечения таймера (`→ SWIPE`), либо таймер срабатывает при неподвижном пальце (`→ LONG_PRESS_CURSOR`), либо происходит `ACTION_UP` (`→ TAP`). |
+| **Точность распознавания** | Низкая: быстрый и медленный пользователь конфликтуют; нет защиты от диагоналей и микродвижений. | Средняя-высокая, но **ломается при удержании без движения** (пользователь держит пробел и не получает отклика, пока не пошевелит пальцем). | **Максимальная:** полная детерминированность всех трёх состояний, включая долгое удержание без перемещения. |
+| **Скорость реакции** | Задержка на `TAP` или ложные срабатывания при быстром наборе. | `TAP` мгновенный, но `LONG_PRESS_CURSOR` запаздывает до первого `ACTION_MOVE`. | **`TAP` мгновенный** (0 мс задержки, события идут в Gboard), **`SWIPE` мгновенный** (срабатывает сразу при пересечении дистанции), **`LONG_PRESS_CURSOR` даёт чёткий тактильный сигнал ровно в момент активации**. |
+| **Случайные переключения** | Высокий риск при быстром соскальзывании пальца. | Низкий за счёт `touchSlop` и угла `\|dx\|/\|dy\|`. | **Минимальный:** dead-zone `swipeStartThreshold` + допуск `maxVerticalDrift` + угол `\|dx\| >= \|dy\| * 1.75` + блокировка мультитача. |
+| **Удобство управления курсором** | Неудобно: неясно, когда можно двигать палец. | Неудобно: нет момента «щелчка» входа в курсор до начала сдвига; риск случайно переключить язык. | **Эталонное (как в Samsung Keyboard):** палец задержался → чёткий haptic-импульс + визуальный режим трекпада → свободное точное ведение курсора по всей ширине клавиатуры. |
+| **Устойчивость к медленным и быстрым движениям** | Плохая: медленный свайп проваливается в курсор, быстрый курсор — в свайп. | Требует хрупких порогов скорости, которые путаются между пользователями. | **Высокая:** не зависит от «угадывания» скорости курсора! Хочешь сменить язык — сразу проведи пальцем (быстро или средне, главное сразу). Хочешь курсор — задержи палец на треть секунды до вибрации и веди с любой скоростью (от сверхмедленной до быстрой). |
+| **Совместимость с экранами и DPI** | Не зависит от DPI, но игнорирует физический размер клавиши. | Отличная при расчёте через `dp`, `touchSlop` и `spacebarWidth`. | **Отличная:** все пространственные пороги заданы в `dp`, масштабированы относительно `ViewConfiguration.getScaledTouchSlop()` и фактической ширины/высоты `SoftKeyView` пробела (портрет, ландшафт, одноручный и плавающий режимы). |
+
+**Аргументация выбора:** отказ от штатного Gboard `enable_scrub_move` (раздел 8) полностью устраняет необходимость «угадывать» по скорости, хотел ли пользователь сдвинуть курсор или переключить язык. В результате **гибридная модель с активным таймером удержания** (развитый Вариант B, воспроизводящий реальную механику Samsung Keyboard) даёт чистое, недвусмысленное, интуитивное разделение `TAP` / `SWIPE` / `LONG_PRESS_CURSOR` без эвристических компромиссов.
+
+### 7.2. Состояния конечного автомата (`GboardSpacebarGestureStateMachine`)
+
+Автомат реализуется как **чистый детерминированный Java-класс** (с абстрактным интерфейсом таймера `LongPressScheduler` для 100% покрытия быстрыми JVM unit-тестами).
+
+| Состояние | Описание | Доставка `MotionEvent` в Gboard |
 |---|---|---|
-| `IDLE` | Ожидание нового касания. Активный указатель отсутствует (`activePointerId = INVALID_POINTER_ID`). | **Да** (все события идут в Gboard). |
-| `POSSIBLE_SPACE_TAP` | Зафиксирован `ACTION_DOWN` на пробеле. Пока неизвестно: это обычный тап пробела, long-press trackpad, вертикальное движение, мультитач или начало горизонтального свайпа. | **Да** (события передаются в Gboard, чтобы не ломать подсветку пробела, tap-to-space и long-press; при этом отслеживаются `dx`, `dy`, `dt`). |
-| `TRACKING_HORIZONTAL_SWIPE` | Горизонтальное намерение превысило dead-zone (`startTrackingThresholdPx`), палец движется преимущественно по оси X внутри вертикального допуска и до истечения таймаута long-press. Жест «захвачен» для оценки порога подтверждения. | **Нет** (поглощается). При входе в состояние один раз инъецируется `ACTION_CANCEL` в дочерние View Gboard, отменяя нажатие пробела и таймер long-press. |
-| `LANGUAGE_SWITCHED` | Превышен порог подтверждения (`confirmThresholdPx`). Переключение языка (`NEXT` или `PREVIOUS`) **выполнено ровно один раз** (latch). Остаток жеста до `ACTION_UP` / `ACTION_CANCEL` поглощается, повторные срабатывания заблокированы. | **Нет** (поглощается до отпускания пальца). |
-| `CANCELLED` | Жест дисквалифицирован до подтверждения переключения (причины: `VERTICAL_DRIFT`, `TIMEOUT_LONG_PRESS`, `MULTITOUCH`, `SYSTEM_CANCEL`, `EXTERNAL_RESET`, `SCRUB_YIELD`, `BACKTRACK_ABORT`). До прихода `ACTION_UP` / `ACTION_CANCEL` автомат игнорирует текущий жест. | **Зависит от точки отмены:** если отмена из `POSSIBLE_SPACE_TAP` → **Да** (Gboard продолжает обрабатывать long-press / scrub / мультитач без перебоев!); если отмена из `TRACKING_HORIZONTAL_SWIPE` (где уже был отправлен `ACTION_CANCEL`) → **Нет** (поглощаем хвост, чтобы не создать фантомный tap). |
+| `IDLE` | Ожидание касания на пробеле. Таймер удержания не активен. | **Да** (100% штатная работа Gboard). |
+| `POSSIBLE_SPACE_TAP` | `ACTION_DOWN` зафиксирован внутри пробела (`0x7f0b05b5`, `keyCode == 62`). Запущен таймер `longPressHoldMs`. | **Да** (сохраняется нативная подсветка пробела и мгновенный `TAP` на `ACTION_UP`). |
+| `SWIPE_TRACKING` | До истечения `longPressHoldMs` палец сместился горизонтально `>= swipeStartThresholdPx` в коридоре `\|dy\| <= maxVerticalDriftPx` и `\|dx\| >= \|dy\| * 1.75f` (при `enabledLanguages >= 2`). Таймер удержания **отменён**. В Gboard один раз отправлен синтетический `ACTION_CANCEL`. | **Нет** (поглощается). |
+| `SWIPE_COMMITTED` | В состоянии `SWIPE_TRACKING` пересечён `swipeConfirmThresholdPx`. Переключение языка (`NEXT` или `PREVIOUS`) выполнено **ровно один раз** (latch). Остаток жеста до отпускания пальца поглощается. | **Нет** (поглощается до `ACTION_UP` / `ACTION_CANCEL`). |
+| `LONG_PRESS_CURSOR` | В состоянии `POSSIBLE_SPACE_TAP` истёк таймер `longPressHoldMs`, пока палец оставался внутри `holdRadiusPx`. В Gboard один раз отправлен синтетический `ACTION_CANCEL` (подавляет и пробел, и штатный long-press Gboard). Активированы тактильный отклик, визуальный режим трекпада и `GboardSpacebarCursorController`. | **Нет** (поглощается до `ACTION_UP` / `ACTION_CANCEL`). |
+| `CANCELLED` | Жест прерван до подтверждения (мультитач, вертикальный/диагональный уход, разворот свайпа к центру, системная отмена). | Если переход из `POSSIBLE_SPACE_TAP` (soft yield, без `ACTION_CANCEL`) → **Да** (Gboard продолжает штатную обработку). Если переход из `SWIPE_TRACKING` (после `ACTION_CANCEL`) → **Нет** (поглощается хвост, чтобы не создать фантомный пробел). |
 
-> **Ключевой инженерный инвариант:** пока автомат находится в `POSSIBLE_SPACE_TAP`, он **не поглощает** `ACTION_DOWN` и ранние микродвижения. Если пользователь просто удерживает пробел (long press → `free_cursor` trackpad) или ставит второй палец (мультитач), переход `POSSIBLE_SPACE_TAP → CANCELLED` происходит **без отправки `ACTION_CANCEL` в Gboard**, поэтому long-press trackpad, tap-to-space и мультитач работают абсолютно нативно, со 100% сохранением поведения Gboard.
+### 7.3. Обоснованные параметры и допуски (адаптация к DPI и геометрии экрана)
 
-### 3.3. Пороговые значения и допуски (обоснованные и настраиваемые)
+Параметры рассчитаны с опорой на `ViewConfiguration`, физические размеры экрана Galaxy S22 5G (`~360dp` ширины, `density ≈ 3.0`, ширина пробела `~145–175dp`) и проверенные интервалы из существующего кода репозитория (`GboardSwipeDismissGesture.java:6-7`):
 
-Все пространственные величины рассчитываются в `dp` (переводятся в `px` через `DisplayMetrics.density`) и масштабируются относительно `ViewConfiguration.get(context).getScaledTouchSlop()` и фактической ширины/высоты пробела (учёт адаптивности, портретной/альбомной ориентации, режима одной руки и разной высоты клавиатуры на Galaxy S22 5G `SM-S901U1`):
+| Параметр | Расчётная формула (по умолчанию) | Техническое обоснование |
+|---|---|---|
+| `holdRadiusPx` (допуск микродрожания при удержании) | `max(touchSlop * 0.9f, 9dp)` | Позволяет удерживать палец с естественным микродрожанием без отмены таймера `LONG_PRESS_CURSOR`, но строго меньше `swipeStartThresholdPx`. |
+| `swipeStartThresholdPx` (dead-zone старта свайпа) | `max(touchSlop * 1.35f, 12dp)` | Надёжно отсекает случайное смазывание пальца при быстром `TAP` (обычном пробеле), но мгновенно перехватывает осознанный свайп до истечения `longPressHoldMs`. |
+| `swipeConfirmThresholdPx` (порог подтверждения смены языка) | `clamp(spacebarWidth * 0.22f, min = max(touchSlop * 2.0f, 28dp), max = 44dp)` | На Galaxy S22 5G (`spacebarWidth ≈ 160dp`): `~35dp`. Достаточно длинный, чтобы исключить случайные срабатывания, и достаточно короткий для комфортного свайпа одним большим пальцем. |
+| `maxVerticalDriftPx` (вертикальный допуск до захвата/подтверждения свайпа) | `min(22dp, spacebarHeight * 0.50f)` | Отсекает уход пальца вверх на ряд букв (исключает случайную смену языка при промахе). **Не применяется** после входа в `LONG_PRESS_CURSOR` (в режиме курсора палец свободен по всей клавиатуре). |
+| `horizontalDominanceRatio` (`\|dx\| / \|dy\|`) | `1.75f` (угол `≤ 29.7°`) | Отсекает диагональные движения `~45°`. |
+| `longPressHoldMs` (порог входа в `LONG_PRESS_CURSOR`) | `clamp(ViewConfiguration.getLongPressTimeout() - 80L, min = 300L, max = 360L)` (при стандартном `400ms` → **`320ms`**) | **Критически важный инженерный расчёт:**<br>1) Должен быть **строго меньше** штатного long-press таймера Gboard (`Lqin;->y()`, обычно `~400ms` или системный `longPressTimeout`), чтобы наш `ACTION_CANCEL` успел отменить штатный popup выбора языка Gboard.<br>2) Должен быть **достаточно длинным** (`>= 300ms`), чтобы обычный тап (`60–140ms`) и начало горизонтального свайпа (`40–180ms` до преодоления `12dp`) никогда не попадали в курсор.<br>*(Если пользователь изменил системную задержку удержания Android на Long/Very Long, верхний предел учитывает настройку, оставаясь на `~80ms` раньше штатного long-press Gboard — точную привязку `Lqin;->y()` необходимо проверить на APK `18.5.4`.)* |
+| `maxSwipeDurationMs` (макс. время на завершение свайпа) | `450L` ms | Если пользователь сдвинул палец на `13dp` и замер на полсекунды, свайп отменяется без смены языка. |
+| `postSwitchCooldownMs` (антидребезг смены языка) | `90L` ms | Защищает от двойного срабатывания на дребезге сенсора, при этом позволяет делать быстрые повторные свайпы подряд (`~3–4` свайпа в секунду). |
+| `bottomEdgeExclusionPx` (защита от One UI 8 gesture pill) | `min(6dp, spacebarHeight * 0.15f)` только при примыкании пробела к нижнему краю окна | Снижает ложные перехваты при системном свайпе по нижней навигационной полосе One UI 8 (Android 16). |
 
-| Параметр | Формула / значение по умолчанию | Настройка в UI | Инженерное обоснование |
-|---|---|---|---|
-| `startTrackingThresholdPx` (dead-zone захвата) | `max(touchSlop * 1.1f, 10dp)` | Нет (внутренний) | Отсеивает естественный микродрожь пальца при обычном нажатии пробела (`tap-to-space`), но достаточно мал, чтобы перехватить быстрый свайп до того, как `ScrubMove` сместит курсор на первый символ. |
-| `confirmThresholdPx` (порог подтверждения смены языка) | По умолчанию (Medium): `clamp(spacebarWidth * 0.22f, min = max(touchSlop * 2.0f, 28dp), max = 44dp)` | **Да:** Чувствительность свайпа:<br>• Высокая (короткий свайп): `min=22dp, ratio=0.16f, max=34dp`<br>• Средняя (по умолчанию): `min=28dp, ratio=0.22f, max=44dp`<br>• Низкая (длинный свайп): `min=36dp, ratio=0.30f, max=56dp` | На экране Galaxy S22 5G (ширина ~360dp, ширина пробела ~145–175dp) `0.22 * 160dp ≈ 35dp` — комфортный, осознанный горизонтальный свайп, исключающий случайный триггер при быстром наборе. |
-| `maxVerticalDriftPx` (вертикальный допуск) | `min(22dp, spacebarHeight * 0.50f)` | Нет | При уходе пальца вверх на соседний ряд букв (ошибочный старт Glide typing или промах с пробела) жест отменяется. |
-| `horizontalDominanceRatio` (соотношение `\|dx\| / \|dy\|`) | `1.75f` (угол к горизонтали `≤ ~29.7°`) | Нет | Надёжно отсекает диагональные движения (`45°`, где `\|dx\| / \|dy\| ≈ 1.0`), не ломая ни пробел, ни Glide typing. |
-| `maxStartDelayMs` (окно старта до long-press) | `min(ViewConfiguration.getLongPressTimeout(), 260L)` ms | Нет | Согласовано с `GboardSwipeDismissGesture.java:6` (`300ms`), но взято с запасом `260ms` (против стандартного Android `400ms` long-press), чтобы при удержании пробела автомат **гарантированно** перешёл в `CANCELLED (TIMEOUT_LONG_PRESS)` раньше срабатывания `Lqin;->y()` (long-press trackpad / language picker). |
-| `maxTotalSwipeDurationMs` (макс. длительность свайпа) | `450L` ms | Нет | Защита от медленного «ползущего» перетаскивания (характерного для ручного движения курсора при `enable_scrub_move`). Согласовано с `GboardSwipeDismissGesture.java:7` (`500ms`). |
-| `minHorizontalVelocityDpPerSec` (мин. скорость при конфликте со scrub) | В обычном режиме: `0` (любая скорость в пределах `450ms`). В режиме совместной работы с `enable_scrub_move`: `180 dp/s` (или `confirmThreshold` за `<= 220ms`). | **Да:** Режим совместимости с движением курсора (см. раздел 6.5) | Разделяет быстрый flick-свайп (смена языка) и плавное ведение пальца (перемещение курсора). |
-| `bottomEdgeExclusionPx` (защита от One UI 8 gesture pill) | `min(6dp, spacebarHeight * 0.15f)` от нижнего края экрана (только если `spacebarBottom` примыкает к нижнему краю окна) | Нет | Снижает ложные срабатывания при системном свайпе по нижней полосе навигации One UI 8 (переключение приложений). |
-| `postSwitchCooldownMs` (антидребезг после переключения) | `120L` ms | Нет | Предотвращает двойное переключение при дребезге сенсора или мгновенном случайном повторном касании во время перерисовки раскладки. |
+### 7.4. Обработка граничных условий в автомате
 
-### 3.4. Точные условия переходов между состояниями
+- **Выход пальца за границы клавиши пробела:**
+  - В `SWIPE_TRACKING`: выход по горизонтали за левый/правый край пробела **разрешён** (важно для узкого пробела в одноручном режиме или при включённых Globe/точке/запятой), пока `|dy| <= maxVerticalDriftPx`. Выход по вертикали (`|dy| > maxVerticalDriftPx`) отменяет свайп.
+  - В `LONG_PRESS_CURSOR`: выход пальца за пределы пробела в любом направлении **полностью разрешён** — вся область клавиатуры работает как сенсорная поверхность курсора (как в Samsung Keyboard).
+- **Единственный язык (`enabledLanguages < 2`):**
+  - Переход `POSSIBLE_SPACE_TAP → SWIPE_TRACKING` **запрещён**.
+  - При горизонтальном движении до `longPressHoldMs` таймер удержания отменяется, автомат уходит в `CANCELLED` (soft yield), пробел/клавиатура не выполняют фиктивного переключения языка.
+  - При неподвижном удержании `>= longPressHoldMs` переход в **`LONG_PRESS_CURSOR` работает полноценно** (управление курсором доступно и при 1 языке!).
+- **Быстрый flick-свайп на `ACTION_UP`:** если за `< 150ms` пришло `ACTION_DOWN → ACTION_UP` (или один `ACTION_MOVE` + `ACTION_UP`) с `|dx| >= swipeConfirmThresholdPx`, `|dy| <= maxVerticalDriftPx`, `|dx| >= |dy| * 1.75f`, автомат выполняет `ACTION_CANCEL` в Gboard и переключает язык даже без промежуточного `SWIPE_TRACKING`.
+- **Полный сброс (`reset()`):** при `ACTION_CANCEL`, `onWindowHidden`, `onFinishInputView`, `onStartInputView`, `onDestroy`, отсоединении `SoftKeyView` пробела и смене конфигурации — немедленная отмена `Handler`-таймера, снятие визуального оверлея курсора, возврат в `IDLE`.
 
-1. **`IDLE → POSSIBLE_SPACE_TAP`**
-   - Событие: `ACTION_DOWN` + все Pre-flight Guard выполнены + `now - lastSwitchTimestampMs >= postSwitchCooldownMs`.
-   - Действия: сохранить `activePointerId`, `downRawX`, `downRawY`, `downTimeMs`, `spacebarRect`, `wasInjectedCancel = false`. Событие **пропускается в Gboard**.
+### 7.5. Диаграммы переходов состояний
 
-2. **`POSSIBLE_SPACE_TAP → IDLE`**
-   - Событие: `ACTION_UP` (для `activePointerId`) или `ACTION_CANCEL`.
-   - Действия: сброс состояния. Событие **пропускается в Gboard** → Gboard штатно вставляет пробел (обычный tap-to-space).
-
-3. **`POSSIBLE_SPACE_TAP → CANCELLED` (без `ACTION_CANCEL` в Gboard — «мягкая уступка»)**
-   - Условия (любое из):
-     - `ACTION_POINTER_DOWN` (`pointerCount > 1`, мультитач);
-     - `dt = eventTime - downTimeMs > maxStartDelayMs` (пользователь держит пробел → отдаём в Gboard для long-press / cursor trackpad / language picker);
-     - `|dy| > maxVerticalDriftPx` (вертикальное движение вверх/вниз);
-     - `hypot(dx, dy) >= startTrackingThresholdPx` **и** `|dx| < |dy| * horizontalDominanceRatio` (диагональное движение);
-     - в режиме совместной работы с `enable_scrub_move`: движение слишком медленное (палец плавно тянет курсор);
-     - внешнее событие сброса (потеря фокуса, скрытие окна, смена раскладки).
-   - Действия: установить `state = CANCELLED`, `swallowRemaining = false`. Все дальнейшие события этого жеста идут напрямую в Gboard без вмешательства.
-
-4. **`POSSIBLE_SPACE_TAP → TRACKING_HORIZONTAL_SWIPE`**
-   - Условия (все одновременно):
-     - `ACTION_MOVE` для `activePointerId` и `pointerCount == 1`;
-     - `dt <= maxStartDelayMs`;
-     - `|dx| >= startTrackingThresholdPx`;
-     - `|dy| <= maxVerticalDriftPx`;
-     - `|dx| >= |dy| * horizontalDominanceRatio`;
-     - (если включён режим совместной работы со scrub) мгновенная скорость `|dx| / max(dt, 1) >= minVelocityPxPerMs`.
-   - Действия:
-     - зафиксировать направление `lockedDirection = (dx > 0) ? NEXT : PREVIOUS`;
-     - **немедленно инъецировать `ACTION_CANCEL` в дочерние View `KeyboardViewHolder`** (через `ThreadLocal<Boolean>` guard, как в `GboardSwipeDismissRuntime.java:92-100`);
-     - выставить временный флаг подавления `KEYCODE_SPACE` для текущего жеста (дополнительная страховка в `GboardGestureFamilyComposer`);
-     - `swallowRemaining = true`;
-     - (опционально) запустить мягкий визуальный сдвиг-предпросмотр метки языка на пробеле (см. раздел 7.2);
-     - поглотить текущее `ACTION_MOVE` (`return true`).
-
-5. **`TRACKING_HORIZONTAL_SWIPE → LANGUAGE_SWITCHED` (момент подтверждения)**
-   - Условия (все одновременно):
-     - `ACTION_MOVE` для `activePointerId` и `pointerCount == 1`;
-     - `dt <= maxTotalSwipeDurationMs`;
-     - `|dy| <= maxVerticalDriftPx`;
-     - направление не сменилось на противоположное (`sign(dx) == lockedDirection`);
-     - `|dx| >= confirmThresholdPx`.
-   - **Момент подтверждения:** переключение выполняется **сразу при пересечении `confirmThresholdPx` во время `ACTION_MOVE`** (не дожидаясь `ACTION_UP`), точно так же, как в Samsung One UI Keyboard — пользователь мгновенно получает тактильный/визуальный отклик и видит новую раскладку/язык.
-   - Действия:
-     - `state = LANGUAGE_SWITCHED` (latch — повторное срабатывание в этом жесте невозможно);
-     - `lastSwitchTimestampMs = eventTime`;
-     - вызвать `GboardLanguageSwitchBridge.switchLanguage(lockedDirection)`;
-     - при успешном переключении: мягкий тактильный отклик (если включён виброотклик клавиатуры) и обновление индикатора языка на пробеле;
-     - поглотить событие (`return true`).
-   - *Примечание о быстром flick-свайпе на `ACTION_UP`:* если пользователь сделал сверхбыстрый рывок и в последнем `ACTION_MOVE` не успел дотянуть до `confirmThresholdPx`, но на `ACTION_UP` выполнено `|dx| >= confirmThresholdPx`, `|dy| <= maxVerticalDriftPx`, `|dx| >= |dy| * horizontalDominanceRatio`, `dt <= maxTotalSwipeDurationMs` — также допускается подтверждение на `ACTION_UP` с последующим немедленным сбросом в `IDLE`.
-
-6. **`TRACKING_HORIZONTAL_SWIPE → CANCELLED` (с поглощением хвоста)**
-   - Условия (любое из):
-     - `ACTION_POINTER_DOWN` (добавился второй палец);
-     - `|dy| > maxVerticalDriftPx` (уход вверх/вниз);
-     - `dt > maxTotalSwipeDurationMs` (слишком долгое удержание/ведение);
-     - разворот пальца назад: `lockedDirection == NEXT && dx < startTrackingThresholdPx * 0.35f` или `lockedDirection == PREVIOUS && dx > -startTrackingThresholdPx * 0.35f` (пользователь «передумал» и вернул палец к центру);
-     - `ACTION_UP` при `|dx| < confirmThresholdPx` (недотянутый свайп → тихая отмена без вставки пробела, т.к. `ACTION_CANCEL` уже ушёл в Gboard; немедленный возврат в `IDLE`).
-   - Действия: вернуть визуальное смещение метки пробела в исходное положение, язык **не переключать**, поглощать хвост жеста до `ACTION_UP`/`ACTION_CANCEL`.
-
-7. **`LANGUAGE_SWITCHED → IDLE` и `CANCELLED → IDLE`**
-   - События: `ACTION_UP` последнего пальца (`pointerCount == 1`), `ACTION_CANCEL`, или любое внешнее событие сброса.
-   - **Защита от повторного срабатывания:** в состоянии `LANGUAGE_SWITCHED` все последующие `ACTION_MOVE` и `ACTION_POINTER_DOWN` до полного отпускания пальца (`ACTION_UP` / `ACTION_CANCEL`) поглощаются; повторный вызов `switchLanguage` в рамках одного жеста архитектурно невозможен (1 свайп = максимум 1 переключение языка).
-
-### 3.5. Принудительный сброс состояния (Lifecycle Reset Matrix)
-
-Автомат обязан немедленно вызывать `reset()` (возврат в `IDLE`, очистка `activePointerId`, снятие флага подавления пробела, сброс визуального смещения) при **любом** из следующих событий:
-- `MotionEvent.ACTION_CANCEL`;
-- `Lphr;->onWindowHidden()V` (скрытие клавиатуры);
-- `Lphr;->onFinishInputView(Z)V` (завершение сессии ввода);
-- `Lphr;->onStartInputView(EditorInfo, Z)V` (переход в новое поле ввода);
-- `Lphr;->onDestroy()V` (уничтожение сервиса);
-- смена/отсоединение `SoftKeyView` пробела (`onDetachedFromWindow` / смена экземпляра в `SoftKeyView.s()`);
-- изменение конфигурации / ширины окна (`onConfigurationChanged` / смена ориентации / переход в плавающий или одноручный режим).
-
----
-
-## 4. Диаграмма переходов состояний
-
-### 4.1. Диаграмма Mermaid
+#### Mermaid
 
 ```mermaid
 stateDiagram-v2
     [*] --> IDLE
 
-    IDLE --> POSSIBLE_SPACE_TAP : ACTION_DOWN на пробеле\n[enabled && langs>=2 && ptr==1\n&& !cooldown && !conflict]
+    IDLE --> POSSIBLE_SPACE_TAP : ACTION_DOWN на пробеле\n[ptr==1 && !conflict && !cooldown]\n/ startTimer(longPressHoldMs)
 
-    POSSIBLE_SPACE_TAP --> IDLE : ACTION_UP / ACTION_CANCEL\n(tap-to-space → Gboard)
+    POSSIBLE_SPACE_TAP --> IDLE : ACTION_UP [до таймера и без свайпа]\n/ cancelTimer() → TAP (вставка пробела в Gboard)
 
-    POSSIBLE_SPACE_TAP --> CANCELLED : ACTION_POINTER_DOWN\nили dt > maxStartDelayMs (long-press)\nили |dy| > maxVerticalDrift\nили диагональ (|dx| < |dy|*1.75)\nили медленный scrub\n[soft yield: Gboard получает события]
+    POSSIBLE_SPACE_TAP --> SWIPE_TRACKING : ACTION_MOVE [langs>=2 && ptr==1\n&& |dx|>=swipeStart && |dy|<=maxVert\n&& |dx|>=|dy|*1.75]\n/ cancelTimer(); inject ACTION_CANCEL
 
-    POSSIBLE_SPACE_TAP --> TRACKING_HORIZONTAL_SWIPE : ACTION_MOVE [ptr==1 && dt<=maxStartDelayMs\n&& |dx|>=startThresh && |dy|<=maxVert\n&& |dx|>=|dy|*1.75]\n/ inject ACTION_CANCEL в Gboard
+    POSSIBLE_SPACE_TAP --> LONG_PRESS_CURSOR : TIMER FIRED (longPressHoldMs)\n[палец в пределах holdRadiusPx && ptr==1]\n/ inject ACTION_CANCEL; haptic + trackpad UI;\nfinishComposingText()
 
-    TRACKING_HORIZONTAL_SWIPE --> LANGUAGE_SWITCHED : ACTION_MOVE [|dx|>=confirmThresh\n&& |dy|<=maxVert && dt<=maxSwipeMs\n&& dir preserved]\n/ switchLanguage(NEXT | PREV) [1x latch]
+    POSSIBLE_SPACE_TAP --> CANCELLED : ACTION_POINTER_DOWN\nили |dy| > maxVert\nили диагональ (|dx| < |dy|*1.75)\nили (langs<2 && движение > holdRadius)\n/ cancelTimer() [soft yield → Gboard]
 
-    TRACKING_HORIZONTAL_SWIPE --> IDLE : ACTION_UP [|dx|>=confirmThresh && valid]\n/ switchLanguage(NEXT | PREV)
+    SWIPE_TRACKING --> SWIPE_COMMITTED : ACTION_MOVE [|dx|>=swipeConfirm\n&& |dy|<=maxVert && dt<=450ms\n&& направление сохранено]\n/ switchLanguage(NEXT | PREV) [1x latch]
 
-    TRACKING_HORIZONTAL_SWIPE --> IDLE : ACTION_UP [|dx|<confirmThresh]\nили ACTION_CANCEL (отмена без пробела)
+    SWIPE_TRACKING --> IDLE : ACTION_UP [|dx|>=swipeConfirm && valid]\n/ switchLanguage(NEXT | PREV)
 
-    TRACKING_HORIZONTAL_SWIPE --> CANCELLED : ACTION_POINTER_DOWN\nили |dy| > maxVerticalDrift\nили dt > maxSwipeMs\nили возврат пальца к центру\n[hard cancel: хвост поглощается]
+    SWIPE_TRACKING --> IDLE : ACTION_UP [|dx|<swipeConfirm]\nили ACTION_CANCEL (отмена без пробела)
 
-    LANGUAGE_SWITCHED --> LANGUAGE_SWITCHED : ACTION_MOVE / POINTER_DOWN\n(поглощение, анти-повтор)
-    LANGUAGE_SWITCHED --> IDLE : ACTION_UP (last ptr) / ACTION_CANCEL
+    SWIPE_TRACKING --> CANCELLED : ACTION_POINTER_DOWN\nили |dy| > maxVert\nили dt > 450ms\nили возврат к центру\n[hard cancel: хвост поглощается]
+
+    LONG_PRESS_CURSOR --> LONG_PRESS_CURSOR : ACTION_MOVE\n/ cursorController.onMove(rawX, rawY)\n(DPAD_LEFT / DPAD_RIGHT + edge repeat)
+
+    LONG_PRESS_CURSOR --> IDLE : ACTION_UP / ACTION_CANCEL\n/ stopCursorMode(); hideTrackpadUI()\n(без пробела и без смены языка)
+
+    SWIPE_COMMITTED --> SWIPE_COMMITTED : ACTION_MOVE / POINTER_DOWN\n(поглощение, анти-повтор)
+    SWIPE_COMMITTED --> IDLE : ACTION_UP (last ptr) / ACTION_CANCEL
 
     CANCELLED --> IDLE : ACTION_UP (last ptr) / ACTION_CANCEL
 
-    POSSIBLE_SPACE_TAP --> IDLE : onWindowHidden / onFinishInputView /\nonStartInputView / onDestroy
-    TRACKING_HORIZONTAL_SWIPE --> IDLE : onWindowHidden / onFinishInputView /\nonStartInputView / onDestroy
-    LANGUAGE_SWITCHED --> IDLE : onWindowHidden / onFinishInputView /\nonStartInputView / onDestroy
-    CANCELLED --> IDLE : onWindowHidden / onFinishInputView /\nonStartInputView / onDestroy
+    POSSIBLE_SPACE_TAP --> IDLE : onWindowHidden / onFinishInputView / onStartInputView / ACTION_CANCEL
+    SWIPE_TRACKING --> IDLE : onWindowHidden / onFinishInputView / onStartInputView / ACTION_CANCEL
+    SWIPE_COMMITTED --> IDLE : onWindowHidden / onFinishInputView / onStartInputView / ACTION_CANCEL
+    LONG_PRESS_CURSOR --> IDLE : onWindowHidden / onFinishInputView / onStartInputView / ACTION_CANCEL
+    CANCELLED --> IDLE : onWindowHidden / onFinishInputView / onStartInputView / ACTION_CANCEL
 ```
 
-### 4.2. ASCII-диаграмма переходов
+#### ASCII-диаграмма
 
 ```text
-                                 [onWindowHidden / onFinishInputView / onStartInputView / ACTION_CANCEL]
-                         ┌───────────────────────────────────────────────────────────────────────────────────┐
-                         ▼                                                                                   │
-                    ┌────────┐   ACTION_DOWN на пробеле (langs>=2, ptr=1, без конфликтов)                    │
-                    │  IDLE  │──────────────────────────────────────────────────────────┐                    │
-                    └────────┘                                                          ▼                    │
-                       ▲  ▲  ▲                                                ┌────────────────────┐         │
-     ACTION_UP (tap)   │  │  │ ACTION_UP / ACTION_CANCEL                      │ POSSIBLE_SPACE_TAP │─────────┤
-     (→ Gboard space)  │  │  └────────────────────────┐                       │ (события → Gboard) │         │
-                       │  │                           │                       └────────────────────┘         │
-                       └──┼───────────────────────────┼──────────────────────────────┘  │  │                 │
-                          │                           │                                 │  │ ptr>1 /         │
-                          │                           │    ACTION_MOVE:                 │  │ dt>260ms /      │
-                          │                           │    |dx|>=startThresh,           │  │ |dy|>maxVert /  │
-                          │                           │    |dx|>=|dy|*1.75              │  │ диагональ /     │
-                          │                           │    [inject ACTION_CANCEL]       │  │ slow scrub      │
-                          │                           │                                 ▼  │ (soft yield)    │
-                          │                           │            ┌───────────────────────────┐             │
-                          │                           │            │ TRACKING_HORIZONTAL_SWIPE │─────┐       │
-                          │                           │            │   (события поглощаются)   │     │       │
-                          │                           │            └───────────────────────────┘     │       │
-                          │                           │                     │            │           │       │
-                          │                           │  |dx|>=confirmThresh│            │ ptr>1 /   │       │
-                          │                           │  [switchLanguage    │            │ |dy|>max /│       │
-                          │                           │   1x latch]         │            │ dt>450ms /│       │
-                          │                           │                     ▼            │ backtrack │       │
-                          │                           │            ┌───────────────────┐ │           ▼       │
-                          │                           │            │ LANGUAGE_SWITCHED │ │      ┌───────────┐│
-                          │  ACTION_UP (last ptr)     │            │ (анти-повтор,     │ │      │ CANCELLED ││
-                          └───────────────────────────┴────────────┤  хвост поглощён)  │ └─────▶│           ││
-                                                                   └───────────────────┘        └───────────┘│
-                                                                             │                        │      │
-                                                                             └────────────────────────┴──────┘
+                      [ACTION_CANCEL / onWindowHidden / onFinishInputView / onStartInputView]
+               ┌─────────────────────────────────────────────────────────────────────────────────┐
+               ▼                                                                                 │
+          ┌────────┐   ACTION_DOWN на пробеле (ptr=1, !conflict)                                 │
+          │  IDLE  │──────────────────────────────────────────────┐                              │
+          └────────┘   [startTimer(longPressHoldMs)]              ▼                              │
+            ▲ ▲ ▲ ▲                                   ┌────────────────────┐                     │
+  TAP       │ │ │ │ ACTION_UP / ACTION_CANCEL         │ POSSIBLE_SPACE_TAP │─────────────────────┤
+  (→ space) │ │ │ └───────────────────────────┐       │ (события → Gboard) │                     │
+            │ │ │                             │       └────────────────────┘                     │
+            │ │ └─────────────────────────────┼─────────────┘   │  │  │                          │
+            │ │                               │                 │  │  │ ptr>1 / |dy|>max /       │
+            │ │    TIMER FIRED (320ms,        │  |dx|>=12dp,    │  │  │ диагональ /              │
+            │ │    палец в holdRadiusPx)      │  |dy|<=maxVert, │  │  │ (langs<2 && move)        │
+            │ │    [inject ACTION_CANCEL,     │  |dx|>=|dy|*1.75│  │  │ [cancelTimer, soft yield]│
+            │ │     haptic + trackpad UI]     │  && langs>=2    │  │  ▼                          │
+            │ │  ┌─────────────────────────┐  │  [cancelTimer,  │  │  ┌───────────┐              │
+            │ │  │    LONG_PRESS_CURSOR    │◀─┼──┤  ACTION_CANCEL] │  │ CANCELLED │──────────────┤
+            │ │  │ ACTION_MOVE → DPAD L/R  │  │  └──────────────┘  │  └───────────┘              │
+            │ │  │ (по всей клавиатуре)    │  │                    │        ▲                    │
+            │ │  └─────────────────────────┘  │                    ▼        │ ptr>1 / |dy|>max / │
+            │ │               │               │          ┌────────────────┐ │ dt>450ms / возврат │
+            │ └───────────────┘               │          │ SWIPE_TRACKING │─┘                    │
+            │  ACTION_UP (без пробела)        │          │ (поглощение)   │                      │
+            │                                 │          └────────────────┘                      │
+            │                                 │                  │                               │
+            │                                 │                  │ |dx| >= swipeConfirmThreshold │
+            │                                 │                  │ [switchLanguage(NEXT | PREV)] │
+            │                                 │                  ▼                               │
+            │                                 │          ┌─────────────────┐                     │
+            │   ACTION_UP (last ptr)          │          │ SWIPE_COMMITTED │                     │
+            └─────────────────────────────────┴──────────┤ (1x latch,      │                     │
+                                                         │  анти-повтор)   │                     │
+                                                         └─────────────────┘                     │
 ```
 
 ---
 
-## 5. Схема интеграции с существующими обработчиками Morphe
+## 8. Решение по замене штатного Gboard Trackpad
 
-Интеграция строго следует архитектуре репозитория `vortexnode/GboardSamsung` (selected-only call chains, семейные компоновщики, централизованный `RuntimeAbi`, каталог контрактов и таблица версионных биндингов).
+### 8.1. Принципиальная позиция
 
-### 5.1. Новый компоновщик `GboardTouchDispatchFamilyComposer` (решение конфликта с `GboardSwipeDismissBytecodePatch`)
+Штатный Gboard Trackpad (`free_cursor` / `free_cursor_lock_mode`) и штатный горизонтальный скраб по пробелу (`enable_scrub_move` / `ScrubMoveMotionEventHandler`) **сознательно отключаются и заменяются** единым Samsung-подобным контроллером пробела (`TAP` / `SWIPE` / `LONG_PRESS_CURSOR`).
 
-- **Проблема, выявленная при аудите:** сейчас `GboardSwipeDismissBytecodePatch.kt:38-55` напрямую патчит `KeyboardViewHolder.dispatchTouchEvent(MotionEvent)Z` и проверяет `instructions.first().isMethodReference(...)`. Если добавить второй независимый патч на этот же метод, нарушится инвариант идемпотентности и порядок вызова хуков.
-- **Решение:** ввести 5-й семейный компоновщик `GboardTouchDispatchFamilyComposer` по образцу `GboardSoftKeyFamilyComposer` и `GboardGestureFamilyComposer`:
-  - Целевой метод: `KeyboardViewHolder.dispatchTouchEvent(MotionEvent)Z` (`swipe_dismiss_dispatch_touch`, переиспользовать общий контракт `keyboard_view_holder_dispatch_touch` с обратной совместимостью).
-  - Регистрируемые участники (selected-only):
-    1. `swipe_down_to_dismiss_keyboard` → `GboardSwipeDismissRuntime.onHeaderTouch(KeyboardViewHolder, MotionEvent)Z` (вызывается **первым**, так как относится к шапке `keyboard_header_view_holder` и не пересекается с пробелом).
-    2. `spacebar_swipe_language_switch` → `GboardSpacebarSwipeRuntime.onTouchDispatch(KeyboardViewHolder, MotionEvent)Z` (вызывается **вторым**, только если первый вернул `false`).
-  - Если любой из участников вернул `true`, `dispatchTouchEvent` немедленно возвращает `true`; иначе исполняется оригинальное тело `KeyboardViewHolder.dispatchTouchEvent`.
-  - Если выбран только `swipe_down_to_dismiss_keyboard`, генерируется ровно один вызов `GboardSwipeDismissRuntime.onHeaderTouch` — 100% сохранение поведения upstream-патча.
+- **Никаких пользовательских режимов и переключателей выбора «Trackpad vs Swipe» не добавляется:** Samsung-подобное поведение пробела является единым поведением по умолчанию.
+- **Функция управления курсором не теряется:** она реализуется полноценно и предсказуемо через `LONG_PRESS_CURSOR` (раздел 9).
 
-### 5.2. Интеграция с `GboardSoftKeyFamilyComposer` (привязка пробела и визуальный индикатор)
+### 8.2. Подтверждённый механизм отключения конфликтующих компонентов Gboard
 
-- Целевой метод: `SoftKeyView.s()V` (`softkey_view_bind`).
-- `GboardSpacebarSwipeRuntime` подключается как новый участник `GboardSoftKeyFamilyComposer`:
-  - `beforeSoftKeyBound(SoftKeyView)`: снимает/подготавливает оверлей Samsung-индикатора пробела до привязки Gboard.
-  - `afterSoftKeyBound(SoftKeyView)`:
-    1. Проверяет `GboardSpacebarLogoAdapter.isSpacebarKey(softKeyView)` (`id == 0x7f0b05b5` и `pressKeycode == 62`).
-    2. Сохраняет `WeakReference<SoftKeyView>` актуального пробела (для получения экранных координат `getLocationOnScreen` в `onTouchDispatch` без обхода всего дерева View на каждом `ACTION_MOVE`).
-    3. Извлекает текущее название языка из `TextView 0x7f0b05f5` / `SoftKeyDef.i` и обновляет визуальный индикатор языка (см. раздел 7.2).
-- **Порядок композиции с `GboardSpacebarLogoRuntime`:**
-  - `GboardSpacebarLogoRuntime` уже работает в `GboardSoftKeyFamilyComposer`. Наш участник обязан проверять `GboardSpacebarLogoSettings.isEnabled(prefs)` и **уступать визуальный оверлей** логотипу, если пользователь включил «G Logo on Spacebar», продолжая при этом отслеживать `WeakReference<SoftKeyView>` пробела для работы самого свайпа.
+**[ПОДТВЕРЖДЕНО В КОДЕ]** В репозитории уже верифицированы обе точки управления штатным Trackpad и скрабом пробела в Gboard `18.5.4`:
 
-### 5.3. Интеграция с `GboardGestureFamilyComposer` (страховочное подавление `KEYCODE_SPACE`)
-
-- Целевой метод: `Lqil;->f(...)V` (`gesture_dispatch`).
-- Подключается лёгкий страховочный хук `GboardSpacebarSwipeRuntime.shouldSuppressGestureDispatch(keyCode, eventTime)`:
-  - Если автомат находится в `TRACKING_HORIZONTAL_SWIPE` или `LANGUAGE_SWITCHED` (или `eventTime` относится к только что отменённому жесту пробела) и `keyCode == 62` (`KEYCODE_SPACE`), диспетчеризация пробела подавляется.
-  - Для всех остальных клавиш и нормальных тапов возвращает `false` (нулевая задержка, без аллокаций).
-
-### 5.4. Интеграция с жизненным циклом `Lphr;` (`InputMethodService`)
-
-- Используются уже верифицированные биндинги `Lphr;` из `gboard-version-bindings.json`:
-  - `onStartInputView(EditorInfo, Z)V` → `GboardSpacebarSwipeRuntime.onInputViewStarted(service)` (кеширование `WeakReference<InputMethodService>` + сброс автомата + обновление числа активных языков);
-  - `onFinishInputView(Z)V` → `GboardSpacebarSwipeRuntime.onInputViewFinished()` (сброс автомата);
-  - `onWindowHidden()V` → `GboardSpacebarSwipeRuntime.onWindowHidden()` (сброс автомата);
-  - `onDestroy()V` → `GboardSpacebarSwipeRuntime.onServiceDestroyed()` (полная очистка ссылок).
-- Механизм композиции: по аналогии с `GboardEditingAccessPointsLifecyclePatch` / `GboardCalculatorLifecyclePatch` (добавление вызова в пролог/эпилог lifecycle-методов `Lphr;` без конфликта с существующими хуками).
-
-### 5.5. Изменения в контрактах, `RuntimeAbi.kt` и реестре патчей (план на Этап 3)
-
-1. **`RuntimeAbi.kt`:** добавить декларации статических методов `GboardSpacebarSwipeRuntime`:
-   - `onTouchDispatch(Lcom/google/android/libraries/inputmethod/keyboard/impl/KeyboardViewHolder;Landroid/view/MotionEvent;)Z`
-   - `beforeSoftKeyBound(Lcom/google/android/libraries/inputmethod/widgets/SoftKeyView;)V`
-   - `afterSoftKeyBound(Lcom/google/android/libraries/inputmethod/widgets/SoftKeyView;)V`
-   - `shouldSuppressSpaceGesture(I)Z` (или с передачей `Lqbc;`)
-   - `onLifecycleReset()V` и `onServiceBound(Landroid/inputmethodservice/InputMethodService;)V`
-2. **`gboard-port-product-catalog.json`:**
-   - зарегистрировать фичу `spacebar_swipe_language_switch` (и при необходимости подконтракты биндингов `language_entry_manager_*` после верификации APK `18.5.4`).
-3. **`gboard-version-bindings.json`:**
-   - добавить верифицированные для `18.5.4.993608717-release-arm64-v8a` биндинги менеджера `InputMethodEntry` (Уровень 1 из раздела 2.3).
-4. **`GboardContributionWiring.kt` и `GboardPatchRegistry.kt`:**
-   - добавить публичный патч `gboardSpacebarSwipeLanguageSwitchPatch = gboardPublicResourcePatch(featureId = "spacebar_swipe_language_switch", ...)` в `GboardPublishedPatchCatalog.morpheRegistrations`;
-   - подключить маркер фичи (`gboardSpacebarSwipeFeatureMarkerPatch`), настройки (`gboardPatchesSettingsPatch`) и участие в `GboardTouchDispatchFamilyComposer`, `GboardSoftKeyFamilyComposer`, `GboardGestureFamilyComposer`.
-5. **Настройки в приложении Gboard:**
-   - встроить новый экран/секцию `GboardSpacebarSwipeSettingsFeature` в существующую группу настроек патчей `GboardKeyboardLayoutSettingsGroupFeature.java` (включение/выключение, чувствительность свайпа, направление/инверсия опционально, политика совместимости с `enable_scrub_move`, отображение стрелок индикатора языка `‹ Язык ›` на пробеле).
+1. **Флаги `free_cursor` и `free_cursor_lock_mode`:**
+   - `extensions/extension/src/main/java/dev/jason/gboardpatches/extension/cursortrackpad/GboardCursorTrackpadPolicy.java:4-5`:
+     - `FREE_CURSOR_FLAG = "free_cursor"`
+     - `FREE_CURSOR_LOCK_MODE_FLAG = "free_cursor_lock_mode"`
+   - `patches/src/main/kotlin/dev/jason/gboardpatches/patches/gboard/shared/GboardFlagFamilyComposer.kt:86-90` (`GboardFlagFamilyFeature.ENABLE_CURSOR_TRACKPAD_MODE`) и `GboardCursorTrackpadFlagValuePatch.kt:6-9`:
+     - через `GboardFlagFamilyComposer` (после всех остальных фич или замещая `ENABLE_CURSOR_TRACKPAD_MODE`) можно принудительно возвращать `false` для `"free_cursor"` и `"free_cursor_lock_mode"`.
+2. **Настройка `enable_scrub_move` (горизонтальный скраб пробела):**
+   - `patches/src/main/kotlin/dev/jason/gboardpatches/patches/gboard/features/cursortrackpad/GboardCursorTrackpadPreferencePatch.kt:24-59` и `GboardCursorTrackpadRuntime.java:11-30`:
+     - два верифицированных биндинга в `gboard-version-bindings.json` (`18.5.4`):
+       - `cursor_string_preference`: `Lqvt;->am(Ljava/lang/String;ZZ)Z` (ключ `"enable_scrub_move"`);
+       - `cursor_resource_preference`: `Lcht;->x(IZ)Z` (ресурс ID `0x7f14096b`).
+     - возврат `false` для `"enable_scrub_move"` и `0x7f14096b` гарантирует, что штатный `ScrubMoveMotionEventHandler` Gboard вообще не активируется на пробеле, даже если пользователь раньше включал «Управление курсором с помощью пробела» в системных настройках Gboard.
+3. **Совместимость с upstream-патчем `gboardCursorTrackpadPatch` (`GboardPatchRegistry.kt:347-361`):**
+   - Согласно `AGENTS.md` (сохранение upstream-функциональности), патч `gboardCursorTrackpadPatch` в реестре не удаляется физически, но в рамках нового патча `gboardSamsungSpacebarPatch` (включаемого по умолчанию в сборке `GboardSamsung`) при активном Samsung-пробеле приоритет флагов `free_cursor`, `free_cursor_lock_mode` и предпочтения `enable_scrub_move` жёстко фиксируется в `false` (более высокий `compositionOrder` в `GboardFlagFamilyComposer` и преференс-хуке).
+4. **Подавление штатного long-press пробела (`Lqin;->y()`):**
+   - Поскольку `longPressHoldMs` (`~320ms`) срабатывает **до** штатного long-press таймера Gboard (`~400ms`), немедленная инъекция `ACTION_CANCEL` в `KeyboardViewHolder` вызывает штатную отмену указателя `Lqin;->s(J)V` (`GboardPointerOwnerTransformation.kt:219-234`), что отменяет запланированный `Lqin;->A` (`longPressFuture`, `GboardLongPressQuickActionsReflectionHandles.java:114, 361`) и предотвращает всплытие штатного окна выбора языка Gboard при удержании пробела.
+   - **[НЕ ИССЛЕДОВАНО — ТРЕБУЕТ APK]** На APK `18.5.4` нужно дополнительно проверить поведение при системной настройке Android «Длительность нажатия и удержания = Короткая» (`300ms`), чтобы `longPressHoldMs` всегда оставался меньше таймера `Lqin;->y()`, либо (при необходимости) подавлять `LONG_PRESS` с `keyCode == 62` в `GboardGestureFamilyComposer` (`Lqil;->f`) как вторую линию защиты.
 
 ---
 
-## 6. Анализ конфликтов и способов их предотвращения
+## 9. Способ управления курсором через удержание пробела (без штатного Gboard Trackpad)
 
-> **Главный приоритет архитектуры:** при любом риске конфликта приоритет всегда отдаётся существующим системным жестам Gboard. Лучше пропустить пограничный жест и оставить штатное поведение Gboard, чем сломать набор текста или перемещение курсора.
+### 9.1. Доступ к текущему редактору (`InputConnection`)
 
-| № | Область / жест Gboard | Механизм потенциального конфликта | Стратегия предотвращения конфликта |
-|---|---|---|---|
-| **1** | **Обычный ввод пробела (`tap-to-space`)** | Слишком низкий порог `startTrackingThresholdPx` или ранний `ACTION_CANCEL` может «съесть» быстрое касание пробела с небольшим смазыванием пальца при скоростной печати. | В состоянии `POSSIBLE_SPACE_TAP` события **пропускаются в Gboard**. Dead-zone `>= max(touchSlop * 1.1f, 10dp)` + обязательный угол `|dx| >= |dy| * 1.75f` гарантируют, что обычный тап и лёгкое соскальзывание при быстрой печати завершатся штатным `ACTION_UP → IDLE` без вмешательства. |
-| **2** | **Glide typing (свайп-ввод слов)** | При непрерывном вводе слов свайпом палец стартует на буквенной клавише и может проходить транзитом над пробелом (или наоборот, палец срывается с пробела вверх на буквы). | 1) Автомат запускается **только** если `ACTION_DOWN` произошёл строго внутри `SoftKeyView` пробела (`0x7f0b05b5`, `keyCode == 62`). Транзитный свайп с букв над пробелом вообще не попадает в `POSSIBLE_SPACE_TAP` (состояние остаётся `IDLE`).<br>2) При старте с пробела и уходе вверх (`|dy| > maxVerticalDriftPx` или `|dx| < |dy| * 1.75f`) автомат немедленно уходит в `CANCELLED`. |
-| **3** | **Free cursor / режим перемещения курсора** | В Gboard `free_cursor` активируется удержанием пробела (и может фиксироваться в `free_cursor_lock_mode`). Если автомат перехватит горизонтальное движение после активации трекпада, пользователь не сможет двигать курсор. | 1) Жёсткое окно старта `dt <= maxStartDelayMs` (`260ms`): любое удержание пробела дольше `260ms` переводит автомат в `CANCELLED` **без** `ACTION_CANCEL` в Gboard — long-press и вход в `free_cursor` работают нативно.<br>2) Во время активного `free_cursor_lock_mode` (проверяется через состояние/флаги при верификации APK `18.5.4`) Pre-flight Guard блокирует вход в `POSSIBLE_SPACE_TAP`. |
-| **4** | **Long press пробела и trackpad (`enable_cursor_trackpad_mode`)** | Патч `gboardCursorTrackpadPatch` (`GboardPatchRegistry.kt:347-361`) включает long-press пробела для trackpad/lock mode и диалог смены языка (в зависимости от настроек Gboard). | Пока палец удерживается без резкого горизонтального смещения `>= startTrackingThresholdPx` в первые `260ms`, события свободно доходят до `Lqin;->y()` (`scheduleLongPress`). По истечении `260ms` автомат тихо уступает управление Gboard (`CANCELLED`, `swallowRemaining = false`). При реальном свайпе `ACTION_CANCEL` отменяет `Lqin;->A` (`longPressFuture`), поэтому диалог/трекпад не всплывают после смены языка. |
-| **5** | **`enable_scrub_move` (горизонтальный скраб курсора по пробелу)** | **Самый высокий риск прямого конфликта!** Оба жеста используют горизонтальный свайп по пробелу. Более того, проверка кода показала (`GboardCursorTrackpadRuntime.java:11-30`), что `enable_cursor_trackpad_mode` **форсирует `enable_scrub_move = true`**, т.е. простое отключение `enable_scrub_move` может сломать `free_cursor`! | **Трёхрежимная явная политика совместимости (выбор пользователя в настройках, безопасный дефолт):**<br>• **Режим A (по умолчанию при включённом `enable_scrub_move` / `enable_cursor_trackpad_mode` — «Умное разделение скорости»):** быстрый горизонтальный рывок (`>= confirmThreshold` быстрее `220ms`, скорость `>= 180 dp/s`) переключает язык; медленное/плавное скольжение (`< 180 dp/s`) или удержание `> 200ms` **уступается Gboard** (`CANCELLED`, soft yield) для точного движения курсора.<br>• **Режим B («Приоритет свайпа языка»):** горизонтальный свайп по пробелу всегда переключает язык; для перемещения курсора остаётся long-press trackpad (`free_cursor`, если он работает при перехвате — подлежит проверке на `18.5.4`).<br>• **Режим C («Автоотключение при включённом scrub»):** если пользователь включил системный `enable_scrub_move` без trackpad, свайп языка уступает Gboard и показывает подсказку в настройках.<br>Никакого скрытого принудительного сброса `enable_scrub_move = false` без проверки зависимости `free_cursor` на APK `18.5.4`! |
-| **6** | **Переключение языка через Globe (`GboardGlobeDragRuntime`, `GboardLatinGlobeKeyIgnoreIntervalRuntime`)** | Пользователь может одновременно использовать клавишу Globe (тап, удержание или drag из `GboardGlobeDragRuntime.java:1-533`) и свайп по пробелу. | 1) Клавиша Globe имеет другой `SoftKeyView` (не `0x7f0b05b5`, не `keyCode == 62`), поэтому свайп по пробелу никогда не перехватывает касания Globe.<br>2) Если `GboardGlobeDragRuntime` находится в активном drag-состоянии, Pre-flight Guard блокирует старт автомата пробела.<br>3) `GboardLatinGlobeKeyIgnoreIntervalRuntime` работает в `Lphr;->aw(Lohe;)Z` и не мешает Уровню 1 (менеджеру `InputMethodEntry`). После переключения языка свайпом состояние Globe-индикатора и пробела синхронно обновляется штатной перепривязкой Gboard. |
-| **7** | **Мультитач (быстрый двуручный набор, Shift + Space и др.)** | При быстрой печати двумя большими пальцами второй палец касается буквы, пока первый ещё не отпустил пробел (или наоборот). | 1) В `IDLE`: `pointerCount > 1` блокирует старт.<br>2) В `POSSIBLE_SPACE_TAP`: любой `ACTION_POINTER_DOWN` мгновенно переводит автомат в `CANCELLED` (soft yield — Gboard нормально отрабатывает оба пальца).<br>3) В `TRACKING_HORIZONTAL_SWIPE`: `ACTION_POINTER_DOWN` мгновенно отменяет свайп (язык не переключается). |
-| **8** | **Голосовой ввод (Voice Typing)** | В режиме голосового ввода (микрофон / Assistant Voice Typing) клавиатура может скрываться, сворачиваться или переходить в панель диктовки, где пробел отсутствует или перепривязан. | 1) При переходе в голосовой ввод срабатывает `onWindowHidden` / смена `SoftKeyView` пробела (`isShown() == false` или отсутствие `keyCode == 62`), автомат сбрасывается в `IDLE`.<br>2) Pre-flight Guard проверяет актуальность и видимость `SoftKeyView` пробела при каждом `ACTION_DOWN`. |
-| **9** | **Другие существующие жесты Gboard и upstream-патчей (`SwipeDismiss`, `TopRowSwipe`, `ZhuyinSlide`, `EnglishQwerty`, `ZhuyinToggle`, One UI 8 nav bar)** | • `GboardSwipeDismiss`: свайп вниз от `keyboard_header_view_holder`.<br>• `GboardTopRowSwipe` / `GboardZhuyinSlide` / `GboardEnglishQwerty` / `GboardZhuyinToggle`: работают в `Lqin;->B` и `Lqil;->f` на клавишах верхнего/основных рядов.<br>• Системная полоса жестов One UI 8 снизу экрана (Android 16). | • `GboardTouchDispatchFamilyComposer` вызывает `GboardSwipeDismissRuntime.onHeaderTouch` **первым**; шапка и пробел пространственно не пересекаются.<br>• Пробел (`0x7f0b05b5`, `keyCode == 62`) не пересекается с верхним рядом, буквами и Чжуинь-клавишами; `GboardPointerOwnerTransformation` вообще не требуется модифицировать для базовой схемы.<br>• `bottomEdgeExclusionPx` (`<= 6dp` от нижнего края при примыкании пробела к краю экрана) предотвращает конфликт с системным свайпом переключения приложений One UI 8. |
+**[ПОДТВЕРЖДЕНО В КОДЕ]** В репозитории уже используются прямые безопасные паттерны работы с `InputConnection` из живого `InputMethodService`:
+- Получение `InputMethodService` из любого `View`: `GboardSwipeDismissRuntime.resolveInputMethodService(View)` (`GboardSwipeDismissRuntime.java:108-124`).
+- Получение `InputConnection` и `EditorInfo` с проверкой неизменности сессии редактора: `GboardEditorActions.java:20-27` (`service.getCurrentInputConnection()`, `service.getCurrentInputEditorInfo()`, `connection.finishComposingText()`).
+- Обработка `onUpdateSelection(IIIIII)V` в `Lphr;`: биндинг `calculator_selection` уже подтверждён в `gboard-version-bindings.json` (`18.5.4`).
 
----
+### 9.2. Низкоуровневый механизм перемещения курсора (`GboardSpacebarCursorController`)
 
-## 7. Предлагаемая структура новых классов и архитектура индикации языка на пробеле
+#### Шаг 1. Подготовка редактора при входе в `LONG_PRESS_CURSOR`
+1. Проверить, что `InputConnection ic = service.getCurrentInputConnection()` не `null` и совпадает с текущей сессией.
+2. Перед первым смещением курсора вызвать `ic.finishComposingText()` **[ПОДТВЕРЖДЕНО В ПУБЛИЧНОМ ANDROID API и `GboardEditorActions.java:57`]**:
+   - Фиксирует текущее набираемое (подчёркнутое) слово в редакторе, предотвращая повреждение буфера композиции (особенно критично для автокоррекции, диакритики, кириллицы, азиатских раскладок и WebView).
+   - Снимает конфликт между курсором и активным словом-кандидатом.
+3. Запомнить стартовую координату `anchorX = lastRawX`, обнулить `accumulatedDeltaX = 0f`, сбросить таймер автоповтора у краёв.
 
-### 7.1. Структура модулей и классов (план для Этапа 3)
+#### Шаг 2. Выбор примитива перемещения: `KEYCODE_DPAD_LEFT` / `KEYCODE_DPAD_RIGHT` (основной) vs внутренний метод Gboard (проверка на APK `18.5.4`)
 
-#### Модуль `patches` (Kotlin / Morphe bytecode & resource patches)
-```text
-patches/src/main/kotlin/dev/jason/gboardpatches/patches/gboard/
-├── shared/
-│   ├── GboardTouchDispatchFamilyComposer.kt        # Новый 5-й семейный компоновщик для KeyboardViewHolder.dispatchTouchEvent
-│   └── runtimeabi/RuntimeAbi.kt                    # + контракты GboardSpacebarSwipeRuntime
-└── features/
-    ├── swipedismiss/
-    │   └── GboardSwipeDismissBytecodePatch.kt      # Перевод на регистрацию в GboardTouchDispatchFamilyComposer
-    └── spacebarswipe/
-        ├── GboardSpacebarSwipeFeatureMarkerPatch.kt    # Регистрация маркера фичи в ресурсах настроек
-        ├── GboardSpacebarSwipeBytecodePatch.kt         # Регистрация в TouchDispatch + SoftKey + Gesture + Lifecycle Lphr
-        └── GboardSpacebarSwipeLanguageBindingsPatch.kt # Подключение биндингов менеджера InputMethodEntry (после проверки APK 18.5.4)
-```
+**Основной механизм (100% публичный Android API, не ломается при обновлении Gboard):**
+Отправка пары событий `KeyEvent.ACTION_DOWN` + `KeyEvent.ACTION_UP` через `InputConnection.sendKeyEvent(...)` с кодами `KeyEvent.KEYCODE_DPAD_LEFT` (`21`) и `KeyEvent.KEYCODE_DPAD_RIGHT` (`22`) (с флагами `KeyEvent.FLAG_SOFT_KEYBOARD | KeyEvent.FLAG_KEEP_TOUCH_MODE` и `InputDevice.SOURCE_KEYBOARD`).
 
-#### Модуль `extensions/extension` (Java runtime, без тяжёлых зависимостей)
-```text
-extensions/extension/src/main/java/dev/jason/gboardpatches/extension/spacebarswipe/
-├── GboardSpacebarSwipeConfig.java              # Конфигурация порогов (dp/ms/ratios/sensitivity/scrubPolicy)
-├── GboardSpacebarSwipeDirection.java           # Enum: NEXT, PREVIOUS
-├── GboardSpacebarSwipeState.java               # Enum: IDLE, POSSIBLE_SPACE_TAP, TRACKING_HORIZONTAL_SWIPE, LANGUAGE_SWITCHED, CANCELLED
-├── GboardSpacebarSwipeCancelReason.java        # Enum: NONE, VERTICAL_DRIFT, DIAGONAL, TIMEOUT_LONG_PRESS, MULTITOUCH, SLOW_SCRUB, BACKTRACK, SYSTEM_CANCEL, LIFECYCLE_RESET
-├── GboardSpacebarSwipeDecision.java            # Неизменяемый результат шага автомата (consumeEvent, injectCancelToGboard, triggerDirection, visualOffsetPx)
-├── GboardSpacebarSwipeStateMachine.java        # Чистый детерминированный конечный автомат (100% JVM unit-testable)
-├── GboardSpacebarSwipeSettings.java            # Чтение/запись SharedPreferences (enabled, sensitivity, scrubCompatibilityMode, showSamsungChevrons)
-├── GboardSpacebarSwipeSettingsFeature.java     # Экран настроек в GboardKeyboardLayoutSettingsGroupFeature
-├── GboardSpacebarLanguageSwitchBridge.java     # Изолированный мост к менеджеру InputMethodEntry (Уровень 1) + safe fallback guards
-├── GboardSpacebarIndicatorRenderer.java        # Визуальная индикация языка на пробеле в стиле Samsung One UI (раздел 7.2)
-└── GboardSpacebarSwipeRuntime.java             # Тонкая точка входа RuntimeAbi: связывает MotionEvent, SoftKeyView, Lphr lifecycle, StateMachine, Bridge и IndicatorRenderer
-```
+Почему `KEYCODE_DPAD_LEFT` / `KEYCODE_DPAD_RIGHT` принципиально лучше, чем `setSelection(pos ± 1)`:
+- **Юникод и эмодзи:** редактор Android сам шагает по целым **графемам** (ZWJ-эмодзи, флаги, составные диакритики), а не рвёт суррогатные пары UTF-16 пополам.
+- **RTL и BiDi (арабский, иврит, смешанный текст):** свайп вправо всегда двигает курсор визуально вправо.
+- **Совместимость с редакторами:** одинаково работает в `EditText`, Jetpack Compose `BasicTextField`, Chrome/WebView, мессенджерах (Telegram, WhatsApp), заметках и терминалах (`TYPE_NULL`), где `getExtractedText()` / `setSelection()` часто дают сбой или рассинхрон.
+- **Многострочный текст:** при достижении начала/конца строки `DPAD_LEFT`/`DPAD_RIGHT` естественным образом переносит курсор на предыдущую/следующую строку.
 
-### 7.2. Проектирование визуальной индикации языка на пробеле (Часть 6)
+**Дополнительная проверка на APK `18.5.4` `[НЕ ИССЛЕДОВАНО — ТРЕБУЕТ APK]`:**
+- Проверить на целевом Gboard `18.5.4`, корректно ли `LatinIme` сбрасывает внутренний буфер предсказаний/автокоррекции после `ic.finishComposingText()` + `ic.sendKeyEvent(DPAD_LEFT/RIGHT)` (через штатный `Lphr;->onUpdateSelection`), **либо** в Gboard существует внутренний диспетчер событий редактирования текста (тот же, который используется панелью «Редактирование текста» со стрелками `←` `→` в Gboard), синхронизирующий `LatinIme` до отправки `DPAD` в `InputConnection`. Если такой внутренний метод прост и стабилен в `18.5.4`, его можно использовать как предпочтительный адаптер поверх `GboardSpacebarCursorController` с автоматическим fallback на `ic.sendKeyEvent(DPAD_LEFT/RIGHT)`.
 
-Задача — приблизить внешний вид пробела к Samsung Keyboard (One UI): отображение активного языка с аккуратными боковыми стрелками `‹ Русский ›` / `‹ English ›`, при этом полностью сохранив совместимость со всеми темами Gboard и без поломки геометрии клавиши.
+#### Шаг 3. Точность и плавность при малых и больших перемещениях пальца
 
-1. **Откуда берётся название активного языка:**
-   - **Основной источник (подтверждён в коде):** `TextView` с ID `0x7f0b05f5` (`GboardSpacebarLogoAdapter.PRIMARY_LABEL_VIEW_ID`, `GboardSpacebarLogoAdapter.java:19, 149-165`) внутри `SoftKeyView` пробела (`0x7f0b05b5`) и массив меток `SoftKeyDef.i` (`GboardTopRowSwipeRuntimeSupport.java:403, 518-553`). Когда в Gboard включено `>= 2` языков, Gboard сам помещает локализованное название активного языка (например, `English`, `Русский`, `Українська`) в этот `TextView`.
-   - **Дополнительный источник (Уровень 1, после проверки APK `18.5.4`):** локализованное отображаемое имя из текущего активного `InputMethodEntry` (нужно на случай, если пользователь включил «показывать короткий код» или при раскладках, где Gboard скрывает текст на пробеле).
+Чтобы управление ощущалось на уровне Samsung Keyboard (удобно и попасть между двумя буквами, и быстро перенести курсор в начало длинной строки):
 
-2. **Как обновляется индикатор после переключения:**
-   - При переключении `InputMethodEntry` Gboard автоматически пересоздаёт/перепривязывает `SoftKeyView` пробела через `SoftKeyView.s()V`.
-   - Наш хук `GboardSoftKeyFamilyComposer → afterSoftKeyBound(SoftKeyView)` вызывается **автоматически** при каждом переключении языка, смене темы, переходе на символы (`?123`, где `pressKeycode` всё ещё `62`, либо при возврате на буквы) и смене ориентации.
-   - Таким образом, отдельный таймер/опрос не требуется — индикатор всегда синхронизирован с реальным состоянием Gboard.
-
-3. **Как отображается в стиле Samsung One UI без нарушения тем Gboard:**
-   - Используется проверенный в `GboardSpacebarLogoRuntime.java:113-152` паттерн **неинтерактивного декоративного дочернего View** (внутри `ViewGroup` пробела `0x7f0b05b5`):
-     - `setClickable(false)`, `setLongClickable(false)`, `setFocusable(false)`, `IMPORTANT_FOR_ACCESSIBILITY_NO`, `setDuplicateParentStateEnabled(true)`.
-   - **Наследование темы без хардкода цветов:** `GboardSpacebarIndicatorRenderer` считывает `currentTextColor`, `textSize`, `typeface` и `alpha` напрямую из штатного `TextView 0x7f0b05f5` после `afterSoftKeyBound`:
-     - левый и правый шевроны (`‹` / `›`, либо компактные векторные `Drawable` размером ~65% от `textSize`) получают цвет штатного текста пробела с пониженной прозрачностью (`alpha ≈ 0.55f`, как в Samsung One UI);
-     - в светлых, тёмных, Dynamic Color (Material You), градиентных и пользовательских темах Gboard индикатор автоматически выглядит нативно.
-   - **Обработка длинных названий языков и узкого пробела:**
-     - Измеряется доступная ширина внутри пробела (`spacebarWidth - horizontalPadding`) и ширина текста `PRIMARY_LABEL_VIEW_ID`.
-     - Если текст + оба шеврона + отступы (`>= 6dp` с каждой стороны) помещаются → показываются оба шеврона `‹  Язык  ›`.
-     - Если название языка длинное (например, `Português (Brasil)` или узкий пробел в одноручном режиме с включённой клавишей Globe + запятая + точка + эмодзи) → текст получает `ellipsize = END` / `maxLines = 1` либо шевроны автоматически скрываются, если свободного запаса `< 12dp` с каждой стороны, чтобы **никогда** не перекрывать текст и не выходить за границы клавиши.
-   - **Микро-анимация обратной связи (опционально):** во время `TRACKING_HORIZONTAL_SWIPE` допустим мягкий `translationX` метки пробела в пределах `±10dp` с возвратом `translationX = 0` при `CANCELLED` / `IDLE` (строго без изменения `layoutParams` и без `requestLayout()`, чтобы не вызывать лишних пересчётов макета на 120 Гц экране Galaxy S22).
-   - **Взаимоисключение с `GboardSpacebarLogoRuntime`:** если включён патч «G Logo on Spacebar» (`GboardSpacebarLogoSettings.isEnabled(prefs)`), `GboardSpacebarIndicatorRenderer` **не рисует** шевроны и не меняет видимость `PRIMARY_LABEL_VIEW_ID`, полностью уступая управление `GboardSpacebarLogoRuntime`. Если активен только 1 язык — шевроны также не отображаются.
+1. **Дробный аккумулятор смещения (`accumulatedDeltaX`):**
+   - На каждом `ACTION_MOVE` вычисляется `stepDeltaX = rawX - prevRawX`.
+   - При смене знака движения (разворот влево↔вправо) применяется лёгкий гистерезис `reversalDeadzonePx = 4dp`, исключающий дрожание курсора на 1 символ при остановке или отрыве пальца.
+2. **Адаптивная нелинейная кривая чувствительности (скорость → шаг на символ):**
+   - **Точное позиционирование (медленное движение, `v <= 120 dp/s`):** `pxPerChar = 10dp` → лёгкий, полностью контролируемый посимвольный шаг.
+   - **Среднее движение (`120 < v <= 350 dp/s`):** линейная интерполяция `pxPerChar` от `10dp` до `5.5dp`.
+   - **Быстрое перемещение на большие расстояния (`v > 350 dp/s`):** `pxPerChar = 4dp` (ускорение ~2.5x), с ограничением не более `4` шагов за один `ACTION_MOVE`-кадр (защита от «телепортации» курсора при скачке координат).
+3. **Автопрокрутка курсора у левого/правого края клавиатуры (Edge Auto-Repeat):**
+   - Если в состоянии `LONG_PRESS_CURSOR` палец сместился в краевую зону клавиатуры (`x <= keyboardLeft + 14dp` или `x >= keyboardRight - 14dp`) и удерживается там, запускается плавный тикер (`Handler`, интервал `90ms`, через `600ms` ускоряется до `55ms`), который продолжает двигать курсор в соответствующем направлении до выхода из краевой зоны или `ACTION_UP`.
+   - Это позволяет дойти до самого начала/конца длинного абзаца даже на узком экране `SM-S901U1` одним движением.
+4. **Тактильная и визуальная обратная связь:**
+   - При входе в `LONG_PRESS_CURSOR`: чёткий импульс (`HapticFeedbackConstants.LONG_PRESS` или `VibrationEffect.Composition.PRIMITIVE_CLICK`, проверка поддержки как в `GboardKeypressHapticsSupport.java:16-18`, строго с учётом системных/Gboard настроек вибрации).
+   - При перемещении курсора: лёгкий микро-отклик (`HapticFeedbackConstants.TEXT_HANDLE_MOVE` / `CLOCK_TICK`) на каждый 1–2 шага (если вибрация включена).
+   - Визуальная обратная связь (см. раздел 12): полупрозрачное приглушение клавиш клавиатуры / индикатор режима курсора `‹  |  ›` на пробеле, мгновенно снимаемое на `ACTION_UP`/`ACTION_CANCEL`.
 
 ---
 
-## 8. План тестирования
+## 10. Интеграция с существующими composers и обработчиками проекта
 
-Тестирование разделяется на **автоматизируемое в JVM/Robolectric** (выполняется через `gradle test` в репозитории) и **ручное на реальном устройстве** (Samsung Galaxy S22 5G `SM-S901U1`, Android 16, One UI 8, с пропатченным Gboard `18.5.4.993608717-release-arm64-v8a`).
+### 10.1. Аудит существующих компоновщиков и единая точка маршрутизации `MotionEvent`
 
-### 8.1. Автоматизированные тесты (JVM Unit + Robolectric + Morphe Patch Tests)
+**[ПОДТВЕРЖДЕНО В КОДЕ]** В репозитории сейчас существуют **4 семейных компоновщика** (`patches/src/main/kotlin/dev/jason/gboardpatches/patches/gboard/shared/`):
+1. `GboardSoftKeyFamilyComposer.kt` → `SoftKeyView.s()V` (`softkey_view_bind`)
+2. `GboardGestureFamilyComposer.kt` → `Lqil;->f(...)V` (`gesture_dispatch`)
+3. `GboardFlagFamilyComposer.kt` → чтение boolean feature-флагов (`flag_bool_getter`)
+4. `GboardPointerOwnerTransformation.kt` → `Lqin;->B(...)V`, `r(JI)V`, `s(J)V`, `C()V`, `ac()V`
 
-1. **JVM Unit-тесты конечного автомата (`GboardSpacebarSwipeStateMachineTest`):**
-   - чистая проверка всех 18 сценариев на синтетических последовательностях `MotionEvent`-кортежей `(action, pointerCount, pointerId, rawX, rawY, eventTimeMs)` без эмулятора.
-2. **JVM Unit-тесты логики циклического выбора языка (`GboardLanguageCyclePolicyTest`):**
-   - корректный циклический индекс `(i + 1) % N` и `(i - 1 + N) % N` для `N = 1, 2, 3, 4, 5`;
-   - обработка дублирующихся раскладок (например, `en-US/qwerty` + `de-DE/qwerty` + `ru-RU/jcuken`).
-3. **Robolectric-тесты runtime и рендерера (`GboardSpacebarSwipeRuntimeTest`, `GboardSpacebarIndicatorRendererTest`):**
-   - проверка инъекции `ACTION_CANCEL` с защитой от рекурсии (`ThreadLocal`);
-   - проверка сброса состояния при `onWindowHidden` / `onFinishInputView` / `onStartInputView`;
-   - проверка расчёта отступов, наследования цвета темы, скрытия шевронов при длинных именах языков и при включённом `GboardSpacebarLogo`.
-4. **Тесты Morphe-патчей и компоновщика (`GboardTouchDispatchFamilyComposerTest`, `RuntimeAbiTest`, `GboardContributionWiringTest`):**
-   - проверка совместной генерации байткода для `swipe_down_to_dismiss_keyboard` + `spacebar_swipe_language_switch` (и каждого по отдельности);
-   - валидация `RuntimeAbi`, `gboard-port-product-catalog.json` и `gboard-version-bindings.json`.
+**Обнаруженный архитектурный пробел `[ПОДТВЕРЖДЕНО В КОДЕ]`:**
+- Компоновщик `GboardTouchDispatchFamilyComposer` в репозитории **ещё НЕ существует**.
+- `GboardSwipeDismissBytecodePatch.kt:23-68` напрямую инъектирует вызов `GboardSwipeDismissRuntime.onHeaderTouch(p0, p1):Z` в начало `KeyboardViewHolder.dispatchTouchEvent(MotionEvent)Z` и на строке **40** проверяет `instructions.first().isMethodReference(SWIPE_DISMISS_RUNTIME_ON_HEADER_TOUCH)`.
+- Создание второго независимого патча на `KeyboardViewHolder.dispatchTouchEvent(MotionEvent)Z` привело бы к гонке порядка хуков и нарушению идемпотентности.
 
-### 8.2. Полная матрица 18 обязательных сценариев
+### 10.2. Проектируемая схема композиции без конкурирующих перехватчиков
 
-| № | Сценарий | Ожидаемое поведение | Автотест (JVM / Robolectric) | Ручной тест (`SM-S901U1`) |
-|---|---|---|---|---|
-| 1 | **2 языка** (напр. EN ↔ RU) | Свайп L→R переключает EN→RU→EN; свайп R→L переключает EN→RU→EN. | Unit (`CyclePolicy`, `StateMachine`) | Обязательно |
-| 2 | **3 языка** (напр. EN, RU, UK) | L→R: EN→RU→UK→EN. R→L: EN→UK→RU→EN (строгий цикл, не MRU). | Unit (`CyclePolicy`) | Обязательно |
-| 3 | **4+ языков** (напр. EN, RU, DE, ES, FR) | Последовательный проход вперёд и строго обратный проход назад по всему кольцу без пропусков. | Unit (`CyclePolicy`) | Обязательно |
-| 4 | **Свайп слева направо (L→R)** | При пересечении `confirmThresholdPx` срабатывает ровно 1 раз `NEXT`; дальнейшее ведение до `ACTION_UP` не повторяет смену. | Unit (`StateMachine`) | Обязательно |
-| 5 | **Свайп справа налево (R→L)** | При пересечении `confirmThresholdPx` срабатывает ровно 1 раз `PREVIOUS`; дальнейшее ведение до `ACTION_UP` не повторяет смену. | Unit (`StateMachine`) | Обязательно |
-| 6 | **Короткое нажатие пробела** | `ACTION_DOWN` → `ACTION_UP` (`|dx| < startTrackingThresholdPx`): `POSSIBLE_SPACE_TAP → IDLE`, вставляется ровно 1 пробел, язык не меняется. | Unit (`StateMachine`) + Robolectric | Обязательно |
-| 7 | **Медленное движение по пробелу** | Длительность `> maxStartDelayMs` или скорость `< minVelocity` (в режиме совместимости с `enable_scrub_move`): `CANCELLED` (soft yield), язык не меняется, работает перемещение курсора. | Unit (`StateMachine`) | Обязательно |
-| 8 | **Быстрый свайп по пробелу** | Быстрый рывок (в т.ч. `DOWN → 1 MOVE → UP` или `DOWN → UP` за `< 150ms` с `|dx| >= confirmThresholdPx`): язык переключается, пробел не вставляется. | Unit (`StateMachine`) | Обязательно |
-| 9 | **Вертикальный свайп от пробела** | `|dy| > maxVerticalDriftPx`: мгновенный `CANCELLED`, язык не меняется. | Unit (`StateMachine`) | Обязательно |
-| 10 | **Диагональный свайп от пробела** | Угол ~45° (`|dx| < |dy| * 1.75f`): `CANCELLED`, язык не меняется, нет случайного переключения при соскальзывании на буквы. | Unit (`StateMachine`) | Обязательно |
-| 11 | **Касание и отмена (`ACTION_CANCEL`)** | Прерывание системным жестом / уведомлением / сворачиванием: мгновенный сброс в `IDLE`, язык не меняется, нет «залипшего» состояния на следующем касании. | Unit (`StateMachine`) + Robolectric | Обязательно (свайп от нижнего края One UI 8 + входящий звонок/шторка) |
-| 12 | **Мультитач** | Второй палец касается экрана во время `POSSIBLE_SPACE_TAP` или `TRACKING_HORIZONTAL_SWIPE`: мгновенный `CANCELLED`, язык не меняется, двуручный набор работает штатно. | Unit (`StateMachine`) | Обязательно (быстрая печать двумя большими пальцами) |
-| 13 | **Удержание пробела (Long Press)** | Удержание `> maxStartDelayMs` (`260ms`): soft yield в `CANCELLED`, открывается штатный long-press Gboard (выбор языка или trackpad). | Unit (`StateMachine`) | Обязательно |
-| 14 | **Включённый `free_cursor` / `enable_cursor_trackpad_mode`** | Долгое удержание пробела запускает trackpad и позволяет двигать курсор по всей клавиатуре и фиксировать lock-режим без помех со стороны свайпа языка. | Частично (политика/состояние в Unit) | Обязательно (проверка на реальном Gboard `18.5.4`) |
-| 15 | **Включённый Glide typing** | Свайп-ввод слов, стартующий на буквах и проходящий над пробелом, работает нативно; быстрая печать + свайп-ввод не вызывают ложных смен языка. | Unit (старт вне пробела → `IDLE`) | Обязательно |
-| 16 | **Переключение через Globe** | Тап, long-press и `GlobeDrag` на клавише Globe работают штатно; после переключения через Globe индикатор на пробеле и последующий свайп по пробелу стартуют от нового текущего языка. | Robolectric (обновление при `SoftKeyView.s()`) | Обязательно |
-| 17 | **Разные раскладки** (напр. EN QWERTY + RU ЙЦУКЕН + символы `?123` + эмодзи) | Переключение с букв меняет раскладку и текст пробела; на экране символов `?123` пробел корректно определяется или безопасно пропускается без краша. | Robolectric | Обязательно |
-| 18 | **Одинаковая раскладка с разными языками** (напр. EN QWERTY + DE QWERTY + ES QWERTY) | Свайп L→R и R→L переключает именно `InputMethodEntry` (меняются словарь, автокоррекция и название языка на пробеле), а не зацикливается на одной раскладке. | Unit (`CyclePolicy` с одинаковым `layoutName`, разными `locale`) | Обязательно |
+1. **Новый 5-й компоновщик `GboardTouchDispatchFamilyComposer.kt`** (целевой метод: `KeyboardViewHolder.dispatchTouchEvent(MotionEvent)Z`, биндинг `swipe_dismiss_dispatch_touch`):
+   - Работает по принципу `selected_only_call_chain = true` (как `gboard-port-product-catalog.json:6`).
+   - Единая упорядоченная цепочка в прологе `KeyboardViewHolder.dispatchTouchEvent(MotionEvent)Z`:
+     1. `SWIPE_DISMISS` (`GboardSwipeDismissRuntime.onHeaderTouch(KeyboardViewHolder, MotionEvent)Z`) — **первый** (фильтрует только `keyboard_header_view_holder`).
+     2. `SAMSUNG_SPACEBAR` (`GboardSpacebarRuntime.onTouchDispatch(KeyboardViewHolder, MotionEvent)Z`) — **второй** (вызывается, только если первый вернул `false`, и работает только для касаний/активных сессий, стартовавших на пробеле в теле клавиатуры).
+   - Если любой обработчик возвращает `true`, `dispatchTouchEvent` немедленно возвращает `true`. Если оба вернули `false` — исполняется штатный код `KeyboardViewHolder.dispatchTouchEvent`.
+   - `GboardSwipeDismissBytecodePatch.kt` переводится на регистрацию в `GboardTouchDispatchFamilyComposer` — при выборе одного только `Swipe Dismiss` генерируется идентичный байткод.
+   - **Никакого дублирования владения `MotionEvent`:** каждый `MotionEvent` проходит через одну точку маршрутизации ровно один раз; при инъекции синтетического `ACTION_CANCEL` используется `ThreadLocal<Boolean>` guard (паттерн из `GboardSwipeDismissRuntime.java:92-100`), прозрачно пропускающий отмену в дочерние View Gboard.
 
-Дополнительные проверки на `SM-S901U1` (Android 16 / One UI 8):
-- Портретная и альбомная ориентации, режим одной руки, плавающая клавиатура;
-- Светлая тема, тёмная тема, Material You (Dynamic Color), пользовательская тема с изображением;
-- Совместная работа с `GboardSpacebarLogo` (включён/выключен), `GboardSwipeDismiss`, `GboardCursorTrackpad`;
-- Проверка на 1 языке (свайп не перехватывается, шевроны не рисуются).
+2. **Подключение к `GboardSoftKeyFamilyComposer.kt` (`SoftKeyView.s()V`):**
+   - `beforeSoftKeyBound(SoftKeyView)` и `afterSoftKeyBound(SoftKeyView)`:
+     - отслеживание актуального `WeakReference<SoftKeyView>` пробела (`id == 0x7f0b05b5`, `pressKeycode == 62` через переиспользование `GboardSpacebarLogoAdapter.isSpacebarKey`);
+     - обновление индикатора языка в стиле Samsung (с проверкой взаимоисключения с `GboardSpacebarLogoRuntime`).
 
----
+3. **Подключение к `GboardGestureFamilyComposer.kt` (`Lqil;->f(...)V`):**
+   - Лёгкая страховочная проверка `shouldSuppressSpaceGesture(Lqbc)`: если активен `SWIPE_TRACKING` / `SWIPE_COMMITTED` / `LONG_PRESS_CURSOR` (или только что отменённый жест пробела) и `keyCode == 62`, подавляет утечку `PRESS` и `LONG_PRESS` пробела в `Lqij;->o(...)V`.
 
-## 9. Перечень неизвестных вопросов и технических рисков
+4. **Подключение к `GboardFlagFamilyComposer.kt` и `GboardCursorTrackpadPreferencePatch.kt`:**
+   - При активном Samsung-пробеле принудительно возвращает `false` для флагов `free_cursor`, `free_cursor_lock_mode` и предпочтений `enable_scrub_move` / `0x7f14096b`.
 
-Следующие вопросы **невозможно подтвердить по текущим исходникам репозитория** — они являются обязательным чек-листом инспекции оригинального APK `18.5.4.993608717-release-arm64-v8a` перед написанием кода:
+5. **Подключение к жизненному циклу `Lphr;` (уже верифицированные биндинги в `gboard-version-bindings.json`):**
+   - `onStartInputView(EditorInfo, Z)V`, `onFinishInputView(Z)V`, `onWindowHidden()V`, `onDestroy()V` — принудительный сброс автомата, отмена `Handler`-таймера, снятие визуального режима курсора.
 
-1. **[КРИТИЧЕСКИЙ БЛОКЕР] Точные обфусцированные символы менеджера `InputMethodEntry` в Gboard `18.5.4`:**
-   - Какой класс/интерфейс в `18.5.4` хранит упорядоченный список активных `InputMethodEntry` и текущий активный `InputMethodEntry`?
-   - Какой метод переключает активный язык на конкретный `InputMethodEntry` (и вызывает ли он штатное обновление раскладки, словарей и `SoftKeyView` пробела)?
-   - Как получить экземпляр этого менеджера из `Lphr;` (`InputMethodService`) или его полей без утечек памяти?
-2. **[КРИТИЧЕСКИЙ] Поведение `enable_scrub_move` и его связь с `free_cursor` в `18.5.4`:**
-   - Действительно ли отключение `enable_scrub_move` ломает `free_cursor` / `free_cursor_lock_mode`, или `GboardCursorTrackpadRuntime` включает `enable_scrub_move` только ради совместимости с частью UI?
-   - Как `ScrubMoveMotionEventHandler` реагирует на синтетический `ACTION_CANCEL`, отправленный из `KeyboardViewHolder.dispatchTouchEvent` после `10dp` горизонтального движения: успевает ли он сдвинуть курсор на 1 символ до `ACTION_CANCEL` или начинает сдвиг позже (`>= touchSlop`)? (Если `ScrubMove` начинает двигать курсор на `<= 10dp`, потребуется либо снизить `startTrackingThresholdPx`, либо добавить хук подавления в сам `ScrubMoveMotionEventHandler`.)
-3. **[ВЫСОКИЙ] Внутренний обработчик keycode `-0x271b` и наличие `-0x271c` (или аналога) в `18.5.4`:**
-   - Существует ли в `18.5.4` встроенный keycode для переключения на предыдущий язык, и использует ли `-0x271b` MRU-порядок или линейный цикл?
-   - Каков конструктор/фабрика `Lohe;` (нужен только как запасной Уровень 2, если Уровень 1 окажется ограничен).
-4. **[СРЕДНИЙ] Мультиязычные `InputMethodEntry` (Multilingual Typing):**
-   - Если у пользователя в Gboard добавлено 2 языка в режиме «мультиязычный ввод» (1 общая QWERTY-раскладка на EN+DE), представлены ли они как 1 `InputMethodEntry` (с массивом `additionalSubtypes`) или как 2 отдельных `InputMethodEntry`? В случае 1 записи переключение языка свайпом невозможно/бессмысленно и должно корректно считаться `entries.size() == 1`.
-5. **[СРЕДНИЙ] Ресурсный ID и иерархия `KeyboardViewHolder` тела клавиатуры:**
-   - Подтвердить, что `SoftKeyView` пробела (`0x7f0b05b5`) всегда находится внутри `KeyboardViewHolder` (включая плавающий режим, режим одной руки и ландшафтную ориентацию на Android 16 / One UI 8).
-6. **[СРЕДНИЙ] Детекция активного `free_cursor_lock_mode` и голосового ввода:**
-   - Найти точное поле/флаг состояния `free_cursor` в `18.5.4`, чтобы Pre-flight Guard мгновенно отключал перехват свайпа во время активного трекпада.
-7. **[СРЕДНИЙ] Совместимость с навигационными жестами Android 16 / One UI 8:**
-   - На Galaxy S22 5G (One UI 8) системная полоса навигации внизу экрана (свайп влево/вправо для смены приложений) проходит вплотную к нижней границе пробела, особенно при скрытой кнопке скрытия клавиатуры. Необходимо проверить на устройстве достаточность `bottomEdgeExclusionPx` (`6dp`).
-8. **[НИЗКИЙ] Обновляемость биндингов при будущих апдейтах Gboard:**
-   - Биндинги менеджера `InputMethodEntry` (обфусцированные имена классов/методов) будут версионно-зависимыми и потребуют обновления в `gboard-version-bindings.json` при переходе на следующие версии Gboard (согласно существующему процессу `gboard-port-product-catalog.json`).
+6. **Почему `GboardPointerOwnerTransformation.kt` НЕ модифицируется для базовой схемы:**
+   - `GboardPointerOwnerTransformation.kt` (`stockRegisterCount = 21`, `expandedRegisterCount = 28`, `GboardPointerOwnerRegisterContract.kt:8-9`) обслуживает `TopRowSwipe`, `ZhuyinSlide`, `EnglishQwerty`, `ZhuyinToggle` и `LongPressQuickActions` на уровне `Lqin;->B`.
+   - Работа нашего контроллера на уровне `KeyboardViewHolder.dispatchTouchEvent` + `ACTION_CANCEL` **не требует** вмешательства в регистровый контракт `Lqin;->B` и сохраняет 100% изоляцию от всех патчей `GboardPointerOwnerTransformation`!
+
+7. **Совместимость с `GboardLatinGlobeKeyIgnoreIntervalBytecodePatch.kt`:**
+   - Патч работает в `Lphr;->aw(Lohe;)Z` и `LatinIme;->N()Lyrt;` только для клавиши Globe. Наш контроллер не конкурирует с его байткодом и не ломает его логику.
+
+8. **Контракты и реестр (план на Этап 4):**
+   - `RuntimeAbi.kt` — декларации статических методов `GboardSpacebarRuntime`.
+   - `gboard-port-product-catalog.json` и `gboard-version-bindings.json` — новые биндинги менеджера `InputMethodEntry` (после проверки APK `18.5.4`).
+   - `GboardContributionWiring.kt` и `GboardPatchRegistry.kt` — регистрация нового публичного патча `gboardSamsungSpacebarPatch` (включённого по умолчанию).
+
+### 10.3. Проектируемая структура новых классов (Этап 4)
+
+- **Модуль `patches` (Kotlin):**
+  - `shared/GboardTouchDispatchFamilyComposer.kt`
+  - `features/samsungspacebar/GboardSamsungSpacebarBytecodePatch.kt`
+  - `features/samsungspacebar/GboardSamsungSpacebarFlagOverridePatch.kt`
+  - `features/samsungspacebar/GboardSamsungSpacebarFeatureMarkerPatch.kt`
+- **Модуль `extensions/extension` (Java, пакет `dev.jason.gboardpatches.extension.samsungspacebar`):**
+  - `GboardSpacebarGestureState.java` (`IDLE`, `POSSIBLE_SPACE_TAP`, `SWIPE_TRACKING`, `SWIPE_COMMITTED`, `LONG_PRESS_CURSOR`, `CANCELLED`)
+  - `GboardSpacebarGestureConfig.java` (расчёт адаптивных порогов в `px` из `density`, `touchSlop`, `spacebarRect`, `longPressTimeout`)
+  - `GboardSpacebarGestureDecision.java` (результат шага автомата без побочных эффектов)
+  - `GboardSpacebarGestureStateMachine.java` (чистый детерминированный автомат + абстракция `LongPressScheduler`)
+  - `GboardSpacebarCursorController.java` (`InputConnection`, `finishComposingText`, `KEYCODE_DPAD_LEFT/RIGHT`, нелинейная кривая, гистерезис, edge auto-repeat, haptics)
+  - `GboardSpacebarLanguageSwitchBridge.java` (циклический переход по `InputMethodEntry` Gboard + кэш количества активных языков)
+  - `GboardSpacebarVisualController.java` (шевроны `‹ Язык ›`, микро-сдвиг текста при свайпе, визуальное приглушение клавиатуры в режиме `LONG_PRESS_CURSOR`)
+  - `GboardSpacebarRuntime.java` (единая точка входа `RuntimeAbi`, связывающая все компоненты)
 
 ---
 
-## 10. Пошаговый план будущей реализации
+## 11. Обработка конфликтов с Glide Typing, Swipe Dismiss и другими функциями Gboard
 
-Реализация разбита на небольшие проверяемые шаги (мелкие ревьюируемые коммиты, без смешивания рефакторинга и новой функциональности):
+### 11.1. Отдельное исследование конфликта с Glide Typing
 
-### Шаг 1. Верификация недостающих биндингов на целевом APK Gboard `18.5.4.993608717-release-arm64-v8a`
-- Проинспектировать декомпилированный байткод целевого APK `18.5.4` (не коммитить APK и извлечённые проприетарные файлы в репозиторий!).
-- Зафиксировать точные дескрипторы:
-  - менеджера `InputMethodEntry` (получение списка, текущего элемента, переключение на элемент по индексу/ссылке);
-  - поведения `ScrubMoveMotionEventHandler` относительно `startTrackingThresholdPx` и `ACTION_CANCEL`;
-  - признака активного `free_cursor` / `free_cursor_lock_mode`;
-  - наличия `KeyboardViewHolder` вокруг пробела во всех режимах клавиатуры.
-- Зафиксировать результаты верификации в документации и добавить контракты в `gboard-port-product-catalog.json` и `gboard-version-bindings.json`.
+Как Gboard обрабатывает свайповый ввод (Glide Typing) относительно пробела:
+1. **Сценарий 1 — Свайп начинается на букве и проходит транзитом над пробелом (например, слова с буквами нижнего ряда `z/x/c/v/b/n/m`):**
+   - `ACTION_DOWN` происходит **вне** `SoftKeyView` пробела (`0x7f0b05b5`).
+   - Автомат остаётся в `IDLE` на протяжении всего жеста. Ни одно событие `ACTION_MOVE` / `ACTION_UP` не перехватывается и не анализируется. **Конфликт невозможен.**
+2. **Сценарий 2 — Пользователь промахнулся и начал вертикальный/диагональный свайп от пробела вверх на буквы:**
+   - В `POSSIBLE_SPACE_TAP` как только `|dy| > maxVerticalDriftPx` или `|dx| < |dy| * 1.75f` (на раннем участке `~10–12dp`), таймер удержания немедленно отменяется, автомат уходит в `CANCELLED` **без отправки `ACTION_CANCEL` в Gboard** (soft yield).
+   - Все события продолжают поступать в конвейер Gboard без разрыва.
+3. **Сценарий 3 — Горизонтальный свайп строго по пробелу при включённом Glide Typing:**
+   - **[ОБОСНОВАННОЕ ПРЕДПОЛОЖЕНИЕ / НЕ ИССЛЕДОВАНО — ТРЕБУЕТ APK]** В стандартной архитектуре Gboard `GestureMotionEventHandler` (Glide Typing) инициирует след слова только на символьных/буквенных клавишах, но не на `KEYCODE_SPACE (62)`. При входе в `SWIPE_TRACKING` (на `12dp` внутри пробела) инъекция `ACTION_CANCEL` дополнительно гарантирует, что ни один внутренний `MotionEventHandler` Gboard не получит остаток горизонтального движения. На APK `18.5.4` это будет верифицировано дополнительно.
 
-### Шаг 2. Выделение компоновщика `GboardTouchDispatchFamilyComposer` (чистый рефакторинг)
-- Создать `GboardTouchDispatchFamilyComposer.kt` для `KeyboardViewHolder.dispatchTouchEvent(MotionEvent)Z`.
-- Перевести `GboardSwipeDismissBytecodePatch.kt` на использование нового компоновщика без изменения поведения upstream-фичи.
-- Добавить юнит-тесты компоновщика и проверить, что существующий набор тестов полностью зелёный.
+### 11.2. Матрица совместимости с остальными функциями Gboard
 
-### Шаг 3. Реализация ядра конечного автомата и политики цикла (pure Java + JVM tests)
-- Реализовать `GboardSpacebarSwipeConfig`, `GboardSpacebarSwipeState`, `GboardSpacebarSwipeCancelReason`, `GboardSpacebarSwipeDecision`, `GboardSpacebarSwipeStateMachine`.
-- Написать полный набор JVM unit-тестов (`GboardSpacebarSwipeStateMachineTest`, `GboardLanguageCyclePolicyTest`), покрывающий все 18 сценариев из раздела 8.2.
+| Функция Gboard | Механизм сохранения 100% совместимости |
+|---|---|
+| **Swipe Dismiss (`GboardSwipeDismissBytecodePatch`)** | Вызывается **первым** в `GboardTouchDispatchFamilyComposer`. Работает исключительно на `keyboard_header_view_holder` (шапка подсказок/тулбара), пространственно не пересекается с пробелом. |
+| **Автокоррекция, предиктивный ввод, словари, многоязычный ввод** | Не модифицируются. В `LONG_PRESS_CURSOR` вызывается `finishComposingText()` перед сдвигом курсора, чтобы не ломать текущее слово-кандидат. При смене языка через внутренний `InputMethodEntry` Gboard сам синхронно переключает словари и модель предсказаний. |
+| **Клавиша Globe (`GboardGlobeDragRuntime`, `GboardLatinGlobeKeyIgnoreIntervalRuntime`)** | Клавиша Globe имеет другой `SoftKeyView` (не `0x7f0b05b5`, не `keyCode == 62`). Если активен `GboardGlobeDragRuntime`, Pre-flight Guard не запускает автомат пробела. После смены языка через Globe хук `SoftKeyView.s()` автоматически синхронизирует индикатор и индекс языка. |
+| **Мультитач и остальные клавиши (`TopRowSwipe`, `LongPressQuickActions`, Shift+Space)** | Любой `ACTION_POINTER_DOWN` в `POSSIBLE_SPACE_TAP` мгновенно отменяет таймер и делает soft yield в Gboard; в `SWIPE_TRACKING` отменяет свайп без смены языка. Касания всех остальных клавиш вообще не выходят из `IDLE`. |
+| **Голосовой ввод, Эмодзи, GIF, Буфер обмена** | На панелях эмодзи/GIF/буфера обмена/голосового ввода `SoftKeyView` пробела (`0x7f0b05b5`, `keyCode == 62`) отсутствует или скрыт (`isShown() == false`), а смена режима вызывает `onWindowHidden` / перепривязку `SoftKeyView.s()` → автомат мгновенно сбрасывается в `IDLE`. |
+| **Системная полоса жестов One UI 8 (Android 16)** | Нижняя защитная зона `bottomEdgeExclusionPx` (`<= 6dp` при примыкании пробела к нижнему краю окна) и мгновенный сброс на системный `ACTION_CANCEL` предотвращают конфликты со свайпом переключения приложений. |
 
-### Шаг 4. Реализация моста переключения языков (`GboardSpacebarLanguageSwitchBridge`) и runtime (`GboardSpacebarSwipeRuntime`)
-- Реализовать Уровень 1 через верифицированные биндинги `InputMethodEntry` с защитой от NPE/reflection-ошибок и fail-safe деградацией.
-- Подключить `GboardSpacebarSwipeRuntime` к `RuntimeAbi.kt`, `GboardTouchDispatchFamilyComposer`, `GboardSoftKeyFamilyComposer`, `GboardGestureFamilyComposer` и lifecycle-хукам `Lphr;`.
-- Написать Robolectric-тесты для `ACTION_CANCEL` инъекции и lifecycle-сбросов.
+---
 
-### Шаг 5. Реализация визуальной индикации языка на пробеле (Samsung One UI style) и настроек
-- Реализовать `GboardSpacebarIndicatorRenderer` (шевроны `‹` / `›`, наследование цвета/размера из `TextView 0x7f0b05f5`, обработка длинных имён, взаимоисключение с `GboardSpacebarLogoRuntime`).
-- Реализовать `GboardSpacebarSwipeSettings` и `GboardSpacebarSwipeSettingsFeature` в `GboardKeyboardLayoutSettingsGroupFeature.java`.
-- Зарегистрировать публичный патч `gboardSpacebarSwipeLanguageSwitchPatch` в `GboardContributionWiring.kt` и `GboardPatchRegistry.kt`.
+## 12. Индикатор текущего языка на пробеле и визуальная обратная связь
 
-### Шаг 6. Сборка `.mpp`, автоматические тесты и верификация на устройстве `SM-S901U1`
-- Собрать `.mpp` bundle и прогнать полный цикл `gradle test` (включая проверки ABI, каталога и композиции всех патчей).
-- Пропатчить оригинальный APK Gboard `18.5.4.993608717-release-arm64-v8a` собранным `.mpp` и выполнить полную ручную проверку всех 18 сценариев + проверку One UI 8 жестов и тем на Samsung Galaxy S22 5G (`SM-S901U1`).
-- По результатам полевого теста откалибровать значения по умолчанию (`confirmThresholdPx`, `minHorizontalVelocityDpPerSec`, `bottomEdgeExclusionPx`).
+**[ПОДТВЕРЖДЕНО В КОДЕ]** Возможности переиспользования существующих механизмов репозитория:
+- `GboardSpacebarLogoAdapter.java:17-19, 53-165`: подтверждает ID пробела (`0x7f0b05b5`), `KEYCODE_SPACE = 62` и дочерний `TextView` первичной метки (`PRIMARY_LABEL_VIEW_ID = 0x7f0b05f5`), в который Gboard уже записывает название активного языка (`SoftKeyDef.i`, подтверждено в `GboardTopRowSwipeRuntimeSupport.java:403, 518-553`).
+- `GboardSpacebarLogoRuntime.java:113-152, 180-218`: подтверждает безопасный паттерн добавления неинтерактивного дочернего декоративного View внутрь `ViewGroup` пробела (`setClickable(false)`, `setLongClickable(false)`, `setFocusable(false)`, `IMPORTANT_FOR_ACCESSIBILITY_NO`, `setDuplicateParentStateEnabled(true)`) и хуки `beforeSoftKeyBound` / `afterSoftKeyBound` в `GboardSoftKeyFamilyComposer` (`SoftKeyView.s()`).
+
+### 12.1. Индикатор языка в стиле Samsung One UI (`GboardSpacebarVisualController`)
+
+1. **Отображение активного языка и шевронов `‹ Язык ›`:**
+   - При `enabledLanguages >= 2`: вокруг штатного `TextView 0x7f0b05f5` добавляются лёгкие неинтерактивные боковые шевроны `‹` и `›` (компактные векторные/текстовые маркеры размером ~65% от `textSize`).
+   - Цвет, размер и шрифт считываются **напрямую из штатного `TextView 0x7f0b05f5`** (`getCurrentTextColor()` с `alpha ≈ 0.55f`) — полная совместимость со светлыми, тёмными, Dynamic Color (Material You), Frosted Glass и пользовательскими темами Gboard без захардкоженных цветов.
+   - При `enabledLanguages < 2` или если пользователь включил upstream-патч «G Logo on Spacebar» (`GboardSpacebarLogoSettings.isEnabled(prefs)`): шевроны **не отображаются** (полная уступка визуального оверлея `GboardSpacebarLogoRuntime`, при этом сама механика свайпа и курсора продолжает работать).
+   - **Длинные названия языков / узкий пробел:** перед показом шевронов измеряется доступная ширина `spacebarWidth - horizontalPadding` и ширина текста; если запас по краям `< 12dp`, шевроны автоматически скрываются, а текст остаётся в одну строку с `ellipsize = END`, никогда не перекрывая границы клавиши.
+2. **Визуальная обратная связь при свайпе языка (аналог Samsung Keyboard):**
+   - В состоянии `SWIPE_TRACKING`: штатный `TextView 0x7f0b05f5` получает мягкое визуальное смещение `setTranslationX(clamp(dx * 0.25f, -12dp, +12dp))` (только GPU-свойство `translationX`, без `requestLayout()` и без просадок на 120 Гц экране Galaxy S22).
+   - При `SWIPE_COMMITTED`: короткая плавная анимация возврата `translationX → 0` (100ms) синхронно с обновлением текста языка через `SoftKeyView.s()`; при `CANCELLED`: плавный возврат в `0`.
+3. **Визуальная обратная связь при входе в `LONG_PRESS_CURSOR` (аналог Samsung Keyboard):**
+   - При срабатывании таймера удержания:
+     - На `KeyboardViewHolder` тела клавиатуры приглушается прозрачность буквенных/дочерних слоёв (или накладывается неинтерактивный полупрозрачный оверлей-трекпад поверх клавиш с мягким fade-in `100ms`, `clickable = false`), а на пробеле отображается минималистичный индикатор режима курсора (например, `‹  |  ›` или подсветка шевронов).
+     - При `ACTION_UP` / `ACTION_CANCEL` / `reset()`: мгновенное (`80ms` fade-out) восстановление исходной видимости клавиатуры, с гарантией от «залипшего» оверлея в `onWindowHidden` / `onFinishInputView`.
+
+---
+
+## 13. Тестовая матрица
+
+Обозначение типа проверки:
+- **[СТАТ / АВТОТЕСТ]** — проверяется статическим анализом, JVM unit-тестами (`StateMachine`, `CursorController` math, `CyclePolicy`), Robolectric-тестами (`Runtime`, `VisualController`, `ACTION_CANCEL`) и тестами Morphe-компоновщиков (`gradle test`).
+- **[УСТРОЙСТВО `SM-S901U1`]** — требует установки пропатченного Gboard `18.5.4.993608717-release-arm64-v8a` на Samsung Galaxy S22 5G (Android 16 / One UI 8).
+
+| № | Сценарий | Исходные условия | Последовательность действий | Ожидаемый результат | Возможные причины ошибки | Способ проверки |
+|---|---|---|---|---|---|---|
+| 1 | **Короткое нажатие пробела** | Активно текстовое поле, 2+ языков | `DOWN` на пробеле → `UP` за `< 150ms`, `\|dx\| < 5dp` | Вставляется ровно 1 пробел; язык и курсор не меняются | Слишком малый `swipeStartThresholdPx` или ложный `ACTION_CANCEL` в `POSSIBLE_SPACE_TAP` | **[СТАТ / АВТОТЕСТ]** + **[УСТРОЙСТВО]** |
+| 2 | **Долгое удержание без перемещения** | Активно текстовое поле с текстом, 2+ языков | `DOWN` на пробеле → держать `500ms` неподвижно (`< holdRadius`) → `UP` | Через `~320ms` срабатывает тактильный/визуальный вход в `LONG_PRESS_CURSOR`; после `UP` режим закрывается, **пробел не вставлен**, язык не сменился, штатный popup Gboard не появился | `longPressHoldMs` больше таймера `Lqin;->y()` или `ACTION_CANCEL` не отменил `Lqin` | **[СТАТ / АВТОТЕСТ]** + **[УСТРОЙСТВО]** |
+| 3 | **Долгое удержание с перемещением влево** | В поле введена строка из 30+ символов (вкл. эмодзи и кириллицу), курсор в конце | `DOWN` на пробеле → удержать `>= 320ms` (до отклика) → медленно и затем быстро вести палец влево по клавиатуре → `UP` | Курсор плавно движется влево (посимвольно при медленном движении, с ускорением при быстром), корректно переходит через эмодзи; пробел не вставлен, язык не сменился | Не вызван `finishComposingText()`, слишком грубый `pxPerChar` или `ACTION_MOVE` обрезается границами пробела | **[СТАТ / АВТОТЕСТ]** (математика/события) + **[УСТРОЙСТВО]** |
+| 4 | **Долгое удержание с перемещением вправо** | В поле введена строка (вкл. многострочный текст), курсор в начале | `DOWN` на пробеле → удержать `>= 320ms` → вести палец вправо (включая удержание у правого края экрана) → `UP` | Курсор плавно движется вправо, у правого края включается мягкий auto-repeat; на `UP` режим завершается без пробела и смены языка | Ошибка знака `accumulatedDeltaX` или неотменяемый тикер edge auto-repeat | **[СТАТ / АВТОТЕСТ]** + **[УСТРОЙСТВО]** |
+| 5 | **Быстрый свайп слева направо** | Настроено 3 языка (EN, RU, UK), активен EN | `DOWN` на пробеле → быстрый свайп вправо `>= 35dp` за `< 200ms` → `UP` | Мгновенный переход на следующий язык (`RU`), обновление раскладки и текста пробела; пробел не вставлен | Несработавший `ACTION_CANCEL` (вставит лишний пробел) или неверный биндинг `InputMethodEntry` | **[СТАТ / АВТОТЕСТ]** + **[УСТРОЙСТВО]** |
+| 6 | **Быстрый свайп справа налево** | Настроено 3 языка (EN, RU, UK), активен EN | `DOWN` на пробеле → быстрый свайп влево `>= 35dp` за `< 200ms` → `UP` | Мгновенный переход на предыдущий язык (`UK`), обновление раскладки и пробела; пробел не вставлен | Ошибка формулы `(i - 1 + N) % N` или использование MRU вместо линейного списка | **[СТАТ / АВТОТЕСТ]** + **[УСТРОЙСТВО]** |
+| 7 | **Два настроенных языка** | Настроено 2 языка (EN, RU), активен EN | Выполнить серию: свайп L→R, затем L→R, затем R→L, затем R→L | Циклическое переключение: `EN → RU → EN → RU → EN` без переключения на сторонний IME (Samsung Keyboard) | Использование системного `switchToNextInputMethod` вместо внутреннего `InputMethodEntry` | **[СТАТ / АВТОТЕСТ]** + **[УСТРОЙСТВО]** |
+| 8 | **Три и более языка** | Настроено 4 языка (EN, RU, DE, ES), активен EN | 4 свайпа L→R, затем 4 свайпа R→L | Строгий прямой цикл `EN→RU→DE→ES→EN` и строго обратный `EN→ES→DE→RU→EN` | Порядок списка языков в менеджере Gboard меняется по MRU после каждого переключения | **[СТАТ / АВТОТЕСТ]** (цикл) + **[УСТРОЙСТВО]** (проверка MRU) |
+| 9 | **Только один язык** | В Gboard включён только 1 язык (EN) | 1) Свайп L→R и R→L по пробелу.<br>2) Долгое удержание + движение. | 1) Шевроны скрыты, фиктивного переключения/мерцания нет.<br>2) `LONG_PRESS_CURSOR` работает полноценно и двигает курсор! | Отсутствие проверки `enabledLanguages >= 2` в ветке `SWIPE` или ошибочная блокировка `LONG_PRESS_CURSOR` при 1 языке | **[СТАТ / АВТОТЕСТ]** + **[УСТРОЙСТВО]** |
+| 10 | **Небольшое случайное движение при нажатии** | Быстрая печать текста, 2+ языков | `DOWN` на пробеле → микродвижение `5–9dp` → `UP` за `80–130ms` | Вставляется обычный пробел; язык не меняется, курсор не активируется | Заниженный `swipeStartThresholdPx` (`< 12dp`) | **[СТАТ / АВТОТЕСТ]** + **[УСТРОЙСТВО]** |
+| 11 | **Вертикальный свайп** | Активно поле ввода, 2+ языков | `DOWN` на пробеле → свайп вверх `30dp` (и диагональ 45°) → `UP` | Переход в `CANCELLED` (soft yield), язык не переключается, режим курсора не включается | Некорректный расчёт `horizontalDominanceRatio` (`1.75f`) или `maxVerticalDriftPx` | **[СТАТ / АВТОТЕСТ]** + **[УСТРОЙСТВО]** |
+| 12 | **Мультитач** | Двуручный набор текста, 2+ языков | `DOWN` на пробеле (палец 1) → `POINTER_DOWN` на букве (палец 2) → движение/отпускание | Мгновенный `CANCELLED` (отмена таймера удержания и свайпа), отсутствие ложного переключения языка, обе клавиши обрабатываются штатно | Игнорирование `ACTION_POINTER_DOWN` или `pointerCount > 1` | **[СТАТ / АВТОТЕСТ]** + **[УСТРОЙСТВО]** |
+| 13 | **`ACTION_CANCEL`** | Поле ввода; проверить в каждом состоянии (`POSSIBLE_SPACE_TAP`, `SWIPE_TRACKING`, `LONG_PRESS_CURSOR`) | Начать жест и прервать системным `ACTION_CANCEL` (шторка уведомлений, свайп от нижнего края One UI 8, сворачивание клавиатуры), затем нажать пробел снова | Немедленный сброс в `IDLE`, таймер отменён, оверлей трекпада снят, лишний пробел не вставлен, следующее нажатие работает штатно | Неотменённый `Handler`-таймер или зависший `state != IDLE` / зависший визуальный оверлей | **[СТАТ / АВТОТЕСТ]** + **[УСТРОЙСТВО]** |
+| 14 | **Glide Typing** | Включён непрерывный ввод (Glide Typing), 2+ языков | 1) Вводить слова свайпом, проходя над пробелом.<br>2) Сразу после слова сделать свайп по пробелу для смены языка. | 1) Слова вводятся без единого сбоя.<br>2) Смена языка срабатывает чисто, без лишних слов и пробелов. | Захват событий без проверки `ACTION_DOWN` внутри пробела или конфликт с `GestureMotionEventHandler` | **[СТАТ / АВТОТЕСТ]** (фильтр `DOWN`) + **[УСТРОЙСТВО]** |
+| 15 | **Globe** | Включена клавиша Globe, 2+ языков | 1) Тап по Globe.<br>2) Удержание/drag на Globe.<br>3) Сразу после Globe — свайп по пробелу. | Globe работает штатно (включая `GboardGlobeDrag` и `LatinGlobeIgnoreInterval`); последующий свайп по пробелу стартует от нового активного языка | Рассинхрон кэша текущего языка или конфликт с `GboardGlobeDragRuntime` | **[СТАТ / АВТОТЕСТ]** (композиция) + **[УСТРОЙСТВО]** |
+| 16 | **Swipe Dismiss** | Включён патч `swipe_down_to_dismiss_keyboard` | 1) Свайп вниз от строки подсказок.<br>2) Открыть клавиатуру снова и сделать свайп по пробелу и удержание пробела. | Swipe Dismiss закрывает клавиатуру штатно; свайп и удержание пробела работают без конфликтов | Ошибка маршрутизации в `GboardTouchDispatchFamilyComposer` | **[СТАТ / АВТОТЕСТ]** (байткод-тест компоновщика) + **[УСТРОЙСТВО]** |
+| 17 | **Быстрые повторные свайпы** | Настроено 3–4 языка | Сделать 4–5 быстрых свайпов по пробелу подряд (`L→R`, `L→R`, `R→L`, `R→L`) с паузой `120–200ms` между ними | Каждое движение даёт ровно 1 стабильное переключение языка; нет пропусков, зависаний и фантомных пробелов | Слишком большой `postSwitchCooldownMs` или устаревший `WeakReference<SoftKeyView>` после перепривязки раскладки | **[СТАТ / АВТОТЕСТ]** + **[УСТРОЙСТВО]** |
+| 18 | **Смена языка при активном вводе** | Пользователь набрал половину слова (активна композиция/подчёркивание и строка подсказок) | Сделать свайп по пробелу (L→R или R→L) и продолжить набор на новом языке | Набранная часть слова корректно фиксируется, раскладка, словари, предсказания и метка на пробеле мгновенно обновляются; набор продолжается без сбоя | Переключение языка не вызывает штатный сброс композиции или ломает `LatinIme` | **[УСТРОЙСТВО `SM-S901U1`]** |
+
+**Дополнительные обязательные проверки на `SM-S901U1` (Android 16 / One UI 8):**
+- Одинаковая раскладка с разными языками (EN QWERTY + DE QWERTY + ES QWERTY) — переключение меняет язык, словарь и метку пробела.
+- Разные раскладки (EN QWERTY + RU ЙЦУКЕН + экран символов `?123` + эмодзи + голосовой ввод).
+- Портретная и альбомная ориентации, режим одной руки, плавающая клавиатура, светлая/тёмная/Material You/Frosted Glass темы, включённый/выключенный `GboardSpacebarLogo`.
+- Тестирование в разнотипных редакторах: Samsung Notes, Chrome (WebView/input), Telegram, WhatsApp, поиск Google, многострочное поле.
+
+---
+
+## 14. Открытые технические вопросы и оставшиеся риски
+
+### 14.1. Классификация по уровню достоверности
+
+- **Подтверждённые факты (из кода репозитория):**
+  - `KeyboardViewHolder.dispatchTouchEvent(MotionEvent)Z` — надёжная единая точка перехвата; для совместной работы с `GboardSwipeDismissBytecodePatch.kt:40` требуется `GboardTouchDispatchFamilyComposer`.
+  - Пробел однозначно идентифицируется через `SoftKeyView` (`0x7f0b05b5`, `KEYCODE_SPACE = 62`, метка `0x7f0b05f5`) в `GboardSoftKeyFamilyComposer` (`SoftKeyView.s()`).
+  - Штатные `free_cursor`, `free_cursor_lock_mode` и `enable_scrub_move` (`Lqvt;->am`, `Lcht;->x(0x7f14096b)`) уже имеют верифицированные хуки и могут быть детерминированно отключены.
+  - `InputMethodService` (`Lphr;`) и `InputConnection` (`finishComposingText()`, `sendKeyEvent()`) напрямую доступны из runtime без reflection и уже применяются в `GboardEditorActions.java` и `GboardSwipeDismissRuntime.java`.
+- **Обоснованные инженерные предположения (подлежат калибровке на устройстве):**
+  - Значения по умолчанию `longPressHoldMs = 320ms`, `swipeStartThresholdPx = 12dp`, `swipeConfirmThresholdPx = 22%` (`28–44dp`), `pxPerChar = 10dp → 4dp`, `bottomEdgeExclusionPx = 6dp`.
+  - Комфортность визуального приглушения клавиатуры и тактильного отклика на `SM-S901U1` (120 Гц, One UI 8).
+- **Ещё не исследованные вопросы (требуют инспекции APK Gboard `18.5.4.993608717-release-arm64-v8a`):**
+  1. **[БЛОКЕР]** Точные обфусцированные дескрипторы менеджера `InputMethodEntry` в `18.5.4` (получение упорядоченного списка активных языков, текущего языка и метод переключения на конкретный `InputMethodEntry`) + способ безопасного получения экземпляра из `Lphr;`.
+  2. **[ВЫСОКИЙ]** Поведение `LatinIme` при вызове `ic.finishComposingText()` + `ic.sendKeyEvent(KEYCODE_DPAD_LEFT/RIGHT)`: синхронизируется ли строка подсказок через `onUpdateSelection` без артефактов, или предпочтительнее дергать внутреннее событие редактирования курсора Gboard.
+  3. **[ВЫСОКИЙ]** Точный таймаут `Lqin;->y()` при системной настройке Android «Короткая задержка удержания (300ms)»: нужен ли страховочный запрет `LONG_PRESS` с `keyCode == 62` в `GboardGestureFamilyComposer` (`Lqil;->f`) вдобавок к `ACTION_CANCEL`.
+  4. **[СРЕДНИЙ]** Подтверждение, что при принудительном `enable_scrub_move = false` и `free_cursor = false` в `18.5.4` не ломаются никакие сторонние функции Gboard (например, удаление слов свайпом с Backspace `enable_scrub_delete` — убедиться, что это отдельный флаг/настройка!).
+  5. **[СРЕДНИЙ]** Представление мультиязычного ввода (Multilingual Typing) в списке `InputMethodEntry` в `18.5.4` (1 запись или несколько).
+  6. **[СРЕДНИЙ]** Гарантия наличия `KeyboardViewHolder` вокруг пробела во всех режимах (`portrait`, `landscape`, `one-handed`, `floating`) и отсутствие инициации Glide Typing на `KEYCODE_SPACE (62)`.
+  7. **[НИЗКИЙ]** При отсутствии APK Samsung Keyboard (`com.samsung.android.honeyboard`) One UI 8 кривая ускорения курсора и точный `longPressHoldMs` будут откалиброваны эмпирически на `SM-S901U1`, а не скопированы из констант HoneyBoard.
+
+### 14.2. Основные технические риски и меры снижения
+
+- **Риск 1 (Рассинхрон `LatinIme` при движении курсора через `InputConnection`):** митигация — обязательный `finishComposingText()` перед первым шагом + проверка на APK `18.5.4` и в реальных приложениях (Chrome, Telegram, Notes).
+- **Риск 2 (Скрытая связь `enable_scrub_move` с `scrub_delete` на Backspace):** митигация — на APK `18.5.4` проверить все обращения к `enable_scrub_move` / `0x7f14096b` перед тем, как глушить их глобально; если ресурс общий — глушить только на пробеле (а перехват в `KeyboardViewHolder` всё равно изолирует пробел!).
+- **Риск 3 (Ощущение конфликта между удержанием и свайпом):** митигация — чёткий тактильный щелчок и визуальный переход клавиатуры в режим трекпада ровно в момент `longPressHoldMs` (`320ms`), плюс полевая калибровка на `SM-S901U1`.
+- **Риск 4 (Хрупкость биндингов при обновлении Gboard):** митигация — изоляция обфусцированных символов только в `GboardSpacebarLanguageSwitchBridge` и `gboard-version-bindings.json`; вся логика автомата и контроллера курсора (`InputConnection`) полностью независима от обфускации Gboard.
+
+---
+
+## 15. Рекомендованная последовательность будущей реализации
+
+1. **Шаг 1 — Верификация биндингов на APK Gboard `18.5.4.993608717-release-arm64-v8a` (без коммита APK):**
+   - Найти точные дескрипторы менеджера `InputMethodEntry` (список, текущий элемент, переход к элементу).
+   - Проверить все места использования `enable_scrub_move` / `0x7f14096b` (убедиться, что не задет Backspace scrub delete).
+   - Проверить взаимодействие `finishComposingText()` + `KEYCODE_DPAD_LEFT/RIGHT` с `LatinIme` и проверить таймаут `Lqin;->y()`.
+   - Зафиксировать контракты в `gboard-port-product-catalog.json` и `gboard-version-bindings.json`.
+2. **Шаг 2 — Рефакторинг `GboardTouchDispatchFamilyComposer` (отдельный чистый коммит):**
+   - Выделить компоновщик для `KeyboardViewHolder.dispatchTouchEvent(MotionEvent)Z` и перевести на него `GboardSwipeDismissBytecodePatch.kt` с сохранением 100% существующих тестов.
+3. **Шаг 3 — Чистое ядро автомата и контроллера курсора + JVM unit-тесты:**
+   - Реализовать `GboardSpacebarGestureStateMachine` (`TAP` / `SWIPE` / `LONG_PRESS_CURSOR`), политику цикла языков и математику `GboardSpacebarCursorController`.
+   - Покрыть автотестами сценарии 1–17 из раздела 13.
+4. **Шаг 4 — Мост переключения языков, отключение штатного Trackpad и интеграция runtime:**
+   - Реализовать `GboardSpacebarLanguageSwitchBridge`, `GboardSpacebarRuntime`, отключение `free_cursor`/`free_cursor_lock_mode`/`enable_scrub_move`, подключение к `RuntimeAbi.kt`, `GboardTouchDispatchFamilyComposer`, `GboardSoftKeyFamilyComposer`, `GboardGestureFamilyComposer` и lifecycle `Lphr;`.
+   - Добавить Robolectric-тесты (`ACTION_CANCEL`, lifecycle reset, взаимоисключение с `GboardSpacebarLogo`).
+5. **Шаг 5 — Визуальный слой Samsung One UI:**
+   - Реализовать `GboardSpacebarVisualController` (шевроны `‹ Язык ›`, наследование темы из `TextView 0x7f0b05f5`, мягкий сдвиг текста при свайпе и приглушение клавиш в режиме `LONG_PRESS_CURSOR`).
+   - Зарегистрировать публичный патч в `GboardContributionWiring.kt` и `GboardPatchRegistry.kt`.
+6. **Шаг 6 — Сборка `.mpp`, полный прогон `gradle test` и полевая калибровка на `SM-S901U1`:**
+   - Прогнать CI/тесты сборки `.mpp` bundle.
+   - Пропатчить оригинальный Gboard `18.5.4.993608717-release-arm64-v8a` и выполнить все 18 сценариев матрицы + проверку приложений и тем на Samsung Galaxy S22 5G (Android 16 / One UI 8).
