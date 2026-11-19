@@ -60,11 +60,11 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
         run: |
           ./gradlew --no-daemon --stacktrace \
-            :patches:compileTestKotlin \
+            :patches:compileKotlin \
             :patches:generateGboardVersionBindings \
             :patches:verifyGboardCapabilityWiring
 
-      - name: Run extension JVM unit tests (no APK task)
+      - name: Run extension JVM unit tests
         env:
           GITHUB_ACTOR: ${{ github.actor }}
           GITHUB_TOKEN: ${{ github.token }}
@@ -72,7 +72,8 @@ jobs:
           ./gradlew --no-daemon --stacktrace \
             :extensions:extension:testDebugUnitTest
 
-      - name: Confirm no package or APK tasks were requested
+      - name: Confirm package tasks were not requested
         run: |
-          echo "This workflow does not invoke :patches:test, :patches:jar, assemble, bundle, package, or release tasks."
-          echo "Patch JUnit execution and compileTestKotlin are intentionally deferred because their task graph can invoke the .mpp-producing jar task."
+          echo "This workflow requests production compilation, admission verification, and extension JVM tests only."
+          echo "It does not request :patches:test, :patches:jar, assemble, bundle, package, release, or publishing tasks."
+          echo "Patch JUnit tests remain deferred until a safe test task graph is designed."
