@@ -16,7 +16,7 @@ jobs:
         with:
           ref: main
           fetch-depth: 0
-          persist-credentials: true
+          persist-credentials: false
           token: ${{ secrets.GH_PAT }}
 
       - name: Configure Git
@@ -73,7 +73,13 @@ jobs:
       - name: Push import branch
         env:
           BRANCH: ${{ steps.merge.outputs.branch }}
-        run: git push origin "HEAD:refs/heads/$BRANCH"
+          GH_PAT: ${{ secrets.GH_PAT }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          AUTH_HEADER="$(printf 'x-access-token:%s' "$GH_PAT" | base64 -w 0)"
+          git -c "http.https://github.com/.extraheader=AUTHORIZATION: basic $AUTH_HEADER" \\
+            push origin "HEAD:refs/heads/$BRANCH"
 
       - name: Open pull request
         env:
