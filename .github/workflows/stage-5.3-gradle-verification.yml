@@ -1,0 +1,74 @@
+name: Stage 5.3 Gradle Verification
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/stage-5.3-gradle-verification.yml'
+      - 'patches/**'
+      - 'extensions/**'
+      - 'gradle/**'
+      - 'gradle.properties'
+      - 'settings.gradle.kts'
+      - 'gradlew'
+      - 'gradlew.bat'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: read
+
+concurrency:
+  group: stage-5.3-gradle-verification-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  gradle-verification:
+    name: Compile, admission and extension unit tests (no packages)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout source without persisted credentials
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Configure Android SDK packages
+        run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
+
+      - name: Verify Gradle wrapper
+        run: |
+          chmod +x ./gradlew
+          ./gradlew --version
+
+      - name: Compile patch main and test sources; generate target admission; verify capability wiring
+        env:
+          GITHUB_ACTOR: ${{ github.actor }}
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          ./gradlew --no-daemon --stacktrace \
+            :patches:compileTestKotlin \
+            :patches:generateGboardVersionBindings \
+            :patches:verifyGboardCapabilityWiring
+
+      - name: Run extension JVM unit tests (no APK task)
+        env:
+          GITHUB_ACTOR: ${{ github.actor }}
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          ./gradlew --no-daemon --stacktrace \
+            :extensions:extension:testDebugUnitTest
+
+      - name: Confirm no package or APK tasks were requested
+        run: |
+          echo "This workflow does not invoke :patches:test, :patches:jar, assemble, bundle, package, or release tasks."
+          echo "Patch JUnit execution is intentionally deferred because :patches:test is wired to the .mpp-producing jar task."
