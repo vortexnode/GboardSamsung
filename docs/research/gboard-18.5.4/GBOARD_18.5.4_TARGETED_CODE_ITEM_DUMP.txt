@@ -3,7 +3,7 @@
 Source APK: Gboard-v18.5.4.993608717-release-arm64-v8a.apk
 APK SHA-256: f47f44d33ab21d28aabfaec8292009c1173964ea238441734327a0a15ba32813
 
-This file contains selected code_item instruction streams extracted from the four original DEX files. It is not Java source and not a JADX/Baksmali disassembly. Each method is identified by its full descriptor and absolute code_item file offset. Instruction positions (+0000, +0001, ...) are 16-bit code-unit offsets within that method. Each line preserves raw 16-bit code units and, where recognized, annotates string, method, field, and branch references.
+This file contains selected code_item instruction streams extracted from the original `classes.dex` and `classes2.dex` files. It is not Java source and not a JADX/Baksmali disassembly. Each method is identified by its full descriptor and absolute code_item file offset. Instruction positions (+0000, +0001, ...) are 16-bit code-unit offsets within that method. Each line preserves raw 16-bit code units and, where recognized, annotates string, method, field, and branch references.
 
 Opcode names are deliberately generic (op_XX). Treat raw code units as primary evidence. Validate instruction widths, payloads, and control flow independently before relying on any interpretation. Do not infer semantics from method names alone. This dump is a navigation aid to enable a bytecode-aware tool to reconstruct the exact instruction stream.
 
