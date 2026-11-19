@@ -1,3 +1,5 @@
+> **Актуальное обновление после повторного анализа оригинального APK:** см. [SPACEBAR_STAGE_4_2_APK_REANALYSIS.md](SPACEBAR_STAGE_4_2_APK_REANALYSIS.md).
+> Этот документ ниже содержит предыдущие заметки; если они расходятся с новым отчётом, приоритет у нового отчёта.
 # Архитектура управления курсором с пробела и единого Touch Dispatcher (Gboard 18.5.4)
 
 > **Статус документа:** Архитектурная спецификация Stage 4.2 для `vortexnode/GboardSamsung` (`main`) под целевую версию Gboard `18.5.4.993608717-release-arm64-v8a` (Samsung Galaxy S22 5G `SM-S901U1`, Android 16 / One UI 8).
