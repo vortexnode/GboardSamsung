@@ -78,8 +78,7 @@ jobs:
         run: |
           set -euo pipefail
           AUTH_HEADER="$(printf 'x-access-token:%s' "$GH_PAT" | base64 -w 0)"
-          git -c "http.https://github.com/.extraheader=AUTHORIZATION: basic $AUTH_HEADER" \\
-            push origin "HEAD:refs/heads/$BRANCH"
+          git -c "http.https://github.com/.extraheader=AUTHORIZATION: basic $AUTH_HEADER" push origin "HEAD:refs/heads/$BRANCH"
 
       - name: Open pull request
         env:
