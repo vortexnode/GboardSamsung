@@ -962,4 +962,15 @@ stateDiagram-v2
 4. **Полноценное управление курсором** в Samsung Notes, Chrome (WebView), Telegram и многострочном поле: плавный сдвиг курсора, корректное прохождение через эмодзи/кириллицу/RTL, отсутствие порчи composing text и активного выделения, уважение `noScrubbing`.
 5. **100% сохранение штатных функций Gboard:** Glide Typing (включая траектории над пробелом), Swipe Dismiss от шапки, клавиша Globe + `GboardGlobeDrag` + `LatinGlobeIgnoreInterval`, Backspace scrub delete (`ScrubDeleteMotionEventHandler`), автокоррекция, inline-подсказки, голосовой ввод, буфер обмена, эмодзи, Direct Boot, отсутствие исключений `GboardPatches` в `logcat`.
 
+---
 
+## Этап 4.1 — статус глубокой трассировки Free Cursor и `NEXT`/`PREVIOUS`
+
+Подробный отчёт с картой подтверждённых дескрипторов, уровнями конкуренции жестов, сравнительной таблицей и точным перечнем блокеров вынесен в отдельный документ:
+
+- **[`docs/SPACEBAR_STAGE_4_1_DEEP_BYTECODE_TRACE.md`](./SPACEBAR_STAGE_4_1_DEEP_BYTECODE_TRACE.md)**
+
+**Итоговые статусы Этапа 4.1 (на основании `GBOARD_18.5.4_BYTECODE_REFERENCE_EXTRACT.md` и исходников `vortexnode/GboardSamsung`, без доступа к бинарному APK в контейнере):**
+- **Cursor:** `BLOCKED` — подтверждены классы `FreeCursorKeyboard`, `FreeCursorMotionEventHandler`, `TriggerFreeCursorMotionEventHandler`, enum `Lxfe` (`FREE_CURSOR_SOURCE_SPACE_LONG_PRESS_*`, `FREE_CURSOR_SOURCE_SWIPE_SPACE`), разделение `ScrubMoveMotionEventHandler` / `ScrubDeleteMotionEventHandler` и связка флагов `"free_cursor"` + `"free_cursor_lock_mode"` + `"enable_scrub_move"` / `0x7f14096b`; для выбора между `OPTION A` (переиспользование Free Cursor) и `OPTION B` (`InputConnection` DPAD) требуется JADX/Baksmali control-flow трассировка указанных 6 классов из APK `18.5.4`.
+- **Language switching:** `BLOCKED` — подтверждён путь `NEXT` (`-0x271b` через `Lphr;->aw(Lohe;)Z`, `Lqga.SWITCH_TO_NEXT_LANGUAGE`), буквальная строка `SWITCH_TO_PREVIOUS_LANGUAGE` в 4 DEX не найдена, а дескрипторы менеджера `InputMethodEntry` (список, текущий элемент, переключение на конкретный элемент) отсутствуют в биндингах и текущем DEX extract; требуется локальная JADX/Baksmali трассировка `Lqga.SWITCH_TO_NEXT_LANGUAGE` / `-10011` и `LanguageSwitcherAccessPointProvider` на APK `18.5.4`.
+- **Реализация (Фаза B):** остаётся заблокированной до получения control-flow выжимки по целевому APK `18.5.4.993608717-release-arm64-v8a`.
