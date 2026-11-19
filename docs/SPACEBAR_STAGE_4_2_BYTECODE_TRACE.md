@@ -1,3 +1,5 @@
+> **Актуальное обновление после повторного анализа оригинального APK:** см. [SPACEBAR_STAGE_4_2_APK_REANALYSIS.md](SPACEBAR_STAGE_4_2_APK_REANALYSIS.md).
+> Этот документ ниже содержит предыдущие заметки; если они расходятся с новым отчётом, приоритет у нового отчёта.
 # Stage 4.2 — Deep Bytecode Trace: Free Cursor Long-Press Handoff + Safe `PREVIOUS` Language
 
 > **Статус этапа:** **АУДИТ ВЫПОЛНЕН; КРИТИЧЕСКИЕ БЛОКЕРЫ PART A И PART B ОСТАЮТСЯ `BLOCKED` ИЗ-ЗА ОТСУТСТВИЯ БИНАРНЫХ DEX И STAGE 4.2 `code_item`-ДАМПОВ В КОНТЕЙНЕРЕ.**
