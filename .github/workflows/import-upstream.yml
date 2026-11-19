@@ -27,9 +27,11 @@ jobs:
       - name: Fetch and merge upstream history
         id: merge
         shell: bash
+        env:
+          GH_PAT: ${{ secrets.GH_PAT }}
         run: |
           set -euo pipefail
-          if [[ -z "${{ secrets.GH_PAT }}" ]]; then
+          if [[ -z "$GH_PAT" ]]; then
             echo "::error::Add a repository secret named GH_PAT with Contents: Read and write and Workflows: Read and write permissions."
             exit 1
           fi
@@ -48,7 +50,7 @@ jobs:
           git show upstream/main:README.md > UPSTREAM_README.md
           printf '%s\n' "$UPSTREAM_SHA" > UPSTREAM_COMMIT.txt
 
-          git add UPSTREAM_README.md UPSTREAM_COMMIT.txt
+          git add README.md UPSTREAM_README.md UPSTREAM_COMMIT.txt
           if ! git diff --cached --quiet; then
             git commit -m "docs: record imported upstream README and commit"
           fi
