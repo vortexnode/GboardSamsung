@@ -1,6 +1,8 @@
 name: Stage 5.3 Gradle Verification
 
 on:
+  push:
+    branches: [ci/stage-5.3-gradle-verification]
   pull_request:
     branches: [main]
     paths:
