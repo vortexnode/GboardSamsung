@@ -84,6 +84,7 @@ import dev.jason.gboardpatches.patches.gboard.features.splitkeyboard.gboardSplit
 import dev.jason.gboardpatches.patches.gboard.features.spacebarlogo.gboardSpacebarLogoFeatureMarkerPatch
 import dev.jason.gboardpatches.patches.gboard.features.symbolfooter.gboardSymbolFooterOrderBytecodePatch
 import dev.jason.gboardpatches.patches.gboard.features.symbolfooter.gboardSymbolFooterOrderFeatureMarkerPatch
+import dev.jason.gboardpatches.patches.gboard.features.swipedismiss.gboardSpacebarGestureResourcePatch
 import dev.jason.gboardpatches.patches.gboard.features.swipedismiss.gboardSwipeDismissBytecodePatch
 import dev.jason.gboardpatches.patches.gboard.features.swipedismiss.gboardSwipeDismissFeatureMarkerPatch
 import dev.jason.gboardpatches.patches.gboard.features.toprowswipe.gboardTopRowSwipeFeatureMarkerPatch
@@ -291,6 +292,7 @@ val gboardSwipeDismissPatch = gboardPublicResourcePatch(
         gboardPatchesSettingsPatch,
         gboardSwipeDismissFeatureMarkerPatch,
         gboardSwipeDismissBytecodePatch,
+        gboardSpacebarGestureResourcePatch,
     )
 }
 
