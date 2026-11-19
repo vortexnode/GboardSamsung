@@ -1,232 +1,337 @@
-# Этап 4.1 — глубокая трассировка Free Cursor и двунаправленного переключения языков в Gboard `18.5.4`
+# Этап 4.1 — Глубокая трассировка байткода Free Cursor и двунаправленного переключения языков (`NEXT`/`PREVIOUS`) в Gboard 18.5.4
 
-**Репозиторий:** `vortexnode/GboardSamsung` (ветка `main`)  
-**Целевая версия Gboard:** `18.5.4.993608717-release-arm64-v8a` (`SHA-256: f47f44d33ab21d28aabfaec8292009c1173964ea238441734327a0a15ba32813`)  
-**Тип этапа:** исключительно исследовательский (без изменения исходного кода, ABI, bindings, Gradle, registry, wiring, workflows и без сборки `.mpp`).
-
----
-
-## 1. Статус исходных артефактов и границы верификации в текущей среде
-
-### 1.1. Что было доступно и проверено напрямую
-1. **Бинарные APK/DEX Gboard `18.5.4` в текущей контейнерной среде отсутствуют** (`find . /public/assets/aistudio /tmp -maxdepth 4 \( -name "*.apk" -o -name "*.dex" -o -name "*.smali" \)` вернул 0 файлов). Поэтому живая декомпиляция `classes.dex`–`classes4.dex` через JADX или Baksmali в данном контейнере технически невыполнима.
-2. **Использованные авторитетные источники (прочитаны напрямую):**
-   - `docs/GBOARD_18.5.4_BYTECODE_REFERENCE_EXTRACT.md` (прямое извлечение дескрипторов классов/методов и string/method-ссылок из `classes.dex`–`classes4.dex` целевого APK);
-   - `docs/SAMSUNG_KEYBOARD_5.9.50.10_BYTECODE_REFERENCE_EXTRACT.md` (эталонные ссылки `classes2.dex` Samsung Keyboard `5.9.50.10`);
-   - `docs/SPACEBAR_LANGUAGE_SWITCH_DESIGN.md` и `docs/TECHNICAL_AUDIT.md`;
-   - реальные исходники и подтверждённые биндинги `vortexnode/GboardSamsung` для Gboard `18.5.4`:
-     - `patches/src/main/resources/gboard/gboard-version-bindings.json` (`profile_version: 1.6.0`, `target_version: 18.5.4`);
-     - `GboardCursorTrackpadPreferencePatch.kt`, `GboardCursorTrackpadFlagValuePatch.kt`, `GboardCursorTrackpadPolicy.java`, `GboardCursorTrackpadRuntime.java`, `GboardCursorTrackpadSettingsFeature.java`, `GboardCursorTrackpadPreferenceTest.java`;
-     - `GboardLongPressQuickActionsReflectionHandles.java`, `GboardLongPressQuickActionsRuntime.java`, `GboardLongPressQuickActionsInputEventPatch.kt`;
-     - `GboardGlobeDragAdapter.java`, `GboardGlobeDragRuntime.java`, `GboardLatinGlobeKeyIgnoreIntervalBytecodePatch.kt`;
-     - `GboardSwipeDismissBytecodePatch.kt`, `GboardSwipeDismissRuntime.java`;
-     - `GboardPointerOwnerTransformation.kt`, `GboardGestureFamilyComposer.kt`, `GboardSoftKeyFamilyComposer.kt`, `GboardFlagFamilyComposer.kt`;
-     - `GboardSpacebarLogoAdapter.java`, `GboardSpacebarLogoRuntime.java`, `GboardEditorActions.java`, `RuntimeAbi.kt`.
-3. **Git-среда:** в контейнере отсутствует каталог `.git` (`ls .git` → `No such file or directory`), поэтому локальный `git commit` / `git push` из контейнера невозможен. При этом через GitHub API проверено актуальное содержимое `docs/` в ветке `main` (`vortexnode/GboardSamsung`) — состав из 8 документов полностью совпал с локальной копией.
-
-### 1.2. Строгий перечень того, что НЕВОЗМОЖНО доказать без полной декомпиляции APK `18.5.4`
-Без JADX/Baksmali-дизассемблирования `Gboard-v18.5.4.993608717-release-arm64-v8a.apk` невозможно доказать на уровне инструкций (control-flow):
-- полные тела и ветвления `FreeCursorKeyboard` (`e`, `eR`, `m`, `h`, `P`), `FreeCursorMotionEventHandler`, `TriggerFreeCursorMotionEventHandler` и места использования всех констант `Lxfe;`;
-- точный возвращаемый тип и условия вызова методов `FreeCursorKeyboard`, `ScrubMotionEventHandler`, `ScrubMoveMotionEventHandler`, `ScrubDeleteMotionEventHandler`;
-- зависимость `TriggerFreeCursorMotionEventHandler` и `ScrubDeleteMotionEventHandler` от `"enable_scrub_move"` / `0x7f14096b`;
-- ветвления `Lqin;->y()V` и точный таймаут `space_long_press_ime_picker`;
-- обработчик `Lqga.SWITCH_TO_NEXT_LANGUAGE` / `-0x271b`, структуру и обфусцированные дескрипторы менеджера `InputMethodEntry` (получение списка, текущего элемента и переключение по индексу/элементу, наличие шага `-1` или MRU-сортировки);
-- декодированные значения XML/arsc-ресурсов порогов Free Cursor / Scrub.
-
-Все утверждения ниже строго разделяют **непосредственно доказанное** и **гипотезы / блокеры**.
+> **Статус документа:** Обновлённый исследовательский отчёт Этапа 4.1 на основе **независимого декодирования raw 16-bit Dalvik code units** из `code_item` целевого APK Gboard `18.5.4.993608717-release-arm64-v8a`.
+>
+> **Репозиторий:** `vortexnode/GboardSamsung` (`main`)
+> **Целевая версия Gboard:** `18.5.4.993608717-release-arm64-v8a` (`SHA-256: f47f44d33ab21d28aabfaec8292009c1173964ea238441734327a0a15ba32813`)
+> **Целевое устройство:** Samsung Galaxy S22 5G (`SM-S901U1`), Android 16 / One UI 8
+> **Ограничение этапа:** Исходный код, патчи, runtime, биндинги, тесты, Gradle и файлы в `docs/research/gboard-18.5.4/` **не изменялись**; сборки `.mpp` / APK **не запускались**.
 
 ---
 
-## 2. Исследование A — встроенный Free Cursor в Gboard `18.5.4`
+## 1. Инвентарь источников и аудит декодирования raw 16-bit Dalvik code units
 
-### 2.1. Сводка подтверждённых дескрипторов и байткод-ссылок
+### 1.1. Использованные артефакты из `docs/research/gboard-18.5.4/`
 
-| Артефакт / DEX / исходник | Класс / тип | Подтверждённый descriptor / сигнатура | Конкретные вызовы, строки, enum | Что доказано непосредственно | Что остаётся гипотезой / не доказано |
-|---|---|---|---|---|---|
-| `GBOARD_18.5.4_BYTECODE_REFERENCE_EXTRACT.md` (DEX extract) | `Lcom/google/android/libraries/inputmethod/freecursor/FreeCursorKeyboard;` | Методы `e(Landroid/view/inputmethod/EditorInfo;Ljava/lang/Object;)` (return type в extract не указан), `eR(Lcom/google/android/libraries/inputmethod/widgets/SoftKeyboardView;Lcom/google/android/libraries/inputmethod/metadata/KeyboardViewDef;)`, `m(Lohe;)`, `h()`, `P(Lohe;)` | Строки в `e(...)`: `"free_cursor_activation_source"`, `"free_cursor_activation_swipe_direction"`; конструирование объекта с enum источника Free Cursor; `eR` привязывает click listeners к view; `m(Lohe)` обрабатывает внутренние события клавиатуры; `h()` меняет видимость и эмитит события; `P(Lohe)` читает состояние текста/выделения редактора. | В APK `18.5.4` существует полноценный класс клавиатуры Free Cursor, принимающий `EditorInfo` + payload аргумент с ключами `free_cursor_activation_source` и `free_cursor_activation_swipe_direction` и реагирующий на `Lohe;`. | Точные возвращаемые типы методов, условия открытия/закрытия клавиатуры, вызывается ли `InputConnection.sendKeyEvent` или `setSelection`, и можно ли запускать `FreeCursorKeyboard` программно напрямую. |
-| `GBOARD_18.5.4_BYTECODE_REFERENCE_EXTRACT.md` (`classes3.dex`) | `Lxfe;` | Enum-тип (точные дескрипторы полей/методов в extract не приведены) | Константы: `FREE_CURSOR_SOURCE_DIRECT_KEYCODE`, `FREE_CURSOR_SOURCE_SPACE_LONG_PRESS_MULTI_KEYBOARD`, `FREE_CURSOR_SOURCE_SPACE_LONG_PRESS_SINGLE_KEYBOARD`, `FREE_CURSOR_SOURCE_SWIPE_DEL`, `FREE_CURSOR_SOURCE_SWIPE_DPAD`, `FREE_CURSOR_SOURCE_SWIPE_SPACE`, `FREE_CURSOR_SOURCE_UNSPECIFIED`. | Сборка `18.5.4` явно различает активацию Free Cursor через long-press пробела (single/multi keyboard), swipe по пробелу, swipe по Del, swipe по D-pad и прямой keycode. | Какие именно классы конструируют/читают каждую из этих констант, какая константа включена по умолчанию на `SM-S901U1`, и какой keycode соответствует `FREE_CURSOR_SOURCE_DIRECT_KEYCODE`. |
-| `GBOARD_18.5.4_BYTECODE_REFERENCE_EXTRACT.md` (DEX extract) | `Lcom/google/android/libraries/inputmethod/freecursor/FreeCursorMotionEventHandler;` и `TriggerFreeCursorMotionEventHandler;` | Классы подтверждены; полные дескрипторы методов в extract не раскрыты | Наличие двух отдельных `MotionEventHandler`: триггер (`TriggerFreeCursorMotionEventHandler`) и активный обработчик (`FreeCursorMotionEventHandler`). | В Gboard `18.5.4` разделены фаза триггера входа в Free Cursor и фаза обработки касаний внутри активного Free Cursor. | Точная логика перехвата `MotionEvent`, владение указателем после активации, завершение на `ACTION_UP`/`ACTION_CANCEL`, условия фильтрации `FREE_CURSOR_SOURCE_SWIPE_SPACE`. |
-| `gboard-version-bindings.json` + `GboardCursorTrackpadPolicy.java:4-5` + `GboardCursorTrackpadPreferencePatch.kt:24-43` + `GboardCursorTrackpadRuntime.java:11-37` | `Loki;`, `Lqvt;`, `Lcht;` | `Loki;->g()Ljava/lang/Object;`, `Loki;->a:Ljava/lang/String;`; `Lqvt;->am(Ljava/lang/String;ZZ)Z`; `Lcht;->x(IZ)Z` | Флаги `"free_cursor"`, `"free_cursor_lock_mode"`; строковая настройка `"enable_scrub_move"`; строковый ресурс-ключ `0x7f14096b`. В `gboard_settings_text.xml:2200,2344` фича описана как «Long-press the space bar to open a trackpad ... with a lock mode». | В `GboardSamsung` уже подтверждены точные точки управления флагами `free_cursor`/`free_cursor_lock_mode` и настройкой `enable_scrub_move` (`0x7f14096b`). **Критическое наблюдение из кода репо:** штатный патч `GboardCursorTrackpad` форсирует **одновременно** `free_cursor = true`, `free_cursor_lock_mode = true` и `enable_scrub_move / 0x7f14096b = true`. | Не доказано, является ли `enable_scrub_move = true` жёстким предварительным условием для работы `TriggerFreeCursorMotionEventHandler`, или только для включения UI-переключателя/горизонтального scrub. |
-| `GBOARD_18.5.4_BYTECODE_REFERENCE_EXTRACT.md` (DEX extract) | `ScrubMotionEventHandler`, `ScrubMoveMotionEventHandler`, `ScrubDeleteMotionEventHandler` | `ScrubMotionEventHandler`: `g(MotionEvent)`, `p(MotionEvent, int)`, `o(int, float, float)`, `r(MotionEvent, boolean)`, `b(MotionEvent)`, `t(MotionEvent)`, `c()` | `g(MotionEvent)` вызывает `SoftKeyboardView.A(MotionEvent, int)`, `SoftKeyView.f(qae)`, `ActionDef.b()`; `p` читает `getHistorySize/getHistoricalX/Y`; `o` вызывает `Rect.contains`, `Math.abs`, `c()`; `r` ссылается на `"noScrubbing"`; конструктор читает integer/dimension ресурсы. | Горизонтальный scrub-курсор (`ScrubMoveMotionEventHandler`) и свайп-удаление с Backspace (`ScrubDeleteMotionEventHandler`) являются **раздельными подклассами** `ScrubMotionEventHandler`. Scrub уважает `EditorInfo` опцию `"noScrubbing"`. | Не доказано, зависит ли `ScrubDeleteMotionEventHandler` от `enable_scrub_move` / `0x7f14096b` и вызывает ли `ScrubMoveMotionEventHandler` переход в `FreeCursorKeyboard` (`FREE_CURSOR_SOURCE_SWIPE_SPACE`). |
-| `gboard-version-bindings.json` + `GboardLongPressQuickActionsReflectionHandles.java:85-86,114,292-306,361` | `Lqin;` (pointer tracker) | `Lqin;->B(SoftKeyView,FFJI)V`, `r(JI)V`, `s(J)V`, `C()V`, `ac()V`, `Lqin;->y()V`, поле `Lqin;->A:Ljava/util/concurrent/Future;` | `y()` планирует `Future` долгого нажатия в поле `A`; `s(J)V` отменяет указатель; в DEX extract присутствует строка `"space_long_press_ime_picker"`. | Подтверждены точные дескрипторы планирования и отмены `longPressFuture` (`Lqin;->y()V` и `Lqin;->A:Ljava/util/concurrent/Future;`). | Не доказаны тело `Lqin;->y()V` (источник таймаута при настройке *Short*) и точное место обработки `"space_long_press_ime_picker"` в `18.5.4`. |
+| Файл | Назначение | Проверено |
+|---|---|---|
+| `docs/research/gboard-18.5.4/GBOARD_18.5.4_DEX_REFERENCE_EXTRACT.md` | Идентификация APK (`95,577,506` байт) и SHA-256 всех 4 оригинальных DEX-файлов | Да (100%) |
+| `docs/research/gboard-18.5.4/GBOARD_18.5.4_TARGETED_METHOD_INDEX.txt` | Индекс `method_ids` по Free Cursor, Scrub, `SoftKeyboardView`, `KeyboardViewHolder`, `Lqga;`, `Lxfe;` | Да (100%) |
+| `docs/research/gboard-18.5.4/GBOARD_18.5.4_TARGETED_CODE_ITEM_DUMP.txt` | Raw `code_item` дампы (`2 423` строки): `ScrubMotionEventHandler`, `InlineSuggestionScrubSpaceMotionEventHandler`, `ScrubDeleteMotionEventHandler`, `ScrubMoveMotionEventHandler`, `FreeCursorKeyboard`, `FreeCursorMotionEventHandler`, `TriggerFreeCursorMotionEventHandler` | Да (100%) |
+| `docs/research/gboard-18.5.4/GBOARD_18.5.4_LANGUAGE_ENUM_XREF_CODE.txt` | Raw `code_item` дампы (`3 622` строки): `Lhcp;->U`, `Ligz;->ad`, `Lpux;->fM`, `Lpux;->fN`, `Lqcm;-><clinit>`, `Lqev;-><clinit>`, `Lqfz;-><clinit>`, `Lqga;`, `FreeCursorKeyboard;->e/h`, `Lomy;->a`, `Lomz;`, `Looc;->a`, `Lxfe;` | Да (100%) |
+| `docs/research/gboard-18.5.4/README_FOR_AI_STUDIO_RU.md` | Паспорт экстракции и ограничения | Да (100%) |
 
-### 2.2. Ответы на 12 обязательных вопросов Исследования A
+**Контрольные SHA-256 DEX-файлов целевого APK:**
+- `classes.dex` (`7,859,484` B): `b403bf2797f56b6bae2ac3f6a10fe10fba3012b201b7c26c120f7370139f606e`
+- `classes2.dex` (`8,465,652` B): `2529a75190010707d17b51f0a63cccb9a2b8dae5a6c9c598445edd7588a7959d`
+- `classes3.dex` (`3,683,072` B): `53e70ef05fe2515e4675d25d2b08708698095d95aa06dca4201d15c7f7cd8f92`
+- `classes4.dex` (`680,452` B): `0b5f0b0e2c28e06b9ac81b063f95848b04ea236f3a49df6bf2649c9fb90d7e17`
 
-1. **Какой класс фактически принимает решение об активации Free Cursor?**
-   - *Частично подтверждено / гипотеза:* по иерархии классов из `GBOARD_18.5.4_BYTECODE_REFERENCE_EXTRACT.md` главным кандидатом является `TriggerFreeCursorMotionEventHandler` (в паре с `FreeCursorKeyboard.e(EditorInfo, Object)`), однако без декомпиляции тела `TriggerFreeCursorMotionEventHandler` и поиска всех call sites `Lxfe;` это **не доказано на уровне control-flow**.
-2. **Как long-press пробела преобразуется в `FREE_CURSOR_SOURCE_SPACE_LONG_PRESS_SINGLE_KEYBOARD` или `MULTI_KEYBOARD`?**
-   - *Не доказано (`BLOCKED`):* наличие обеих констант в `Lxfe;` (`classes3.dex`) подтверждено, но call sites, формирующие эти значения (и передающие их в `FreeCursorKeyboard.e(EditorInfo, Object)` под ключом `free_cursor_activation_source`), отсутствуют в DEX reference extract.
-3. **Можно ли активировать Free Cursor программно из нашего runtime, не имитируя касания и не включая `FREE_CURSOR_SOURCE_SWIPE_SPACE`?**
-   - *Не доказано (`BLOCKED`):* косвенным указанием на такую возможность является константа `Lxfe.FREE_CURSOR_SOURCE_DIRECT_KEYCODE`, но конкретный целочисленный keycode, принимающий его метод и передача владения текущим `MotionEvent` после программного открытия `FreeCursorKeyboard` не подтверждены байткодом.
-4. **Существует ли публичный или внутренний метод/интерфейс для запуска Free Cursor? Точный descriptor и сигнатура.**
-   - *Не подтверждён (`BLOCKED`):* известна только внутренняя точка активации клавиатуры `FreeCursorKeyboard.e(Landroid/view/inputmethod/EditorInfo;Ljava/lang/Object;)` (без подтверждённого возвращаемого типа и без подтверждённого фабричного/менеджерского вызова, который переключает активный `Keyboard` на `FreeCursorKeyboard`). Точный метод запуска **не выдумывается**.
-5. **Кто становится владельцем `MotionEvent` после активации?**
-   - *Не доказано (`BLOCKED`):* в APK подтверждён отдельный `FreeCursorMotionEventHandler`, но порядок передачи уже начатого жеста (`ACTION_DOWN` на пробеле → переход в `FreeCursorKeyboard` → последующие `ACTION_MOVE` / `ACTION_UP`) от `TriggerFreeCursorMotionEventHandler` к `FreeCursorMotionEventHandler` требует декомпиляции обоих классов.
-6. **Как Free Cursor завершает работу при `ACTION_UP`, `ACTION_CANCEL`, смене окна и завершении input session?**
-   - *Не доказано (`BLOCKED`):* в `FreeCursorKeyboard` видны `h()` (видимость и внутренние события) и `m(Lohe)`, а на `Lphr;` подтверждены `onWindowHidden()V`, `onFinishInputView(Z)V`, `onFinishInput()V`, `onDestroy()V` (`gboard-version-bindings.json`), но точная логика завершения `FreeCursorMotionEventHandler` на `ACTION_UP` / `ACTION_CANCEL` без APK не прослежена.
-7. **Вставляется ли обычный пробел после отпускания пальца?**
-   - *Не доказано на уровне байткода Free Cursor (`BLOCKED`), но архитектурно контролируемо:* при использовании нашего единого `GboardTouchDispatchFamilyComposer` + страховочной стадии в `GboardGestureFamilyComposer` (`Lqil;->f` для `keyCode == 62`) утечка `KEYCODE_SPACE` гарантированно подавляется на уровне диспетчера независимо от того, как ведёт себя `TriggerFreeCursorMotionEventHandler`. Для штатного пути без нашего `ACTION_CANCEL` поведение должно быть проверено по телу `TriggerFreeCursorMotionEventHandler`.
-8. **Можно ли гарантированно исключить вызов `space_long_press_ime_picker`?**
-   - *Частично подтверждено:* на уровне нашего диспетчера — **да** (отмена через синтетический `ACTION_CANCEL` в `KeyboardViewHolder` вызывает `Lqin;->s(J)V`, отменяющий `Lqin;->A:Ljava/util/concurrent/Future;`, плюс страховочное подавление `LONG_PRESS` для `keyCode == 62` в `Lqil;->f`). Как именно сам `TriggerFreeCursorMotionEventHandler` подавляет `space_long_press_ime_picker` внутри Gboard, без декомпиляции не доказано.
-9. **Требуется ли `free_cursor_lock_mode` или режим может работать только пока палец удерживается?**
-   - *Не доказано (`BLOCKED`):* в `GboardCursorTrackpadPolicy.java:4-5` подтверждены два **раздельных** флага `"free_cursor"` и `"free_cursor_lock_mode"`. Это указывает на потенциальную независимость базового Free Cursor от lock mode, но точное поведение при `free_cursor = true, free_cursor_lock_mode = false` (закрывается ли сразу на `ACTION_UP`) требует проверки кода `FreeCursorKeyboard` / `FreeCursorMotionEventHandler`.
-10. **Можно ли заблокировать `FREE_CURSOR_SOURCE_SWIPE_SPACE`, сохранив активацию Free Cursor через long-press?**
-    - *Не доказано (`BLOCKED`):* архитектурно `GboardTouchDispatchFamilyComposer` способен перехватывать горизонтальный свайп по пробелу раньше `TriggerFreeCursorMotionEventHandler` и `ScrubMoveMotionEventHandler`, но неизвестно, не запускается ли `FREE_CURSOR_SOURCE_SWIPE_SPACE` по флагу/ветке, неразрывно связанной с `enable_scrub_move` или `TriggerFreeCursorMotionEventHandler`.
-11. **Как связаны Free Cursor и Scrub Move? Можно ли отключить только горизонтальный scrub, не затронув Scrub Delete?**
-    - *Частично подтверждено:*
-      - **Подтверждено в DEX extract:** `ScrubMoveMotionEventHandler` и `ScrubDeleteMotionEventHandler` — два отдельных подкласса `ScrubMotionEventHandler`.
-      - **Подтверждено в исходниках репо (`GboardCursorTrackpadRuntime.java:11-37`):** существующий патч `GboardCursorTrackpad` форсирует `"enable_scrub_move"` (`Lqvt;->am`) и `0x7f14096b` (`Lcht;->x`) в `true` вместе с `"free_cursor"`.
-      - **Не доказано (`BLOCKED`):** зависит ли `FreeCursor` от `enable_scrub_move = true`, и читает ли `ScrubDeleteMotionEventHandler` ключ `"enable_scrub_move"` / `0x7f14096b` или отдельный ключ (`enable_scrub_delete`). **Поэтому отключать общий флаг `enable_scrub_move` / `0x7f14096b` до проверки байткода запрещено.**
-12. **Как Free Cursor взаимодействует с composing text, inline suggestions и Glide Typing?**
-    - *Не доказано (`BLOCKED`):* в `GBOARD_18.5.4_BYTECODE_REFERENCE_EXTRACT.md` подтверждено лишь то, что `FreeCursorKeyboard.P(Lohe)` читает состояние текста/выделения редактора, а в DEX присутствуют `INLINE_SUGGESTION_SELECT_BY_SWIPE_ON_SPACEBAR` и `Lphr.dF(...)` (`finishComposingText()`). Связь `FreeCursorKeyboard` с `Lphr.dF(...)`, `Lpdd.i(...)` (`setSelection`) и `InputConnection.sendKeyEvent` не прослежена.
+Также сверены с исходниками `vortexnode/GboardSamsung` (`SpacebarSwipePatch.kt`, `SpacebarSwipeRuntime.kt`, `SwipeDismissPatch.kt`, `LatinGlobeIgnoreIntervalPatch.kt`, `docs/GBOARD_18.5.4_BYTECODE_REFERENCE_EXTRACT.md`).
+
+### 1.2. КРИТИЧЕСКИЙ аудит багов кастомного дампера (исправлено при независимом декодировании)
+
+При независимой побитовой проверке 16-bit code units (форматы Dalvik Bytecode spec) в обоих файлах дампов выявлены и полностью устранены **две систематические ошибки авто-дизассемблера**:
+
+1. **Ошибочная длина 12x-инструкций `/2addr` для `float`/`double` (`0xc6`–`0xc9`, `0xce`):**
+   Дампер верно считал целочисленные `0xb0`–`0xbc` (`add-int/2addr`..`ushr-long/2addr`) шириной **1 code unit**, но ошибочно читал **2 code units** для:
+   - `0xc6` (`add-float/2addr vA, vB`) — реальная ширина **1 code unit** (`12x`);
+   - `0xc7` (`sub-float/2addr vA, vB`) — реальная ширина **1 code unit** (`12x`);
+   - `0xc8` (`mul-float/2addr vA, vB`) — реальная ширина **1 code unit** (`12x`);
+   - `0xc9` (`div-float/2addr vA, vB`) — реальная ширина **1 code unit** (`12x`);
+   - `0xce` (`div-double/2addr vA, vB`) — реальная ширина **1 code unit** (`12x`).
+   Из-за этого после каждой такой инструкции происходил сдвиг потока декодирования на `+1` code unit (до ближайшей синхронизации), что порождало **ложные аннотации дампера**. Все затронутые участки передекодированы вручную с проверкой совпадения с `insns_size` и всеми branch-целями:
+   - `ScrubMotionEventHandler;->o(IFF)Z` (`0x521488`):
+     - `+0019: 05c7` (`sub-float/2addr v5, v0`) → `+001a: 6432 0010` (`if-eq v4, v6, +0x10` → точная цель `+002a`).
+     - `+0036: 54c7` (`sub-float/2addr v4, v5`) → `+0037: 106e 3aa0 0003` (`invoke-virtual {v3}, ScrubMotionEventHandler;->c()F`).
+   - `ScrubMotionEventHandler;->g(MotionEvent)V` (`0x521634`):
+     - `+0083: 87c7` (`sub-float/2addr v7, v8`) → `+0084: 7787` (`float-to-int v7, v7`).
+     - `+008a: 87c6` (`add-float/2addr v7, v8`) → `+008b: 7787` (`float-to-int v7, v7`).
+   - `ScrubMotionEventHandler;->r(MotionEvent, Z)V` (`0x52184c`):
+     - `+0041: 60c7` (`sub-float/2addr v0, v6`) → `+0042: 0689` (`float-to-long` / конверсия).
+     - `+006d: 30c7` (`sub-float/2addr v0, v3`) → `+006e: a352 1bb3` (`iget v3, v10, ScrubMotionEventHandler;->a:I`), `+0072: 30c9` (`div-float/2addr v0, v3`) → `+0073: 02c6` (`add-float/2addr v2, v0`).
+   - `FreeCursorKeyboard;->P(Lohe;)Z` (`0x59e200`):
+     - `+006f: 73c6` (`add-float/2addr v3, v7`) → `+0070: 0715 4000` (`const/high16 v7, 2.0f`) → `+0072: 73c9` (`div-float/2addr v3, v7`) → `+0073: 0712` (`const/4 v7, 0`).
+   - `FreeCursorMotionEventHandler;->b(MotionEvent, Integer, Integer)Lonj;` (`0x5a1650`):
+     - `+0055: dcc8` (`mul-float/2addr v12, v13`) → `+0056: 4d82`; `+005f: fec8` (`mul-float/2addr v14, v15`) → `+0060: cbc6` (`add-float/2addr v11, v12`); `+007a: b3c7` → `+007b: 3389`; `+0087: edc6` → `+0088: d389`; `+009f: d3c7` → `+00a0: 3389`.
+   - **`Looc;->a(MotionEvent)Loof;` (`0x5a2e14`) — критическое исправление ложных аннотаций:**
+     - На `+0109..+0110` из-за сдвига после `mul-float/2addr` дампер выдал **ложные** ссылки на `EditorInfo;->inputType` и `AddLanguagePreferenceFragment;->an`. Реальное декодирование:
+       - `+0109: a2c8` (`mul-float/2addr v2, v10`)
+       - `+010a: 0a54 8265` (`iget-object v10, v0, Looc;->e:Ljava/util/Collection;`)
+       - `+010c: 0c62 8268` (`sget-object v12, Lood;->...`)
+       - `+010e: 2071 cdec 0023` (`invoke-static {v3, v2}, method@0xcdec` — вычисление направления `Lood;` по `(dx, dy)`).
+     - На `+0183..+0186`: `+0183: 68ce` (`div-double/2addr v8, v6`), `+0184: 022f 0802` (`cmpg-double v2, v8, v2`), `+0186: 023a 008e` (`if-ltz v2, +0x8e` → точная цель `+0214`).
+2. **Псевдо-инструкция `packed-switch-payload` (`0x0100`) в `Looc;->a` (`+0216..+0221`):**
+   Дампер распечатал хвост `+0216..+0221` как набор инструкций, тогда как на самом деле это корректная таблица `packed-switch-payload` (`ident = 0x0100`, `size = 4`, `first_key = 19` [`0x13`, `KEYCODE_DPAD_UP`], 4 смещения `+0x0006` от `packed-switch` на `+01be` → все 4 кода `19..22` прыгают на `+01c4`, где загружается `Lxfe;->d = FREE_CURSOR_SOURCE_SWIPE_DPAD`). Суммарная длина `0x222 = 546 == insns_size`.
+
+Все дальнейшие выводы в настоящем отчёте опираются исключительно на **перепроверенные** смещения и инструкции.
 
 ---
 
-## 3. Исследование B — переключение языков `NEXT` / `PREVIOUS` в Gboard `18.5.4`
+## 2. Направление A — Полная байткод-трассировка Free Cursor и Scrub-обработчиков
 
-### 3.1. Сводка подтверждённых дескрипторов и байткод-ссылок
+### 2.1. Enum `Lxfe;` (`classes3.dex`) — источники активации Free Cursor
 
-| Артефакт / исходник | Класс / тип | Подтверждённый descriptor / константа | Подтверждённые факты | Что НЕ доказано без APK `18.5.4` |
+- **DEX:** `classes3.dex`
+- **Класс:** `Lxfe;`
+- **Методы:** `<clinit>()V` (`code_item_off=0x1b9d24`, `insns_size=90`), `<init>(Ljava/lang/String;II)V` (`0x1b9de8`), `values()[Lxfe;` (`0x1b9cc8`), `a()I` (`0x1b9cec`), `toString()Ljava/lang/String;` (`0x1b9d04`).
+- **Точные константы из `<clinit>()` (`0x1b9d24`):**
+
+| Поле `Lxfe;` | Имя константы | Числовой ID (`a()`) | Подтверждённое место использования |
+|---|---|---|---|
+| `Lxfe;->a` | `FREE_CURSOR_SOURCE_UNSPECIFIED` | `0` | Fallback в `Looc;->a` и `FreeCursorKeyboard;->e` |
+| `Lxfe;->b` | `FREE_CURSOR_SOURCE_DIRECT_KEYCODE` | `1` | Прямой запуск keycode |
+| `Lxfe;->c` | `FREE_CURSOR_SOURCE_SWIPE_SPACE` | `2` | `Looc;->a` (`+01c7`) при `d == 62` (`KEYCODE_SPACE`) |
+| `Lxfe;->d` | `FREE_CURSOR_SOURCE_SWIPE_DPAD` | `3` | `Looc;->a` (`+01c4`) при `d in 19..22` (`DPAD`) |
+| `Lxfe;->e` | `FREE_CURSOR_SOURCE_SPACE_LONG_PRESS_SINGLE_KEYBOARD` | `4` | `FreeCursorKeyboard;->e` (`+0036`) при `payload == null` и `u.p(true) == false` |
+| `Lxfe;->f` | `FREE_CURSOR_SOURCE_SPACE_LONG_PRESS_MULTI_KEYBOARD` | `5` | `FreeCursorKeyboard;->e` (`+0033`) при `payload == null` и `u.p(true) == true` |
+| `Lxfe;->g` | `FREE_CURSOR_SOURCE_SWIPE_DEL` | `6` | `Looc;->a` (`+01ca`) при `d == 67` (`KEYCODE_DEL`) |
+
+- **`Lomy;->a(Lxfe;)Z` (`classes2.dex`, `code_item_off=0x59f760`, `insns_size=16`):** возвращает `true` для `Lxfe.e` и `Lxfe.f` (источники space long-press) и `false` для остальных (в т.ч. `SWIPE_SPACE`). Используется для учёта телеметрии/обучения при закрытии (`FreeCursorKeyboard;->h`).
+
+### 2.2. Активация Free Cursor свайпом (`TriggerFreeCursorMotionEventHandler` + `Looc;->a`)
+
+- **DEX:** `classes2.dex`
+- **Класс:** `Lcom/google/android/libraries/inputmethod/freecursor/TriggerFreeCursorMotionEventHandler;`
+  - `<clinit>()V` (`code_item_off=0x5a380c`, `insns_size=83`): заполняет статический `Set` `a` кодами клавиш **`62` (`SPACE`), `19`, `20`, `21`, `22` (`DPAD_UP/DOWN/LEFT/RIGHT`)** и статический `Set` действий скольжения значениями **`Lqae.c`, `Lqae.d`, `Lqae.e`, `Lqae.f`**.
+  - `<init>(Landroid/content/Context;Lqit;)V` (`0x5a38c4`, `insns_size=37`): сохраняет `Context`, `Lqit`, инициализирует состояние `this.g = new Looe(this)` (idle-состояние конечного автомата `Loof;`).
+  - `g(Landroid/view/MotionEvent;)V` (`0x5a39d8`, `insns_size=17`): делегирует каждое `MotionEvent` в автомат `this.g = this.g.a(event)`.
+  - `d()V` (`0x5a3920`), `f()V` (`0x5a3994`), `l()V` (`0x5a3a0c`), `close()V` (`0x5a3974`), `n(SoftKeyboardView)V` (`0x5a3a2c`): сбрасывают `this.g` обратно в `new Looe(this)` / сохраняют `SoftKeyboardView`.
+- **Автомат активного свайпа: `Looc;->a(Landroid/view/MotionEvent;)Loof;` (`classes2.dex`, `code_item_off=0x5a2e14`, `insns_size=546`):**
+  1. Проверка `ACTION_UP (1)` / `ACTION_CANCEL (3)` и совпадения `pointerId == this.b` — при завершении или чужом пальце возвращает `new Looe(a)` (сброс в idle).
+  2. Сравнение угла смещения с порогом `Loml;->R` (`+00bf..+00ce`).
+  3. Проверка минимальной длительности свайпа `(event.eventTime - this.f) >= this.g` (`+00cf..+00e1`).
+  4. Вычисление направления `Lood;` по `(dx, dy)` (`+010e`, после исправления бага дампера) и проверка принадлежности допустимому набору `this.e:Collection` (`+010a..+0116`).
+  5. Проверка минимальной скорости в dp/сек: `(distPx / density) / dtSec >= Loml;->U` (`+0118..+0187`, включая `div-double/2addr` на `+0183` и переход на `+0214` при недоборе скорости).
+  6. Определение `Lxfe;` по исходному `keyCode` (`this.d`):
+     - `62` (`SPACE`) → `Lxfe;->c` (`FREE_CURSOR_SOURCE_SWIPE_SPACE`, `+01c7`);
+     - `67` (`DEL`) → `Lxfe;->g` (`FREE_CURSOR_SOURCE_SWIPE_DEL`, `+01ca`);
+     - `19..22` (`DPAD`, через `packed-switch` на `+01be` и таблицу `+0216..+0221`) → `Lxfe;->d` (`FREE_CURSOR_SOURCE_SWIPE_DPAD`, `+01c4`);
+     - иначе → `Lxfe;->a` (`UNSPECIFIED`).
+  7. **Точный механизм запуска Free Cursor (`+01cc..+020c`):**
+     - Создаётся `Map` из 3 записей:
+       - `"activation_source"` → `Lohr;->c`
+       - `"free_cursor_activation_source"` → выбранный `Lxfe;`
+       - `"free_cursor_activation_swipe_direction"` → `Lood;->g`
+     - Создаётся `Lqci(Lomw;->a:Lqch;, map)` (тип клавиатуры Free Cursor + payload-карта).
+     - Создаётся `Lqbc(-10104 [0xd888 = SWITCH_KEYBOARD_WITH_PAYLOAD], null, lqci, 0)`.
+     - Оборачивается через `Lohe;->d(Lqbc;)Lohe;` и отправляется через **`Lqit;->n(Lohe;)V`**.
+
+### 2.3. Активация Free Cursor долгим нажатием пробела (`FreeCursorKeyboard;->e`)
+
+- **DEX:** `classes2.dex`
+- **Метод:** `Lcom/google/android/libraries/inputmethod/freecursor/FreeCursorKeyboard;->e(Landroid/view/inputmethod/EditorInfo;Ljava/lang/Object;)V` (`code_item_off=0x59ebbc`, `insns_size=259`).
+- **Подтверждённая логика (`+0000..+00f6`):**
+  1. Если переданный `payload` является `Map`, читает ключ `"free_cursor_activation_source"` (экземпляр `Lxfe;`).
+  2. **Критическое открытие (`+0028..+0039`):** если **`payload == null`** (то есть клавиатура Free Cursor активирована простым **`SWITCH_KEYBOARD (-10004)` с `Lomw;->a`** без `Map`-payload), сам `FreeCursorKeyboard;->e` вызывает **`this.u.p(true)`** (где `this.u: Lpex;`, полученный в `<init>` через `Lomo;->ae()Lpex;`):
+     - если `this.u.p(true) == true` (включено несколько клавиатур/языков) → выставляет `Lxfe;->f` (`FREE_CURSOR_SOURCE_SPACE_LONG_PRESS_MULTI_KEYBOARD`, `+0033`);
+     - если `this.u.p(true) == false` (одна клавиатура) → выставляет `Lxfe;->e` (`FREE_CURSOR_SOURCE_SPACE_LONG_PRESS_SINGLE_KEYBOARD`, `+0036`).
+  3. **Флаг режима блокировки (`+00de..+00f6`):** читает **`Loml;->D:Lokc;->g()`** (`Boolean`) и выставляет видимость кнопки lock (`this.v`: `View.VISIBLE` или `View.GONE`).
+  4. **Вывод:** программный запуск `FreeCursorKeyboard` через событие **`SWITCH_KEYBOARD (-10004)` с `Lomw;->a` и `payload == null`** (либо `SWITCH_KEYBOARD_WITH_PAYLOAD (-10104)` с `Lqci(Lomw.a, map)` и `Lxfe.e/f`) является **нативным контрактом** для пути долгого нажатия пробела. Однако сам **продюсер** (где именно в Gboard при удержании пробела формируется `SWITCH_KEYBOARD (-10004, Lomw.a)` и как он конкурирует со `space_long_press_ime_picker`) отсутствует в текущих дампах (см. раздел 7).
+
+### 2.4. Активный трекпад и выход из Free Cursor (`FreeCursorMotionEventHandler` + `FreeCursorKeyboard`)
+
+#### `FreeCursorMotionEventHandler` (`classes2.dex`)
+| Метод | `code_item_off` | `insns_size` | Подтверждённое поведение |
+|---|---:|---:|---|
+| `<clinit>()V` | `0x5a1820` | `55` | Константы длительностей: `a = 50ms`, `b = 150ms`, `c = Loml;->C` ms |
+| `<init>(Context, Lqit)V` | `0x5a18a0` | `47` | Инициализирует `this.f = new Lonl(this, 1)` (начальное состояние `Lonk;`) |
+| `gt(MotionEvent)Z` | `0x5a163c` | `2` | **Безусловно возвращает `true`** — принимает live handoff активного касания при переключении на `FreeCursorKeyboard` |
+| `gs(MotionEvent)V` | `0x5a1a64` | `14` | Пробрасывает переданный (handoff) `MotionEvent` в `this.f = this.f.a(event)` |
+| `g(MotionEvent)V` | `0x5a19f0` | `17` | Пробрасывает обычные `MotionEvent` в `this.f = this.f.a(event)` |
+| `b(MotionEvent, Integer, Integer)Lonj;` | `0x5a1650` | `192` | Определяет нахождение пальца в прикраевой зоне (отступ `Lonq.a(Loml.p, ctx)`) и возвращает `DPAD` (`19/20/21/22`) для автопрокрутки у края экрана |
+| `c(int, Long, int, Double)V` | `0x5a1994` | `38` | В цикле `count` раз отправляет `Lohe.e(keyCode, null)` с метаданными скорости `Lonp(velocity)` через `Lqit;->n(Lohe;)V` |
+| `p()V` | `0x5a1910` | `29` | Отменяет корутины `g`, `i` и вызывает `VelocityTracker.recycle()` |
+| `o()Lonk;` | `0x5a17e0` | `23` | Вызывает `p()`, отправляет **`Lohe.e(-10215 [0xd819 = FREE_CURSOR_LOCK], Lonu.a)`** через `Lqit;->n(Lohe;)V`, возвращает `new Lonl(this, 1)` |
+| `l()V` / `f()V` / `close()V` | `0x5a1a24` / `0x5a197c` / `0x5a195c` | `12` / `4` / `7` | Сброс состояния `f`, остановка корутин и очистка `VelocityTracker` |
+
+#### `FreeCursorKeyboard` (`classes2.dex`)
+| Метод | `code_item_off` | `insns_size` | Подтверждённое поведение |
+|---|---:|---:|---|
+| `<clinit>()V` | `0x59e700` | `78` | Набор `b` из 4 кодов `DPAD` (`19, 20, 21, 22`) |
+| `eR(SoftKeyboardView, KeyboardViewDef)V` | `0x59f0c8` | `212` | Находит views трекпада/подсказки/кнопки lock (`v`) и кнопки выделения, вешает клик-слушатели |
+| `m(Lohe;)Z` | `0x59e478` | `266` | Обрабатывает `-10239` (`0xd801 = FREE_CURSOR_MOTION_EVENT` → `P(Lohe)`), подавляет `DPAD_UP/DOWN (19, 20)` при `!m.b()` (однострочное поле), пропускает `DPAD (19..22)` с возвратом `false` (при активном режиме выделения `j` шлёт `FINISH_INLINE_COMPOSING (-10090)` и ставит флаг `h |= 1`, скрывает подсказку `H()` с анимацией `200ms`, даёт троттленный хаптик `Q(9)` через `Loml.ab`), а на `-10215` (`0xd819 = FREE_CURSOR_LOCK`) вызывает **`R(Lonv)`** |
+| `P(Lohe;)Z` | `0x59e200` | `285` | Обновляет визуальный указатель/лупу (`Lomc`) по координатам `FREE_CURSOR_MOTION_EVENT` (`-10239`), используя среднее `(a + b) / 2.0f` (`+006f..+0072`) |
+| `R(Lonv;)V` | `0x59e954` | `278` | Диспетчер состояний блокировки: `Lonr` (обратный отсчёт lock), `Lons` (заблокирован + панель), `Lont` (разблокирован), **`Lonu` → вызывает `F()`** |
+| `F()V` | `0x59eb90` | `14` | **Штатный выход из Free Cursor:** отправляет **`Lohe.e(-10004 [0xd8ec = SWITCH_KEYBOARD], Lqch.b)`** через **`Lpkz;->N(Lohe;)V`** (возврат на Prime-клавиатуру) |
+| `K()V` / `M()V` | `0x59f51c` / `0x59f5b8` | `70` / `41` | Режим выделения текста: отправляет `KeyEvent(KEYCODE_SHIFT_LEFT=59, ACTION_DOWN/UP, SOURCE_KEYBOARD=0x101)` через `Lpcn;->D(KeyEvent)` + `FINISH_INLINE_COMPOSING (-10090)` |
+| `h()V` | `0x59edd4` | `268` | Полная очистка при закрытии клавиатуры: скрытие view `h`, `R(Lont.a)`, закрытие попапов, разборка лупы `Lomc`, отписка `T`/`U`/`X`, отмена корутины `g`, учёт `Lomy.a`, вызов `M()` (гарантированный отпуск `SHIFT_LEFT`), `super.h()` |
+
+**Что осталось НЕ дамплено по Free Cursor (`BLOCKED` для безопасного выбора `OPTION A`):**
+1. Реализации автомата **`Lonl`**, **`Long`**, **`Loni`** (`Lonk;->a(MotionEvent)Lonk;`) — именно в них лежит фактическая обработка `ACTION_DOWN` / `ACTION_MOVE` / `ACTION_UP` / `ACTION_CANCEL`, запуск обратного отсчёта `Lonr` vs немедленный вызов `o()` (выход на `ACTION_UP`), а также поведение после синтетического `ACTION_CANCEL` на Prime-клавиатуре.
+2. **`Looe;->a(MotionEvent)Loof;`** — проверка гейтов `ACTION_DOWN` в `TriggerFreeCursorMotionEventHandler` (в т.ч. проверка `noScrubbing`, флага `"free_cursor"`, `enable_scrub_move` и длительности удержания).
+3. Продюсер пути **`SWITCH_KEYBOARD (-10004, Lomw.a)`** при долгом нажатии пробела и конкретный обработчик настройки **`space_long_press_ime_picker`** + `Lqin;->y()V`.
+
+### 2.5. Полная трассировка Scrub-обработчиков (`classes.dex`)
+
+Все 4 класса полностью декодированы из `GBOARD_18.5.4_TARGETED_CODE_ITEM_DUMP.txt`:
+
+| Класс | `code_item_off` (`<init>` / `b`) | `keyCode` | `leaveKeyRect` | `mode` | Keycodes (`START` / `MOVE` / `FINISH` / `CANCEL`) | TypedArray res | Направления в `b(MotionEvent)` |
+|---|---:|---:|---:|---:|---|---|---|
+| `ScrubMoveMotionEventHandler` | `0x1f12b4` / наследует `0x521568` | `62` (`SPACE`) | `false` | `1` | `-10061` / `-10053` / `-10054` / `-10062` | `0x7f0300bb` | Двунаправленно (`p(event, 3)`) |
+| `ScrubDeleteMotionEventHandler` | `0x1f0fdc` / `0x521458` | `67` (`DEL`) | `true` | `2` | `-10050` / `-10051` / `-10052` / `-10063` | `0x7f0300ba` | Двунаправленно (`p(event, 3)`), только если `!p.q()` |
+| `InlineSuggestionScrubSpaceMotionEventHandler` | `0x1eace0` / `0x4fbc58` | `62` (`SPACE`) | `false` | `1` | `-50001` / `-50003` / `-50004` / `-50002` | `0x7f0300bb` + int `0x7f0c0063` | **Однонаправленно** (`dir = 1` или `2` по RTL/LTR `Lpem.d().G()`), только если активна inline-подсказка `Lqlp;->e(Lpaw;->a)Z` |
+
+**Ключевые детали базового `ScrubMotionEventHandler` (`classes.dex`):**
+- `g(MotionEvent)V` (`0x521634`, `insns_size=254`):
+  - Пропускает обработку при TalkBack (`Lqit.dr().v()`).
+  - Проверяет cooldown после последней клавиши: `event.eventTime >= this.p.c() + this.c.a`.
+  - Проверяет, что `SoftKeyView` имеет `PRESS`-действие с `keyCode == this.g.a` (`62` или `67`) и **отсутствует** `Lqae.e` (слайд-действие на этой клавише).
+  - Проверяет feature-флаг **`Lqhz;->a:Lokc;->g()`** (`Boolean`).
+  - При входе вызывает **`Lqit;->m()`** (захватывает владение потоком касаний и гасит конкурирующие хендлеры клавиатуры).
+- `r(MotionEvent, boolean)V` (`0x52184c`, `insns_size=219`):
+  - **Доказано на уровне инструкций:** проверяет **`Lobk;->v(pkg, "noScrubbing", this.e)`**; если поле запрещает scrubbing, блокирует скраббинг и показывает toast `0x7f1411aa` (ограниченно).
+- **Важное открытие:** внутри самого `ScrubMotionEventHandler` (и его 3 подклассов) **нет чтения `"enable_scrub_move"` / `0x7f14096b`** — этот ключ читается на уровне выше (вероятно, при регистрации `MotionEventHandler` в клавиатуре/модуле). Чтобы доказать, что отключение `"enable_scrub_move"` не затрагивает `ScrubDeleteMotionEventHandler` и `TriggerFreeCursorMotionEventHandler`, нужен дамп xref на `"enable_scrub_move"` / `0x7f14096b`.
+
+### 2.6. Обновлённые ответы на 12 вопросов Направления A
+
+1. **Точный способ программной активации Free Cursor без имитации свайпа:** `CONFIRMED` на стороне приёмника (`FreeCursorKeyboard;->e` при `SWITCH_KEYBOARD (-10004)` с `Lomw.a` и `payload == null` сам выставляет `Lxfe.e/f`, а `Looc;->a` показывает формат `SWITCH_KEYBOARD_WITH_PAYLOAD (-10104)` + `Lqci(Lomw.a, map)` через `Lqit;->n(Lohe)`). Продюсер long-press ещё не дамплен (`PARTIALLY CONFIRMED`).
+2. **Путь `FREE_CURSOR_SOURCE_SPACE_LONG_PRESS_SINGLE/MULTI_KEYBOARD`:** `CONFIRMED` (`FreeCursorKeyboard;->e` `+0028..+0039`: `payload == null` → `this.u.p(true)` выбирает `Lxfe.f` или `Lxfe.e`).
+3. **Разница с `FREE_CURSOR_SOURCE_SWIPE_SPACE`:** `CONFIRMED` (`Looc;->a` передаёт `Lxfe.c` в `Map` через `-10104`; `Lomy;->a(Lxfe)` возвращает `true` только для `Lxfe.e/f`).
+4. **Handoff касания в `FreeCursorMotionEventHandler`:** `PARTIALLY CONFIRMED` (`gt(MotionEvent)` всегда возвращает `true`, `gs(MotionEvent)` отдаёт событие в `this.f.a(event)`), но поведение `Lonl`/`Long`/`Loni` после синтетического `ACTION_CANCEL` на Prime-клавиатуре не дамплено (`BLOCKED`).
+5. **Обязательность `free_cursor_lock_mode = false` и выход на `ACTION_UP`:** `PARTIALLY CONFIRMED` (`FreeCursorKeyboard;->e` читает `Loml;->D` для кнопки lock; `FreeCursorMotionEventHandler;->o()` шлёт `-10215` + `Lonu.a`, что вызывает `FreeCursorKeyboard;->F()` → `-10004` + `Lqch.b`). Кто именно вызывает `o()` на `ACTION_UP` (в `Lonl`/`Long`/`Loni`) — не дамплен (`BLOCKED`).
+6. **Очистка и отсутствие утечек (`ACTION_UP`/`ACTION_CANCEL`/`onWindowHidden`):** `CONFIRMED` на уровне `FreeCursorKeyboard;->h()` (`0x59edd4`: сбрасывает `R(Lont.a)`, отпускает `SHIFT_LEFT` через `M()`, закрывает лупу `Lomc`, отменяет корутины) и `FreeCursorMotionEventHandler;->p()/l()/close()`.
+7. **Связка с `noScrubbing`:** `CONFIRMED` для `ScrubMotionEventHandler;->r()` (`Lobk;->v(pkg, "noScrubbing", e)` + toast `0x7f1411aa`); проверка `noScrubbing` для Free Cursor (`Looe.a` / продюсер long-press) не дамплено (`BLOCKED`).
+8. **Влияние `enable_scrub_move` на `ScrubDeleteMotionEventHandler` и `TriggerFreeCursorMotionEventHandler`:** `BLOCKED` (внутри всех 4 `Scrub*` и `TriggerFreeCursor*` ключ `"enable_scrub_move"` / `0x7f14096b` не читается; требуется дамп xref на этот ресурс).
+9. **Поведение при `InlineSuggestionScrubSpaceMotionEventHandler`:** `CONFIRMED` (`b(MotionEvent)` на `0x4fbc58` активен только когда `Lqlp;->e(Lpaw;->a)Z == true`, работает однонаправленно `1`/`2` по RTL/LTR, использует отдельные коды `-50001..-50004`).
+10. **Сдвиг курсора, composing text и выделение:** `CONFIRMED` для `FreeCursorKeyboard`: отправляет нативные `DPAD (19..22)` через `FreeCursorMotionEventHandler;->c()`, шлёт `FINISH_INLINE_COMPOSING (-10090)` при выделении и управляет `KEYCODE_SHIFT_LEFT (59)` через `Lpcn;->D(KeyEvent)` (`K()`/`M()`).
+11. **Подавление `space_long_press_ime_picker`:** `BLOCKED` (обработчик настройки и `Lqin;->y()V` не входят в текущие дампы).
+12. **Совместимость с `KeyboardViewHolder.dispatchTouchEvent`:** `CONFIRMED` — `FreeCursorMotionEventHandler` принимает touch через `SoftKeyboardView` → `MotionEventHandler` pipeline ниже `KeyboardViewHolder`; при `OPTION A` важно не сломать handoff своим синтетическим `ACTION_CANCEL` (проверка зависит от `Lonl`/`Long`/`Loni`).
+
+---
+
+## 3. Направление B — Полная байткод-трассировка переключения языков (`NEXT`/`PREVIOUS`)
+
+### 3.1. КРИТИЧЕСКОЕ ОПРОВЕРЖЕНИЕ гипотезы о `Lqga;` / `Lqfz;` / `Lqev;` / `Ligz;->ad` / `Lpux;->fM/fN`
+
+По результатам декодирования `GBOARD_18.5.4_LANGUAGE_ENUM_XREF_CODE.txt` доказано, что ни один из перечисленных классов **НЕ является диспетчером переключения языка**:
+
+| Класс / метод (`classes.dex`) | `code_item_off` | `insns_size` | Реальная роль (доказано по байткоду) |
+|---|---:|---:|---|
+| `Lqga;` (`<clinit>`, `a`, `b`, `c`, `values`) | `0x3465b4` (`a`: `0x51e7d0`, `b`: `0x51e7f8`, `c`: `0x51e7e4`) | `78` / `2` / `3` / `2` | **Enum метрик задержки (`Lqek;`)**, а не action-диспетчер. Значения: `OPEN_KEYBOARD`, `OPEN_KEYBOARD_COLD`, `OPEN_KEYBOARD_HOT`, `SWITCH_LANGUAGE`, `SWITCH_TO_NEXT_LANGUAGE`, `OPEN_EXTENSION`. `a() = -1`, `b() = ""`, `c() = 1` |
+| `Lqfz;-><clinit>()V` | `0x34645c` | `101` | Словарь имён Clearcut-таймеров для `Lqga;`: `"KeyboardLatency.SwitchLanguage"`, `"KeyboardLatency.SwitchToNextLanguage"` и др. |
+| `Lqev;-><clinit>()V` | `0x3431d4` | `126` | **Enum телеметрии** (`INPUT_METHOD_PICKER_SHOWN`, `SWITCH_TO_NEXT_LANGUAGE` и др.) |
+| `Lhcp;->U(Map, Lohr)V` | `0x47b404` | `61` | Логирование задержек `"KeyboardLatency.OpenExtension.*"` (использует `Lqga.OPEN_EXTENSION`) |
+| `Ligz;->ad(String)V` | `0x48dd2c` | `18` | Форматирует `"Input.switchToNextLanguage.%s"` и пишет счётчик через `Lqdy;->c(String)` |
+| `Lpux;->fM(Context, Lqhb)V` / `Lpux;->fN()V` | `0x32c390` / `0x517aa0` | `9` / `17` | Обёртки `Trace.beginSection/endSection` для `LanguageSwitcherAccessPointProviderModuleProvider$AccessPointProviderModule.onCreate/onDestroy` (`fN` вызывает `Lpux;->b()V`, тело которого не дамплено) |
+
+### 3.2. Полная верифицированная таблица keycodes Gboard 18.5.4 (`Lqcm;-><clinit>()`)
+
+- **DEX:** `classes.dex`
+- **Метод:** `Lqcm;-><clinit>()V` (`code_item_off=0x33c4a0`, `insns_size=5398`)
+- Проверены **все** отрицательные keycode-регистрации (`+081c..+1515`).
+
+| Keycode (dec) | Hex (`const/16`) | Имя в `Lqcm.<clinit>()` | Смещение в `Lqcm.<clinit>` | Значение для проекта |
+|---:|---|---|---:|---|
+| **`-10000`** | `0xd8f0` (`-0x2710`) | **`SWITCH_LANGUAGE`** | `+087f` | **Главный кандидат для адресного переключения на конкретный язык / `PREVIOUS`** (требует дамп обработчика payload!) |
+| **`-10011`** | `0xd8e5` (`-0x271b`) | **`SWITCH_TO_NEXT_LANGUAGE`** | `+08b6` | **Текущий путь `NEXT` (внутри Gboard)** — явно отделён от `-10197`! |
+| **`-10197`** | `0xd82b` (`-0x27d5`) | **`SWITCH_TO_NEXT_LANGUAGE_ALLOWING_OTHER_IMES`** | `+08c1` | **КЛЮЧЕВОЕ ОТКРЫТИЕ:** отдельный keycode для перехода к внешним IME (Samsung Keyboard и др.) — объясняет, почему `-10011` архитектурно отделён от кросс-IME переключения |
+| **`-10022`** | `0xd8da` (`-0x2726`) | `SHOW_SYSTEM_IME_PICKER` | `+092f` | Системный диалог выбора IME (запрещено вызывать по ТЗ) |
+| **`-10065`** | `0xd8af` (`-0x2751`) | `UPDATE_CURRENT_IME_LOCALES` | `+0b4a` | Обновление локалей активного IME |
+| `-10004` | `0xd8ec` | `SWITCH_KEYBOARD` | `+08a0` | Переключение клавиатуры (выход из Free Cursor `Lqch.b`, запуск Free Cursor `Lomw.a` с `payload == null`) |
+| `-10104` | `0xd888` | `SWITCH_KEYBOARD_WITH_PAYLOAD` | `+0c89` | Запуск Free Cursor с `Map`-payload (`Looc;->a`) |
+| `-10215` | `0xd819` | `FREE_CURSOR_LOCK` | `+0f99` | Управление блокировкой и выходом (`Lonu.a`) Free Cursor |
+| `-10239` | `0xd801` | `FREE_CURSOR_MOTION_EVENT` | `+103e` | Координаты указателя в `FreeCursorKeyboard;->P` |
+| `-10090` | `0xd896` | `FINISH_INLINE_COMPOSING` | `+0c10` | Завершение inline composing перед выделением в Free Cursor |
+| `-10091` | `0xd895` | `HAPTIC_TEXT_HANDLE` | `+0c1b` | Тактильный отклик курсора |
+| `-10061..-10062` (`-10061/-10053/-10054/-10062`) | `0xd8b3` / `0xd8bb` / `0xd8ba` / `0xd8b2` | `SCRUB_MOVE_START / MOVE / FINISH / CANCEL` | проверено | События `ScrubMoveMotionEventHandler` |
+| `-10050..-10063` (`-10050/-10051/-10052/-10063`) | `0xd8be` / `0xd8bd` / `0xd8bc` / `0xd8b1` | `SCRUB_DELETE_START / DELETE / FINISH / CANCEL` | проверено | События `ScrubDeleteMotionEventHandler` |
+| `-50001..-50004` | `0x3caf` / `0x3cad` / `0x3cac` / `0x3cae` | `INLINE_SCRUB_MOVE_START / MOVE / FINISH / CANCEL` | проверено | События `InlineSuggestionScrubSpaceMotionEventHandler` |
+
+- **Окончательно доказано (`NOT FOUND`):** во всей таблице `Lqcm.<clinit>()` (`5398` code units) **нет** keycode `SWITCH_TO_PREVIOUS_LANGUAGE` (или любого другого отрицательного keycode для предыдущего языка).
+
+### 3.3. Новая подтверждённая байткод-наводка на менеджер языков (`Lpex;`)
+
+В `FreeCursorKeyboard;-><init>` (`0x59e7ac`) и `FreeCursorKeyboard;->e` (`0x59ebbc`, `+002c`) обнаружен прямой вызов:
+- `Lomo;->ae()Lpex;` → сохраняется в `FreeCursorKeyboard;->u:Lpex;`;
+- `Lpex;->p(Z)Z` вызывается с аргументом `true` для проверки **наличия нескольких включённых клавиатур/языков** (`FREE_CURSOR_SOURCE_SPACE_LONG_PRESS_MULTI_KEYBOARD` vs `SINGLE_KEYBOARD`).
+
+> **Важно (строгая дисциплина доказательств):** `Lpex;` — подтверждённый байткодом **высокоприоритетный кандидат** на интерфейс `InputMethodEntryManager` в Gboard `18.5.4`, но его методы получения списка включённых `InputMethodEntry`, текущего `InputMethodEntry` и переключения на произвольный `InputMethodEntry` **не входят в текущие дампы** и **не считаются подтверждёнными** до получения `code_item` для `Lpex;` и его реализации.
+
+### 3.4. Обновлённые ответы на 10 вопросов Направления B
+
+1. **Есть ли нативный `SWITCH_TO_PREVIOUS_LANGUAGE` keycode?** `NOT FOUND` (доказано полной проверкой `Lqcm.<clinit>()`).
+2. **Что такое `Lqga;`?** `CONFIRMED` — enum метрик задержки (`Lqek;`), НЕ диспетчер смены языка.
+3. **Точный обработчик `-10011` (`SWITCH_TO_NEXT_LANGUAGE`) за `Lphr;->aw(Lohe;)Z`:** `BLOCKED` (нет в текущих дампах; нужен дамп xref на `-10011` / `-0x271b`).
+4. **Гарантия невыхода во внешний IME (Samsung Keyboard):** `PARTIALLY CONFIRMED` — в `Lqcm.<clinit>()` существует чёткое разделение `-10011` (`SWITCH_TO_NEXT_LANGUAGE`) и `-10197` (`SWITCH_TO_NEXT_LANGUAGE_ALLOWING_OTHER_IMES`), но фактический `if`-гейт внутри обработчика `-10011` ещё не дамплен (`BLOCKED`).
+5. **Назначение `-10000` (`SWITCH_LANGUAGE`) и формат его payload:** `BLOCKED` (ключевой кандидат для `OPTION B`, но обработчик `-10000` не дамплен).
+6. **Порядок переключения (`NEXT` — циклический или MRU):** `BLOCKED` (требуется дамп обработчика `-10011` и `Lpex;` / реализации менеджера `InputMethodEntry`).
+7. **Дескрипторы получения списка включённых `InputMethodEntry`, текущего элемента и адресного переключения:** `BLOCKED` (найдена точная наводка `Lpex;` через `FreeCursorKeyboard;->u:Lpex;` + `Lpex;->p(Z)Z`, но методы `Lpex;` и его реализации не дамплены).
+8. **Валидность `(N - 1)` вызовов `NEXT` (Вариант C) для `N >= 3`:** `BLOCKED` — опасно без проверки, не является ли `-10011` MRU-порядком и не вызывает ли он N-1 полных циклов смены раскладки/визуальных артефактов.
+9. **Поведение при `N == 1` языке:** `PARTIALLY CONFIRMED` — `Lpex;->p(true)` в `FreeCursorKeyboard;->e` подтверждает наличие встроенного детектора `multi-keyboard` vs `single-keyboard`, но список языков (`size() <= 1`) требует дампа `Lpex;`.
+10. **Роль `Lpux;` (`LanguageSwitcherAccessPointProvider`):** `PARTIALLY CONFIRMED` (`fM`/`fN` — только `Trace` + `Lpux;->b()V`; сам `b()` и хендлеры кликов не дамплены).
+
+---
+
+## 4. Направление C — Конкурирующие жесты и ограничение единого хука `KeyboardViewHolder.dispatchTouchEvent`
+
+### 4.1. Верифицированная карта конкурирующих обработчиков на пробеле
+
+На основе декодированных `code_item` в `classes.dex` и `classes2.dex`:
+
+1. **Уровень ViewGroup (выше `SoftKeyboardView`):**
+   - `KeyboardViewHolder;->dispatchTouchEvent(MotionEvent)Z` (`classes.dex`, method_id `0014660`) — **уже перехвачен существующим хуком `SwipeDismissPatch`** в `vortexnode/GboardSamsung`.
+   - **Жёсткое ограничение проекта:** второй независимый хук на `KeyboardViewHolder.dispatchTouchEvent` **запрещён**; любая логика перехвата пробела должна встраиваться через единый композитор/диспетчер вокруг существующего хука.
+2. **Уровень `SoftKeyboardView` → `MotionEventHandler` pipeline (ниже `KeyboardViewHolder`):**
+   - **`ScrubMoveMotionEventHandler`** (`keyCode=62`, `leaveKeyRect=false`, двунаправленный `p(event, 3)`, гейты: `!TalkBack`, cooldown `p.c() + c.a`, `Lqhz;->a:Lokc`, `noScrubbing` в `r()`, захватывает поток через `Lqit;->m()`).
+   - **`InlineSuggestionScrubSpaceMotionEventHandler`** (`keyCode=62`, `leaveKeyRect=false`, **однонаправленный `dir=1/2` по RTL/LTR**, активен **только при `Lqlp;->e(Lpaw;->a)Z == true`** — когда в шапке показана inline-подсказка, шлёт `-50001..-50004`). **Важно:** при активной inline-подсказке свайп по пробелу в направлении подсказки конкурирует со свайпом языка — это нужно учитывать в state machine.
+   - **`TriggerFreeCursorMotionEventHandler`** (`keyCode in {62, 19..22}`, через `Looc;->a` шлёт `-10104` `SWITCH_KEYBOARD_WITH_PAYLOAD` с `Lxfe.c = FREE_CURSOR_SOURCE_SWIPE_SPACE` при прохождении порога угла `Loml.R`, длительности `g` и скорости `Loml.U`).
+   - **`ScrubDeleteMotionEventHandler`** (`keyCode=67 [DEL]`, `leaveKeyRect=true`, отдельный TypedArray `0x7f0300ba`, коды `-10050..-10063`) — полностью изолирован по `keyCode=67` от пробела (`62`), но неизвестно, влияет ли глобальная настройка `"enable_scrub_move"` на его регистрацию.
+   - **`space_long_press_ime_picker` / Space Long-Press → Free Cursor** — точный `MotionEventHandler` / `SoftKey` action-обработчик не дамплен.
+
+### 4.2. Критический риск для `OPTION A` (переиспользование Free Cursor)
+Если перехват удержания пробела в `KeyboardViewHolder.dispatchTouchEvent` отправит синтетический `ACTION_CANCEL` в `SoftKeyboardView`, а затем программно переключит клавиатуру на `FreeCursorKeyboard`:
+- `FreeCursorMotionEventHandler;->gt(MotionEvent)` возвращает `true` и ждёт live-handoff (`gs(MotionEvent)`), но после `ACTION_CANCEL` в `SoftKeyboardView` цепочка `MotionEventHandler` может сбросить активный pointer, либо `Lonl`/`Long`/`Loni` потребуют реального `ACTION_DOWN` перед `ACTION_MOVE`.
+- Без декодирования `Lonl`/`Long`/`Loni` подтвердить корректность handoff **невозможно**.
+
+---
+
+## 5. Обновлённая сравнительная таблица верификации (9 строк)
+
+| # | Механизм / гипотеза | Прежний статус (индекс символов) | Новый статус (raw `code_item`) | Доказательство (DEX / `code_item_off` / смещение) |
 |---|---|---|---|---|
-| `gboard-version-bindings.json` + `GboardLongPressQuickActionsReflectionHandles.java:84,121-123,226-229` + `GboardGlobeDragAdapter.java:10` | `Lphr;`, `Lohe;`, `Lqbc;`, `Lqae;` | `Lphr;->aw(Lohe;)Z` (`public final boolean` на подклассе `InputMethodService`); `Lohe;->a:Lqae;`, `b:[Lqbc;`, `c:SoftKeyDef;`, `w:I`; `Lqbc;->c:I`, `e:Object;`; keycode `-0x271b` (`-10011`), payload `"globe"`, `qae.PRESS`; keycode `-0x2726` (`qae.LONG_PRESS`, IME picker) | Входная точка обработки событий клавиш IME (`Lphr;->aw(Lohe;)Z`) и формат события переключения на следующий язык (`-0x271b`, `"globe"`) полностью подтверждены. | Тело `Lphr;->aw(Lohe;)Z` и вызываемый далее диспетчер `-0x271b` не видны без APK. |
-| `GBOARD_18.5.4_BYTECODE_REFERENCE_EXTRACT.md` | `Lqga;` | Enum-константы `SWITCH_LANGUAGE`, `SWITCH_TO_NEXT_LANGUAGE` | Подтверждены оба имени действия в enum `Lqga;`, а также строки `Input.switchToNextLanguage.%s`, `PREF_SHOW_LANGUAGE_SWITCH_KEY`. | Неизвестны остальные значения `Lqga;`, обработчик `SWITCH_LANGUAGE` (принимает ли целевой `InputMethodEntry` или направление) и точный маппинг `-0x271b` → `Lqga`. |
-| `GBOARD_18.5.4_BYTECODE_REFERENCE_EXTRACT.md` | `LanguageSwitcherAccessPointProvider`, `InputMethodManagerWrapper` | Метод `InputMethodManagerWrapper.hasOtherSwitchableImes` (точная сигнатура параметров/возврата в extract не указана) | Подтверждено наличие провайдера access point переключения языков и обёртки над `InputMethodManager` с проверкой сторонних IME. | Дескрипторы методов внутри `LanguageSwitcherAccessPointProvider` и класс менеджера `InputMethodEntry` не раскрыты в extract. |
-| `GBOARD_18.5.4_BYTECODE_REFERENCE_EXTRACT.md` + `grep` по всему `vortexnode/GboardSamsung` | 4 DEX string tables + весь репозиторий | `SWITCH_TO_PREVIOUS_LANGUAGE` — **NOT FOUND** | Буквальной строки `SWITCH_TO_PREVIOUS_LANGUAGE` нет ни в одном из 4 DEX-файлов `18.5.4`, и в исходниках/биндингах `GboardSamsung` нет ни одного дескриптора `InputMethodEntry` или метода `PREVIOUS`. | Отсутствие строки **не доказывает** невозможность `PREVIOUS`: переключение назад может выполняться через индекс/список `InputMethodEntry` или обфусцированный метод с параметром направления. |
-
-### 3.2. Ответы на 10 обязательных вопросов Исследования B
-
-1. **Где именно обрабатывается `SWITCH_TO_NEXT_LANGUAGE`?**
-   - *Частично подтверждено:* событие `Lohe;` с `Lqbc.c == -0x271b` (`-10011`) и `qae.PRESS` проходит через `Lphr;->aw(Lohe;)Z`; в DEX подтверждены enum `Lqga.SWITCH_TO_NEXT_LANGUAGE` и `LanguageSwitcherAccessPointProvider`. Точный целевой метод-потребитель за `Lphr;->aw(Lohe;)Z` — **`BLOCKED`** (требует декомпиляции APK `18.5.4`).
-2. **Как определяется следующий язык?**
-   - *Не доказано (`BLOCKED`):* неизвестно, использует ли обработчик `-0x271b` линейный циклический порядок списка включённых языков или MRU-порядок (последний использованный язык).
-3. **Где хранится упорядоченный список включённых языков Gboard?**
-   - *Не доказано (`BLOCKED`):* в `gboard-version-bindings.json` и в `GBOARD_18.5.4_BYTECODE_REFERENCE_EXTRACT.md` дескрипторы класса `InputMethodEntry` и его менеджера отсутствуют.
-4. **Как определяется текущий элемент?**
-   - *Не доказано (`BLOCKED`):* точный геттер текущего `InputMethodEntry` в `18.5.4` не найден в имеющихся материалах.
-5. **Есть ли метод переключения на конкретный `InputMethodEntry` или индекс?**
-   - *Не доказано (`BLOCKED`):* косвенным ориентиром является наличие отдельного enum-значения `Lqga.SWITCH_LANGUAGE` рядом с `Lqga.SWITCH_TO_NEXT_LANGUAGE`, но без декомпиляции обработчика `Lqga.SWITCH_LANGUAGE` точный descriptor отсутствует.
-6. **Есть ли внутренний механизм отрицательного шага (`-1`)?**
-   - *`NOT FOUND` в имеющихся данных / `BLOCKED` для окончательного вывода:* в 4 DEX string tables нет строки `SWITCH_TO_PREVIOUS_LANGUAGE`, а обфусцированный метод с параметром направления (`int step` / `boolean forward`) можно обнаружить только по control-flow декомпиляции.
-7. **Если отдельного `PREVIOUS` нет, можно ли безопасно получить предыдущий элемент из того же списка и переключиться на него?**
-   - *Архитектурно — да (целевой план `OPTION B`), но на уровне байткода `18.5.4` — `BLOCKED`*, пока из APK не извлечены три конкретных дескриптора: (а) получение упорядоченного списка включённых `InputMethodEntry`, (б) получение текущего `InputMethodEntry`, (в) вызов переключения на конкретный `InputMethodEntry`.
-8. **Как исключить переключение на Samsung Keyboard, Voice Typing и другие внешние IME?**
-   - *Частично подтверждено:*
-     - В Gboard `18.5.4` существует `InputMethodManagerWrapper.hasOtherSwitchableImes` — нужно проверить, вызывает ли обработчик `-0x271b` переключение на другой IME при достижении конца списка языков Gboard (если да, прямой `-0x271b` опасен без перехвата/замены).
-     - Переключение строго по внутреннему списку `InputMethodEntry` самого Gboard по построению **никогда** не выходит за пределы процесса/пакета `com.google.android.inputmethod.latin`.
-     - Стандартный Android API `InputMethodService.switchToNextInputMethod(false)` / `switchToPreviousInputMethod()` **исключён**, так как он переключает на Samsung Keyboard / Voice Typing.
-9. **Как обеспечить стабильный порядок языков, не полагаясь на MRU?**
-   - Только чтением стабильного (пользовательского) списка включённых `InputMethodEntry` без мутации порядка (или с собственной детерминированной проекцией по стабильному идентификатору раскладки) и прямым переключением на `(i + 1) % N` / `(i - 1 + N) % N`. Многократная отправка `-0x271b` (`N - 1` раз) неприемлема именно из-за возможного MRU-переупорядочивания и визуального мерцания.
-10. **Можно ли получить полностью двунаправленный цикл для 2, 3 и 4 языков без системного диалога?**
-    - Для `N == 2` технически возможно при условии проверки, что `-0x271b` не переключает на сторонний IME и не блокируется `GboardLatinGlobeKeyIgnoreInterval` (`Lyrt;->h:F`).
-    - Для **`N == 3` и `N == 4`** без системного диалога это **невозможно доказать и безопасно реализовать**, пока не найдены дескрипторы внутреннего списка `InputMethodEntry` (или внутренний метод `PREVIOUS`) в APK `18.5.4`.
+| 1 | `FreeCursorKeyboard` lifecycle (`e`, `m`, `R`, `F`, `h`, `K`, `M`, `P`) | `BLOCKED` | **`CONFIRMED`** | `classes2.dex`: `0x59ebbc`, `0x59e478`, `0x59e954`, `0x59eb90`, `0x59edd4`, `0x59f51c`, `0x59f5b8`, `0x59e200` |
+| 2 | `Lxfe;` источники (`SWIPE_SPACE`, `SPACE_LONG_PRESS_SINGLE/MULTI`) | `PARTIALLY CONFIRMED` | **`CONFIRMED`** | `classes3.dex` `0x1b9d24` (`a..g`); `classes2.dex` `FreeCursorKeyboard;->e` `0x59ebbc` (`+0028..+0039`), `Looc;->a` `0x5a2e14` (`+01c4..+01ca`) |
+| 3 | `TriggerFreeCursorMotionEventHandler` swipe-активация (`-10104`) | `BLOCKED` | **`PARTIALLY CONFIRMED`** | `Looc;->a` `0x5a2e14` (`+01cc..+020c` → `-10104` + `Lqci(Lomw.a, map)` через `Lqit.n`) подтверждён; `Looe;->a` (`ACTION_DOWN` gate) не дамплен |
+| 4 | `FreeCursorMotionEventHandler` handoff, движение, `lock_mode`, выход на `ACTION_UP` | `BLOCKED` | **`PARTIALLY CONFIRMED`** | `gt()=true` (`0x5a163c`), `gs`/`g` (`0x5a1a64`/`0x5a19f0`), `c()` DPAD (`0x5a1994`), `o()` → `-10215 Lonu.a` (`0x5a17e0`) подтверждены; автоматы `Lonl`/`Long`/`Loni` не дамплены (`BLOCKED`) |
+| 5 | Разделение `ScrubMove`, `ScrubDelete`, `InlineSuggestionScrubSpace` + `noScrubbing` | `PARTIALLY CONFIRMED` | **`CONFIRMED`** | `classes.dex`: `0x1f12b4`, `0x1f0fdc`, `0x1eace0`, `0x4fbc58`, `0x521634`, `0x52184c` (`Lobk.v("noScrubbing")`); xref на `"enable_scrub_move"` всё ещё нужен |
+| 6 | Наличие нативного keycode `SWITCH_TO_PREVIOUS_LANGUAGE` | `PARTIALLY CONFIRMED` | **`NOT FOUND`** | `classes.dex` `Lqcm;-><clinit>()` (`0x33c4a0`, `5398` units): проверены все отрицательные keycodes — `SWITCH_TO_PREVIOUS_LANGUAGE` отсутствует |
+| 7 | Разделение intra-Gboard vs cross-IME keycodes (`-10011` vs `-10197`, `-10000`) | `BLOCKED` | **`PARTIALLY CONFIRMED`** | `Lqcm.<clinit>` (`0x33c4a0`): `-10000` (`+087f`), `-10011` (`+08b6`), `-10197` (`+08c1`, `ALLOWING_OTHER_IMES`), `-10022` (`+092f`); тела их обработчиков за `Lphr.aw` не дамплены |
+| 8 | Роль `Lqga;`, `Lqfz;`, `Lqev;`, `Ligz;->ad`, `Lpux;->fM/fN` | `BLOCKED` | **`CONFIRMED` (не диспетчеры)** | `classes.dex`: `0x3465b4`, `0x34645c`, `0x3431d4`, `0x48dd2c`, `0x32c390`, `0x517aa0` — только телеметрия, Clearcut-таймеры и `Trace` |
+| 9 | Менеджер `InputMethodEntry` (список, текущий, адресное переключение для `PREVIOUS`) | `BLOCKED` | **`BLOCKED`** | Обнаружена байткод-наводка `Lpex;` (`Lomo;->ae()Lpex;`, `Lpex;->p(Z)Z` в `FreeCursorKeyboard;->e` `+002c`), но `code_item` для `Lpex;` и обработчиков `-10000`/`-10011` отсутствуют |
 
 ---
 
-## 4. Исследование C — конфликтующие жесты пробела и уровни конкуренции
+## 6. Итоговые вердикты Этапа 4.1
 
-### 4.1. Карта уровней пайплайна касаний (кто реально конкурирует за один `MotionEvent`)
+### 6.1. Управление курсором (удержание пробела) — **`BLOCKED`** (`OPTION A` частично подтверждён, `OPTION B` готов как fallback)
+- **Прогресс:** В отличие от предыдущей итерации (где были только имена методов), теперь на уровне Dalvik-инструкций доказана вся архитектура `FreeCursorKeyboard` (`e`, `m`, `R`, `F`, `h`, `K`, `M`, `P`), `TriggerFreeCursorMotionEventHandler` (`Looc;->a`), `FreeCursorMotionEventHandler` (`gt`, `gs`, `b`, `c`, `o`, `p`) и всех трёх `Scrub*`-обработчиков.
+- **Почему `OPTION A` всё ещё `BLOCKED`:** без декодирования `Lonl`/`Long`/`Loni` (`Lonk.a`), `Looe.a`, продюсера space long-press (`-10004` + `Lomw.a` / `space_long_press_ime_picker`) и xref на `"enable_scrub_move"` (`0x7f14096b`) нельзя гарантировать:
+  1. корректный live-handoff пальца в `FreeCursorMotionEventHandler` после удержания пробела без отрыва;
+  2. немедленный выход на `ACTION_UP` без залипания lock-режима;
+  3. отсутствие побочного отключения `ScrubDeleteMotionEventHandler`.
+- **Fallback:** `OPTION B` (прямой Samsung-подобный `InputConnection` DPAD-трекпад поверх единого хука `KeyboardViewHolder.dispatchTouchEvent`, с `finishComposingText()`, `KEYCODE_DPAD_LEFT/RIGHT` и проверкой `noScrubbing`) остаётся полностью жизнеспособным и независимым от внутренних состояний `Lonl`/`Long`/`Loni`.
 
-```text
-Уровень 0 (View-контейнер окна клавиатуры)
-  KeyboardViewHolder.dispatchTouchEvent(MotionEvent)Z          [CONFIRMED: classes.dex + gboard-version-bindings.json]
-    ├─ Header holder (id == keyboard_header_view_holder):
-    │    GboardSwipeDismissBytecodePatch / GboardSwipeDismissRuntime  [НЕ конкурирует с пробелом пространственно,
-    │                                                                  НО конкурирует за ОДИН И ТОТ ЖЕ байткод-метод!]
-    └─ Body holder (не header):
-         └─► Будущая стадия Stage 2 в ЕДИНОМ GboardTouchDispatchFamilyComposer (НЕ второй независимый хук!)
-
-Уровень 1 (Поверхность клавиш)
-  SoftKeyboardView.dispatchTouchEvent(MotionEvent)Z            [CONFIRMED: DEX extract]
-    └─ SoftKeyboardView.A(MotionEvent, int) -> SoftKeyView (0x7f0b05b5, keyCode == 62)
-
-Уровень 2 (Конкурирующие MotionEventHandler — ОДИН raw MotionEvent!)
-  ├─ TriggerFreeCursorMotionEventHandler                       [CONFIRMED: DEX extract]
-  │    ├─ FREE_CURSOR_SOURCE_SPACE_LONG_PRESS_SINGLE_KEYBOARD  [конкуренция за HOLD пробела]
-  │    ├─ FREE_CURSOR_SOURCE_SPACE_LONG_PRESS_MULTI_KEYBOARD   [конкуренция за HOLD пробела]
-  │    └─ FREE_CURSOR_SOURCE_SWIPE_SPACE                       [ПРЯМАЯ конкуренция за SWIPE пробела!]
-  ├─ ScrubMoveMotionEventHandler (< ScrubMotionEventHandler)   [ПРЯМАЯ конкуренция за SWIPE пробела! Проверяет noScrubbing]
-  ├─ ScrubDeleteMotionEventHandler (< ScrubMotionEventHandler) [НЕ конкурирует по координате (Backspace, не пробел),
-  │                                                             НО потенциально рискует при отключении общего Scrub-флага!]
-  ├─ Inline suggestion swipe handler                           [строка INLINE_SUGGESTION_SELECT_BY_SWIPE_ON_SPACEBAR —
-  │                                                             ПРЯМАЯ конкуренция за SWIPE пробела при активной inline-подсказке!]
-  └─ GestureMotionEventHandler (Glide Typing)                  [не пересекается при ACTION_DOWN вне пробела; при промахе с пробела вверх нужен soft yield]
-
-Уровень 3 (Трекинг отдельного указателя SoftKeyView)
-  Lqin;->B(SoftKeyView, F, F, J, I)V / y()V / s(J)V / r(JI)V   [CONFIRMED: GboardPointerOwnerTransformation.kt]
-    ├─ 4 существующие фичи GboardSamsung (ENGLISH_QWERTY, LONG_PRESS_QUICK_ACTIONS, TOP_ROW_SWIPE, ZHUYIN_SLIDE)
-    └─ Lqin;->A:Future (long-press таймер -> потенциально запускает space_long_press_ime_picker)
-
-Уровень 4 (Пост-классификационный диспатч дискретных жестов клавиш)
-  Lqil;->f(...)V -> Lqij;->o(...)V                             [CONFIRMED: GboardGestureFamilyComposer.kt]
-    └─ События PRESS (keyCode == 62) и LONG_PRESS (keyCode == 62 / space_long_press_ime_picker)
-
-Уровень 5 (Обработка IME-событий)
-  Lphr;->aw(Lohe;)Z                                            [CONFIRMED: GboardLongPressQuickActionsInputEventPatch.kt]
-```
-
-### 4.2. Критические выводы по конфликтам
-1. **`KeyboardViewHolder.dispatchTouchEvent(MotionEvent)Z`:**
-   - В текущем `GboardSwipeDismissBytecodePatch.kt:40` стоит строгий инвариант единственности хука (`existing == 1 && instructions.first().isMethodReference(abi.reference)`).
-   - **Второй независимый хук строго запрещён.** Единственный безопасный путь — рефакторинг `GboardSwipeDismissBytecodePatch` в общий `GboardTouchDispatchFamilyComposer` (Stage 1 `SWIPE_DISMISS` только для `keyboard_header_view_holder` → Stage 2 `SAMSUNG_SPACEBAR` только для body holder, с общим `ThreadLocal<Boolean>` guard синтетического `ACTION_CANCEL`).
-2. **`GboardPointerOwnerTransformation` (`Lqin;`) и `GboardGestureFamilyComposer` (`Lqil;->f`):**
-   - Оба лежат **ниже** Уровня 2 (`ScrubMoveMotionEventHandler`, `TriggerFreeCursorMotionEventHandler`, `INLINE_SUGGESTION_SELECT_BY_SWIPE_ON_SPACEBAR`). Поэтому основное распознавание жестов пробела **невозможно** перенести в `Lqin;` или `Lqil;`.
-   - `GboardPointerOwnerTransformation` остаётся полностью нетронутым; `GboardGestureFamilyComposer` используется только как лёгкая страховочная стадия (`keyCode == 62`).
-3. **Запрет преждевременного отключения общего флага `enable_scrub_move` / `0x7f14096b`:**
-   - До декомпиляции `ScrubMoveMotionEventHandler`, `ScrubDeleteMotionEventHandler` и `TriggerFreeCursorMotionEventHandler` **не доказано**:
-     - (а) что отключение `enable_scrub_move` / `0x7f14096b` не отключит `ScrubDeleteMotionEventHandler` (Backspace Scrub Delete);
-     - (б) что отключение `enable_scrub_move` / `0x7f14096b` не сломает встроенный `FreeCursorKeyboard` (поскольку в текущем `GboardCursorTrackpadRuntime.java` эти настройки форсируются вместе с `free_cursor`).
-   - Вместо отключения общего флага перехват горизонтального свайпа на Уровне 0 (`KeyboardViewHolder.dispatchTouchEvent`) с инъекцией синтетического `ACTION_CANCEL` отменяет **только** текущую сессию касания пробела и физически не затрагивает Backspace (`ScrubDeleteMotionEventHandler`).
-4. **Неразрешённый конфликт с `INLINE_SUGGESTION_SELECT_BY_SWIPE_ON_SPACEBAR`:**
-   - Поскольку в DEX `18.5.4` подтверждена строка `INLINE_SUGGESTION_SELECT_BY_SWIPE_ON_SPACEBAR` (и `SWIPE_ON_SPACEBAR`), при активной inline-подсказке свайп по пробелу конкурирует со сменой языка. Нужно решить на этапе трассировки APK / спецификации UX: отдавать приоритет смене языка всегда или уступать при видимой inline-подсказке.
+### 6.2. Двунаправленное переключение языков (`NEXT`/`PREVIOUS`) — **`BLOCKED`** (целевой путь — `OPTION B` через `Lpex;` и/или `-10000` `SWITCH_LANGUAGE`)
+- **Доказано:**
+  - `OPTION A` (нативный keycode `SWITCH_TO_PREVIOUS_LANGUAGE`) окончательно закрыт как **`NOT FOUND`** по полному `Lqcm.<clinit>()`.
+  - `Lqga;`, `Lqfz;`, `Lqev;`, `Ligz;->ad`, `Lpux;->fM/fN` — только телеметрия/трассировка.
+  - В `Lqcm.<clinit>()` подтверждены ключевые коды **`-10000` (`SWITCH_LANGUAGE`)**, **`-10011` (`SWITCH_TO_NEXT_LANGUAGE`)** и **`-10197` (`SWITCH_TO_NEXT_LANGUAGE_ALLOWING_OTHER_IMES`)**.
+  - Обнаружена конкретная байткод-наводка на менеджер раскладок/языков: **`Lpex;`** (`Lomo;->ae()Lpex;`, `Lpex;->p(Z)Z`).
+- **Почему `BLOCKED`:** в дампах отсутствуют тела обработчиков `-10000`, `-10011`, `-10197` и методы интерфейса/реализации `Lpex;`. Без них невозможно гарантировать детерминированный `PREVIOUS` при `N >= 3` языках и 100% защиту от перехода в Samsung Keyboard.
 
 ---
 
-## 5. Исследование D — сводная сравнительная таблица
+## 7. Точный список целевых `code_item` для финальной разблокировки (Этап 4.2)
 
-| Возможность | Механизм | Подтверждённый descriptor | Ограничения | Статус |
-|---|---|---|---|---|
-| **Free Cursor long-press** | Встроенная подсистема `FreeCursorKeyboard` / `TriggerFreeCursorMotionEventHandler` / `FreeCursorMotionEventHandler` + enum `Lxfe.FREE_CURSOR_SOURCE_SPACE_LONG_PRESS_SINGLE_KEYBOARD` / `MULTI_KEYBOARD`; флаги `"free_cursor"`, `"free_cursor_lock_mode"` и настройка `"enable_scrub_move"` / `0x7f14096b` | `Loki;->g()Ljava/lang/Object;` + `Loki;->a:Ljava/lang/String;`; `Lqvt;->am(Ljava/lang/String;ZZ)Z`; `Lcht;->x(IZ)Z`; в DEX extract (без return types): `FreeCursorKeyboard.e(EditorInfo, Object)`, `eR(SoftKeyboardView, KeyboardViewDef)`, `m(Lohe)`, `h()`, `P(Lohe)` | Не прослежен control-flow `TriggerFreeCursorMotionEventHandler`, неизвестен точный метод программного запуска и зависимость от `enable_scrub_move` и `free_cursor_lock_mode` (APK отсутствует в среде) | `PARTIALLY CONFIRMED` |
-| **Завершение Free Cursor** | Жизненный цикл `FreeCursorKeyboard` (`h()`, `m(Lohe)`) + `FreeCursorMotionEventHandler` + lifecycle `Lphr;` | `Lphr;->onWindowHidden()V`, `onFinishInputView(Z)V`, `onFinishInput()V`, `onDestroy()V` (`gboard-version-bindings.json`); `FreeCursorKeyboard.h()` (без return type в extract) | Не прослежено поведение `FreeCursorMotionEventHandler` на `ACTION_UP`/`ACTION_CANCEL` и гарантированное отсутствие вставки пробела без `free_cursor_lock_mode` | `BLOCKED` |
-| **Отключение Swipe Space** | Блокировка `FREE_CURSOR_SOURCE_SWIPE_SPACE` и `ScrubMoveMotionEventHandler` (через точечный арбитраж в `GboardTouchDispatchFamilyComposer` или патч обработчика) | `Lcom/google/android/libraries/inputmethod/keyboard/impl/KeyboardViewHolder;->dispatchTouchEvent(Landroid/view/MotionEvent;)Z` (`gboard-version-bindings.json`); классы `ScrubMoveMotionEventHandler`, `Lxfe.FREE_CURSOR_SOURCE_SWIPE_SPACE` (DEX extract) | Неизвестно, сработает ли `ScrubMoveMotionEventHandler` / `FREE_CURSOR_SOURCE_SWIPE_SPACE` до нашего порога `D_swipe_start`, и связана ли настройка `enable_scrub_move` с Free Cursor long-press и Scrub Delete | `BLOCKED` |
-| **Сохранение Scrub Delete** | Раздельный подкласс `ScrubDeleteMotionEventHandler` (< `ScrubMotionEventHandler`), привязанный к Backspace | Классы `ScrubMotionEventHandler` (`g`, `p`, `o`, `r`), `ScrubMoveMotionEventHandler`, `ScrubDeleteMotionEventHandler` (DEX extract, без полных return types) | Подтверждено разделение классов, но не доказано, читает ли `ScrubDeleteMotionEventHandler` общий ключ `"enable_scrub_move"` / `0x7f14096b` | `PARTIALLY CONFIRMED` |
-| **NEXT language** | Событие `Lohe;` с `Lqbc.c == -0x271b` (`-10011`), payload `"globe"`, `qae.PRESS`, enum `Lqga.SWITCH_TO_NEXT_LANGUAGE` | `Lphr;->aw(Lohe;)Z`, `Lohe;->a:Lqae;`, `b:[Lqbc;`, `Lqbc;->c:I`, `e:Ljava/lang/Object;` (`gboard-version-bindings.json` + `GboardLongPressQuickActionsReflectionHandles.java`); `Lqga.SWITCH_TO_NEXT_LANGUAGE` (DEX extract) | Не прослежен downstream-обработчик `-0x271b`: не доказано, циклический он или MRU, и может ли переключить на внешний IME (`hasOtherSwitchableImes`) | `PARTIALLY CONFIRMED` |
-| **PREVIOUS language** | Поиск буквального идентификатора или обратного keycode / метода шага `-1` | Не найден (строка `SWITCH_TO_PREVIOUS_LANGUAGE` отсутствует во всех 4 DEX; в репо нет обратного keycode) | Отсутствие строки не доказывает невозможность `PREVIOUS`; нужен поиск обфусцированного метода / индексного декремента в JADX/Baksmali | `NOT FOUND` |
-| **Получение списка языков** | Внутренний менеджер `InputMethodEntry` Gboard (упорядоченный список включённых раскладок) | Не подтверждён (отсутствует в `gboard-version-bindings.json`, исходниках репо и текущем DEX extract) | Невозможно извлечь дескриптор без декомпиляции `Gboard-v18.5.4.993608717-release-arm64-v8a.apk` | `BLOCKED` |
-| **Получение текущего языка** | Геттер активного `InputMethodEntry` во внутреннем менеджере Gboard | Не подтверждён (отсутствует в `gboard-version-bindings.json`, исходниках репо и текущем DEX extract) | Невозможно извлечь дескриптор без декомпиляции целевого APK `18.5.4` | `BLOCKED` |
-| **Переключение на конкретный язык** | Внутренний метод переключения на целевой `InputMethodEntry` / `Lqga.SWITCH_LANGUAGE` | В DEX extract подтверждён только enum `Lqga.SWITCH_LANGUAGE` (без дескриптора целевого метода) | Невозможно извлечь сигнатуру и проверить защиту от выхода из Gboard без декомпиляции APK `18.5.4` | `BLOCKED` |
+Для закрытия всех оставшихся блокеров и выбора между `OPTION A`/`OPTION B` больше не нужны широкие дампы — достаточно выгрузить **ровно 2 узких пакета `code_item`** из того же APK `18.5.4.993608717-release-arm64-v8a` (с исправлением в дампере ширины `12x` для `0xc6`–`0xc9`, `0xce`):
 
----
+### Пакет 1 — Закрытие блокера `NEXT`/`PREVIOUS` (высший приоритет)
+1. **Все `code_item` методов, содержащих константы `-10000` (`0xd8f0`), `-10011` (`0xd8e5`) и `-10197` (`0xd82b`)** в `classes.dex` и `classes2.dex` (исключая `Lqcm.<clinit>`) — это даст точный диспетчер `SWITCH_LANGUAGE`, `SWITCH_TO_NEXT_LANGUAGE` и `SWITCH_TO_NEXT_LANGUAGE_ALLOWING_OTHER_IMES` за `Lphr;->aw(Lohe;)Z`.
+2. **Определение интерфейса `Lpex;` и всех классов, реализующих `Lpex;`** (особенно методы, возвращающие `List` / `InputMethodEntry`, текущий `InputMethodEntry` и методы переключения на переданный `InputMethodEntry` / `Locale`), плюс тело **`Lpux;->b()V`** (`classes.dex`).
 
-## 6. Финальный архитектурный вердикт Этапа 4.1
-
-### 6.1. Cursor: **`BLOCKED`**
-- **Почему `BLOCKED`, а не `OPTION A` или `OPTION B` прямо сейчас:**
-  - Доказано существование встроенного `FreeCursorKeyboard`, `FreeCursorMotionEventHandler`, `TriggerFreeCursorMotionEventHandler`, констант `Lxfe.FREE_CURSOR_SOURCE_SPACE_LONG_PRESS_SINGLE_KEYBOARD / MULTI_KEYBOARD / SWIPE_SPACE / DIRECT_KEYCODE`, а также то, что upstream-патч `GboardCursorTrackpad` уже активирует режим трекпада на удержании пробела через `"free_cursor"`, `"free_cursor_lock_mode"` и `"enable_scrub_move"` / `0x7f14096b`.
-  - Однако в контейнере отсутствует APK `18.5.4`, поэтому **не доказаны**: (1) точный descriptor и условия запуска `TriggerFreeCursorMotionEventHandler` / `FreeCursorKeyboard`, (2) возможность работать без `free_cursor_lock_mode` с чистым выходом по `ACTION_UP`, (3) возможность отключить `FREE_CURSOR_SOURCE_SWIPE_SPACE` и `ScrubMoveMotionEventHandler` без поломки Free Cursor long-press и без поломки `ScrubDeleteMotionEventHandler`.
-  - **Приоритет после разблокировки:** первым проверяется **`OPTION A`** (переиспользование `FreeCursorKeyboard`); если трассировка докажет жёсткую связку `SWIPE_SPACE` или несовместимость UX с удержанием без lock mode — немедленный переход на **`OPTION B`** (`GboardSpacebarCursorController` через `finishComposingText()` + сбалансированные `InputConnection.sendKeyEvent(KEYCODE_DPAD_LEFT/RIGHT)`).
-
-### 6.2. Language switching: **`BLOCKED`**
-- **Почему `BLOCKED`:**
-  - Подтверждён только путь `NEXT` (`-0x271b` через `Lphr;->aw(Lohe;)Z`, `Lqga.SWITCH_TO_NEXT_LANGUAGE`).
-  - Буквальный `SWITCH_TO_PREVIOUS_LANGUAGE` в 4 DEX не найден, а дескрипторы внутреннего списка `InputMethodEntry`, текущего элемента и метода переключения на конкретный `InputMethodEntry` (или `Lqga.SWITCH_LANGUAGE`) отсутствуют и в репозитории, и в текущем поверхностном DEX extract.
-  - Без этих 3 дескрипторов из APK `18.5.4` невозможно безопасно гарантировать детерминированный двунаправленный цикл для `3` и `4` языков без MRU, без открытия системного IME picker и без выхода в Samsung Keyboard.
-  - **Приоритет после разблокировки:** трассировка обработчика `Lqga.SWITCH_TO_NEXT_LANGUAGE` (`-0x271b`) и `LanguageSwitcherAccessPointProvider` в JADX/Baksmali сразу переведёт вердикт либо в **`OPTION A`** (если найдётся скрытый шаг `-1`), либо в **`OPTION B`** (собственный детерминированный цикл `(i ± 1 + N) % N` поверх внутреннего списка `InputMethodEntry` Gboard).
-
----
-
-## 7. Минимальный целевой пакет декомпиляции для закрытия всех блокеров
-
-Поскольку APK `Gboard-v18.5.4.993608717-release-arm64-v8a.apk` находится на локальной машине владельца проекта (и не должен коммититься в GitHub), достаточно выполнить локально **ровно один** проход JADX/Baksmali и сохранить компактную текстовую выжимку (только дескрипторы, call-графы и ключевые ветвления — без дампа исходников APK) в `docs/GBOARD_18.5.4_STAGE_4_2_CONTROL_FLOW_EXTRACT.md`:
-
-1. **Блок Free Cursor + Scrub (закрывает вердикт Cursor):**
-   - Декомпилировать 6 классов:
-     - `com.google.android.libraries.inputmethod.freecursor.FreeCursorKeyboard`
-     - `com.google.android.libraries.inputmethod.freecursor.FreeCursorMotionEventHandler`
-     - `com.google.android.libraries.inputmethod.freecursor.TriggerFreeCursorMotionEventHandler`
-     - `com.google.android.libraries.inputmethod.motioneventhandler.scrubmove.ScrubMotionEventHandler`
-     - `com.google.android.libraries.inputmethod.motioneventhandler.scrubmove.ScrubMoveMotionEventHandler`
-     - `com.google.android.libraries.inputmethod.motioneventhandler.scrubmove.ScrubDeleteMotionEventHandler`
-   - Найти все ссылки (`xrefs`) на `Lxfe.FREE_CURSOR_SOURCE_SPACE_LONG_PRESS_SINGLE_KEYBOARD`, `FREE_CURSOR_SOURCE_SPACE_LONG_PRESS_MULTI_KEYBOARD`, `FREE_CURSOR_SOURCE_SWIPE_SPACE`, `FREE_CURSOR_SOURCE_DIRECT_KEYCODE`, `"enable_scrub_move"`, `0x7f14096b` и `"space_long_press_ime_picker"` + тело `Lqin;->y()V`.
-2. **Блок двунаправленного переключения языков (закрывает вердикт Language Switching):**
-   - Найти все ссылки (`xrefs`) на `Lqga.SWITCH_TO_NEXT_LANGUAGE`, `Lqga.SWITCH_LANGUAGE`, целочисленную константу `-10011` (`-0x271b`), `"Input.switchToNextLanguage.%s"` и декомпилировать `LanguageSwitcherAccessPointProvider` + найденный обработчик переключения `InputMethodEntry`.
-   - Зафиксировать точные дескрипторы: список включённых `InputMethodEntry`, текущий `InputMethodEntry`, метод переключения на конкретный `InputMethodEntry` (и проверить, затрагивает ли он внешние IME).
+### Пакет 2 — Закрытие блокера `OPTION A` (Free Cursor) и `enable_scrub_move`
+3. **`classes2.dex`: `Lonl;`, `Long;`, `Loni;`, `Lonk;`** (в частности `a(Landroid/view/MotionEvent;)Lonk;`) — полная логика движения, `ACTION_UP`/`ACTION_CANCEL`, lock countdown и вызова `FreeCursorMotionEventHandler;->o()`.
+4. **`classes2.dex`: `Looe;->a(Landroid/view/MotionEvent;)Loof;`** — `ACTION_DOWN`-гейты `TriggerFreeCursorMotionEventHandler`.
+5. **Все методы в `classes.dex`/`classes2.dex` с xref на `Lomw;->a`** (исключая `Looc;->a`) и на строку **`"space_long_press_ime_picker"`** / **`Lqin;->y()V`** — точный продюсер долгого нажатия пробела.
+6. **Все методы в `classes.dex`/`classes2.dex` с xref на `"enable_scrub_move"` или ресурс `0x7f14096b`** — проверка, безопасно ли отключать `ScrubMoveMotionEventHandler` без влияния на `ScrubDeleteMotionEventHandler` и `TriggerFreeCursorMotionEventHandler`.
