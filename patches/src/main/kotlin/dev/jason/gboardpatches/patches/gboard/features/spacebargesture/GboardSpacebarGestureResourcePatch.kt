@@ -1,4 +1,4 @@
-package dev.jason.gboardpatches.patches.gboard.features.swipedismiss
+package dev.jason.gboardpatches.patches.gboard.features.spacebargesture
 
 import app.morphe.patcher.patch.ResourcePatchContext
 import app.morphe.patcher.patch.resourcePatch

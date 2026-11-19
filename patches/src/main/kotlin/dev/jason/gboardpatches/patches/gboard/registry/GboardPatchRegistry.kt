@@ -81,10 +81,11 @@ import dev.jason.gboardpatches.patches.gboard.features.signaturebypass.gboardSig
 import dev.jason.gboardpatches.patches.gboard.features.splitkeyboard.gboardSplitKeyboardFeatureMarkerPatch
 import dev.jason.gboardpatches.patches.gboard.features.splitkeyboard.gboardSplitKeyboardAccessPointPatch
 import dev.jason.gboardpatches.patches.gboard.features.splitkeyboard.gboardSplitKeyboardModePatch
+import dev.jason.gboardpatches.patches.gboard.features.spacebargesture.gboardSpacebarGestureBytecodePatch
+import dev.jason.gboardpatches.patches.gboard.features.spacebargesture.gboardSpacebarGestureResourcePatch
 import dev.jason.gboardpatches.patches.gboard.features.spacebarlogo.gboardSpacebarLogoFeatureMarkerPatch
 import dev.jason.gboardpatches.patches.gboard.features.symbolfooter.gboardSymbolFooterOrderBytecodePatch
 import dev.jason.gboardpatches.patches.gboard.features.symbolfooter.gboardSymbolFooterOrderFeatureMarkerPatch
-import dev.jason.gboardpatches.patches.gboard.features.swipedismiss.gboardSpacebarGestureResourcePatch
 import dev.jason.gboardpatches.patches.gboard.features.swipedismiss.gboardSwipeDismissBytecodePatch
 import dev.jason.gboardpatches.patches.gboard.features.swipedismiss.gboardSwipeDismissFeatureMarkerPatch
 import dev.jason.gboardpatches.patches.gboard.features.toprowswipe.gboardTopRowSwipeFeatureMarkerPatch
@@ -292,6 +293,21 @@ val gboardSwipeDismissPatch = gboardPublicResourcePatch(
         gboardPatchesSettingsPatch,
         gboardSwipeDismissFeatureMarkerPatch,
         gboardSwipeDismissBytecodePatch,
+    )
+}
+
+@Suppress("unused")
+val gboardSamsungSpacebarGesturesPatch = gboardPublicResourcePatch(
+    featureId = "samsung_spacebar_gestures",
+    name = "Samsung Spacebar Gestures",
+    description = "在空白鍵啟用 Samsung 風格手勢：左右滑動切換語言，長按滑動移動游標。\n" +
+        "Enable Samsung-style spacebar gestures: swipe left/right to switch languages and long-press to move the cursor.",
+    default = true,
+) {
+    compatibleWith(COMPATIBILITY_GBOARD)
+
+    dependsOn(
+        gboardSpacebarGestureBytecodePatch,
         gboardSpacebarGestureResourcePatch,
     )
 }
@@ -884,6 +900,7 @@ object GboardPublishedPatchCatalog {
         gboardEditingAccessPointsPatch,
         gboardSimpleCalculatorPatch,
         gboardSwipeDismissPatch,
+        gboardSamsungSpacebarGesturesPatch,
         gboardAdvancedVoiceTypingPatch,
         gboardBluetoothMicrophonePatch,
         gboardEmojiSizePatch,

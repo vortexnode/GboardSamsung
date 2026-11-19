@@ -23,13 +23,20 @@ import java.util.WeakHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * Switches strictly within the active Gboard IME:
- * - NEXT: direct {@link InputMethodManager#switchToNextInputMethod(IBinder, boolean)} with
- *   {@code onlyCurrentIme = true} (bypassing Gboard's {@code Lpga.az} TalkBack fallback).
- * - PREVIOUS: follows Gboard's confirmed internal rotation list ({@code Lpga.F(Context)} ->
- *   {@code Lpga.C()} -> {@code Lpga.Y} ({@code Lrek}) -> {@code Lrek.j(current)} ->
- *   {@code Lrek.b[index - 1]} -> {@code Lpev.f()}) and switches strictly inside Gboard's own
- *   {@link InputMethodInfo} via {@code Lsex.k} or verified {@code setInputMethodAndSubtype}.
+ * Switches languages strictly within the active Gboard IME using ONE unified ordered list and ONE
+ * verified Gboard-only switch mechanism for both directions:
+ * <ul>
+ *   <li>Reads Gboard's confirmed internal rotation list:
+ *       {@code Lpga.F(Context)} -> {@code Lpga.C()} (current {@code Lpev}) ->
+ *       {@code Lpga.Y} ({@code Lrek}) -> {@code Lrek.j(current)} -> {@code Lrek.b}.</li>
+ *   <li>{@code NEXT}: {@code (index + 1) % size} (matching Gboard's {@code Lrek.k(current, boolean)}).</li>
+ *   <li>{@code PREVIOUS}: {@code (index - 1 + size) % size} on the exact same {@code Lrek.b} list.</li>
+ *   <li>Extracts {@code Lpev.f()} ({@link InputMethodSubtype}), verifies that both the target
+ *       {@link InputMethodInfo} and enabled subtype strictly belong to the active Gboard IME, and
+ *       switches via {@code Lsex.k} or verified {@code imm.setInputMethodAndSubtype}.</li>
+ *   <li>Never calls {@code Lpga.az}, {@code imm.setInputMethod}, or {@code imm.switchToNextInputMethod},
+ *       so an external IME can never be selected and {@code NEXT}/{@code PREVIOUS} never diverge in order.</li>
+ * </ul>
  */
 public final class GboardSpacebarLanguageNavigator {
     private static final String TAG = "GboardPatches";
@@ -41,11 +48,20 @@ public final class GboardSpacebarLanguageNavigator {
     private static final String ROTATION_LIST_CLASS = "rek";
     private static final String SUBTYPE_SWITCHER_CLASS = "sex";
 
-    private static final Map<ClassLoader, WeakReference<PreviousReflectionHandles>> HANDLES =
+    private static final Map<ClassLoader, WeakReference<LanguageRotationHandles>> HANDLES =
             Collections.synchronizedMap(new WeakHashMap<>());
     private static final AtomicInteger WARN_LOG_COUNT = new AtomicInteger();
 
     private GboardSpacebarLanguageNavigator() {
+    }
+
+    /**
+     * Computes the cyclic next index in Gboard's ordered language rotation list.
+     *
+     * @return {@code -1} if switching is impossible ({@code listSize <= 1} or invalid index).
+     */
+    public static int resolveNextIndex(int currentIndex, int listSize) {
+        return resolveTargetIndex(currentIndex, listSize, +1);
     }
 
     /**
@@ -54,10 +70,22 @@ public final class GboardSpacebarLanguageNavigator {
      * @return {@code -1} if switching is impossible ({@code listSize <= 1} or invalid index).
      */
     public static int resolvePreviousIndex(int currentIndex, int listSize) {
-        if (listSize <= 1 || currentIndex < 0 || currentIndex >= listSize) {
+        return resolveTargetIndex(currentIndex, listSize, -1);
+    }
+
+    /**
+     * Computes the cyclic target index for a non-zero directional step ({@code +1} for NEXT,
+     * {@code -1} for PREVIOUS) in Gboard's ordered language rotation list.
+     *
+     * @return {@code -1} if switching is impossible ({@code listSize <= 1}, {@code step == 0},
+     *     invalid index, or target wraps back to {@code currentIndex}).
+     */
+    public static int resolveTargetIndex(int currentIndex, int listSize, int step) {
+        if (listSize <= 1 || currentIndex < 0 || currentIndex >= listSize || step == 0) {
             return -1;
         }
-        return currentIndex == 0 ? listSize - 1 : currentIndex - 1;
+        int targetIndex = ((currentIndex + step) % listSize + listSize) % listSize;
+        return targetIndex == currentIndex ? -1 : targetIndex;
     }
 
     /**
@@ -70,118 +98,129 @@ public final class GboardSpacebarLanguageNavigator {
                 && servicePackageName.equals(imePackageName);
     }
 
-    @SuppressWarnings("deprecation")
     public static boolean switchNext(InputMethodService service) {
-        if (service == null) {
-            return false;
-        }
-        IBinder token = resolveWindowToken(service);
-        InputMethodManager imm = resolveInputMethodManager(service);
-        if (token == null || imm == null) {
-            logWarn("NEXT aborted: missing IME token or InputMethodManager", null);
-            return false;
-        }
-        try {
-            // onlyCurrentIme MUST be true so Android never leaves Gboard for another IME.
-            return imm.switchToNextInputMethod(token, true);
-        } catch (Throwable throwable) {
-            logWarn("NEXT failed via switchToNextInputMethod(token, true)", throwable);
-            return false;
-        }
+        return switchByStep(service, +1, "NEXT");
+    }
+
+    public static boolean switchPrevious(InputMethodService service) {
+        return switchByStep(service, -1, "PREVIOUS");
     }
 
     @SuppressWarnings("deprecation")
-    public static boolean switchPrevious(InputMethodService service) {
+    private static boolean switchByStep(
+            InputMethodService service, int step, String directionLabel) {
         if (service == null) {
             return false;
         }
         IBinder token = resolveWindowToken(service);
         InputMethodManager imm = resolveInputMethodManager(service);
         if (token == null || imm == null) {
-            logWarn("PREVIOUS aborted: missing IME token or InputMethodManager", null);
+            logWarn(directionLabel + " aborted: missing IME token or InputMethodManager", null);
             return false;
         }
         InputMethodInfo gboardInfo = resolveCurrentGboardImeInfo(service, imm);
         if (gboardInfo == null) {
-            logWarn("PREVIOUS aborted: unable to verify active Gboard InputMethodInfo", null);
+            logWarn(directionLabel + " aborted: unable to verify active Gboard InputMethodInfo",
+                    null);
             return false;
         }
 
         try {
-            PreviousReflectionHandles handles = resolveHandles(service.getClass().getClassLoader());
+            LanguageRotationHandles handles = resolveHandles(service.getClass().getClassLoader());
             Context appContext = service.getApplicationContext();
             Object pgaInstance = handles.getManagerMethod.invoke(
                     null, appContext != null ? appContext : service);
             if (pgaInstance == null) {
-                logWarn("PREVIOUS aborted: Lpga.F(Context) returned null", null);
+                logWarn(directionLabel + " aborted: Lpga.F(Context) returned null", null);
                 return false;
             }
 
-            Object currentEntry = handles.currentEntryMethod.invoke(pgaInstance);
             Object rotationList = handles.rotationListField.get(pgaInstance);
-            if (currentEntry == null || rotationList == null) {
-                logWarn("PREVIOUS aborted: current Lpev or Lpga.Y (Lrek) is null", null);
+            if (rotationList == null) {
+                logWarn(directionLabel + " aborted: Lpga.Y (Lrek) is null", null);
                 return false;
             }
 
-            Object indexResult = handles.indexOfEntryMethod.invoke(rotationList, currentEntry);
-            if (!(indexResult instanceof Integer currentIndex)) {
-                logWarn("PREVIOUS aborted: Lrek.j(current) did not return Integer", null);
-                return false;
-            }
-
-            List<?> entries = extractEntryList(handles.rotationEntriesField.get(rotationList));
-            if (entries.size() <= 1) {
-                return false;
-            }
-
-            int previousIndex = resolvePreviousIndex(currentIndex, entries.size());
-            if (previousIndex < 0) {
-                logWarn("PREVIOUS aborted: current Lpev index not found (" + currentIndex
-                        + " of " + entries.size() + ")", null);
-                return false;
-            }
-
-            Object previousEntry = entries.get(previousIndex);
-            if (previousEntry == null
-                    || previousEntry == currentEntry
-                    || previousEntry.equals(currentEntry)) {
-                return false;
-            }
-
-            Object subtypeObject = handles.entrySubtypeMethod.invoke(previousEntry);
-            if (!(subtypeObject instanceof InputMethodSubtype targetSubtype)) {
-                logWarn("PREVIOUS aborted: previous Lpev.f() did not return InputMethodSubtype",
-                        null);
-                return false;
-            }
-
-            InputMethodSubtype verifiedSubtype =
-                    findEnabledSubtypeForGboard(imm, gboardInfo, targetSubtype);
-            if (verifiedSubtype == null) {
-                logWarn("PREVIOUS aborted: target subtype is not enabled for current Gboard IME",
-                        null);
-                return false;
-            }
-
-            if (trySwitchViaGboardHelper(handles, pgaInstance, gboardInfo, token, verifiedSubtype)) {
-                return true;
-            }
-
-            // Final package check before invoking setInputMethodAndSubtype strictly on Gboard ID.
-            if (!isSameImePackage(service.getPackageName(), gboardInfo.getPackageName())) {
-                return false;
-            }
-            imm.setInputMethodAndSubtype(token, gboardInfo.getId(), verifiedSubtype);
-            return true;
+            RotationSwitchBackend<Object, InputMethodSubtype> backend =
+                    new GboardReflectionBackend(
+                            service,
+                            imm,
+                            token,
+                            gboardInfo,
+                            handles,
+                            pgaInstance,
+                            rotationList);
+            return switchWithBackend(backend, step, directionLabel);
         } catch (Throwable throwable) {
-            logWarn("PREVIOUS failed; staying on current Gboard language", throwable);
+            logWarn(directionLabel + " failed; staying on current Gboard language", throwable);
             return false;
         }
     }
 
+    static <E, S> boolean switchWithBackend(
+            RotationSwitchBackend<E, S> backend, int step, String directionLabel) {
+        if (backend == null || step == 0) {
+            return false;
+        }
+        String servicePackage = backend.getServicePackageName();
+        String targetImePackage = backend.getTargetImePackageName();
+        String targetImeId = backend.getTargetImeId();
+        if (!isSameImePackage(servicePackage, targetImePackage)
+                || targetImeId == null
+                || targetImeId.isEmpty()) {
+            logWarn(directionLabel + " aborted: target IME does not belong to active Gboard", null);
+            return false;
+        }
+
+        E currentEntry = backend.getCurrentEntry();
+        List<E> entries = backend.getRotationEntries();
+        if (currentEntry == null || entries == null || entries.size() <= 1) {
+            return false;
+        }
+
+        int currentIndex = backend.indexOfEntry(currentEntry);
+        int targetIndex = resolveTargetIndex(currentIndex, entries.size(), step);
+        if (targetIndex < 0) {
+            logWarn(directionLabel + " aborted: current Lpev index not found (" + currentIndex
+                    + " of " + entries.size() + ")", null);
+            return false;
+        }
+
+        E targetEntry = entries.get(targetIndex);
+        if (targetEntry == null
+                || targetEntry == currentEntry
+                || targetEntry.equals(currentEntry)) {
+            return false;
+        }
+
+        S targetSubtype = backend.extractSubtype(targetEntry);
+        if (targetSubtype == null) {
+            logWarn(directionLabel + " aborted: target Lpev.f() did not return InputMethodSubtype",
+                    null);
+            return false;
+        }
+
+        S verifiedSubtype = backend.findEnabledGboardSubtype(targetSubtype);
+        if (verifiedSubtype == null) {
+            logWarn(directionLabel
+                    + " aborted: target subtype is not enabled for current Gboard IME", null);
+            return false;
+        }
+
+        if (backend.trySwitchViaGboardHelper(verifiedSubtype)) {
+            return true;
+        }
+
+        // Final package check before invoking setInputMethodAndSubtype strictly on Gboard ID.
+        if (!isSameImePackage(backend.getServicePackageName(), backend.getTargetImePackageName())) {
+            return false;
+        }
+        backend.switchViaInputMethodManager(targetImeId, verifiedSubtype);
+        return true;
+    }
+
     private static boolean trySwitchViaGboardHelper(
-            PreviousReflectionHandles handles,
+            LanguageRotationHandles handles,
             Object pgaInstance,
             InputMethodInfo gboardInfo,
             IBinder token,
@@ -254,9 +293,10 @@ public final class GboardSpacebarLanguageNavigator {
         return null;
     }
 
-    private static List<?> extractEntryList(Object rawEntries) {
+    @SuppressWarnings("unchecked")
+    private static List<Object> extractEntryList(Object rawEntries) {
         if (rawEntries instanceof List<?> list) {
-            return list;
+            return (List<Object>) list;
         }
         if (rawEntries instanceof Object[] array) {
             return Arrays.asList(array);
@@ -282,18 +322,18 @@ public final class GboardSpacebarLanguageNavigator {
         return manager instanceof InputMethodManager imm ? imm : null;
     }
 
-    private static PreviousReflectionHandles resolveHandles(ClassLoader classLoader)
+    private static LanguageRotationHandles resolveHandles(ClassLoader classLoader)
             throws Throwable {
         if (classLoader == null) {
             throw new IllegalStateException("Missing ClassLoader for Gboard language manager");
         }
         synchronized (HANDLES) {
-            WeakReference<PreviousReflectionHandles> reference = HANDLES.get(classLoader);
-            PreviousReflectionHandles cached = reference == null ? null : reference.get();
+            WeakReference<LanguageRotationHandles> reference = HANDLES.get(classLoader);
+            LanguageRotationHandles cached = reference == null ? null : reference.get();
             if (cached != null) {
                 return cached;
             }
-            PreviousReflectionHandles created = new PreviousReflectionHandles(classLoader);
+            LanguageRotationHandles created = new LanguageRotationHandles(classLoader);
             HANDLES.put(classLoader, new WeakReference<>(created));
             return created;
         }
@@ -317,7 +357,128 @@ public final class GboardSpacebarLanguageNavigator {
         }
     }
 
-    private static final class PreviousReflectionHandles {
+    interface RotationSwitchBackend<E, S> {
+        String getServicePackageName();
+
+        String getTargetImePackageName();
+
+        String getTargetImeId();
+
+        E getCurrentEntry();
+
+        int indexOfEntry(E currentEntry);
+
+        List<E> getRotationEntries();
+
+        S extractSubtype(E entry);
+
+        S findEnabledGboardSubtype(S targetSubtype);
+
+        boolean trySwitchViaGboardHelper(S verifiedSubtype);
+
+        void switchViaInputMethodManager(String gboardImeId, S verifiedSubtype);
+    }
+
+    private static final class GboardReflectionBackend
+            implements RotationSwitchBackend<Object, InputMethodSubtype> {
+        private final InputMethodService service;
+        private final InputMethodManager imm;
+        private final IBinder token;
+        private final InputMethodInfo gboardInfo;
+        private final LanguageRotationHandles handles;
+        private final Object pgaInstance;
+        private final Object rotationList;
+
+        GboardReflectionBackend(
+                InputMethodService service,
+                InputMethodManager imm,
+                IBinder token,
+                InputMethodInfo gboardInfo,
+                LanguageRotationHandles handles,
+                Object pgaInstance,
+                Object rotationList) {
+            this.service = service;
+            this.imm = imm;
+            this.token = token;
+            this.gboardInfo = gboardInfo;
+            this.handles = handles;
+            this.pgaInstance = pgaInstance;
+            this.rotationList = rotationList;
+        }
+
+        @Override
+        public String getServicePackageName() {
+            return service.getPackageName();
+        }
+
+        @Override
+        public String getTargetImePackageName() {
+            return gboardInfo.getPackageName();
+        }
+
+        @Override
+        public String getTargetImeId() {
+            return gboardInfo.getId();
+        }
+
+        @Override
+        public Object getCurrentEntry() {
+            try {
+                return handles.currentEntryMethod.invoke(pgaInstance);
+            } catch (Throwable throwable) {
+                throw new IllegalStateException("Lpga.C() invocation failed", throwable);
+            }
+        }
+
+        @Override
+        public int indexOfEntry(Object currentEntry) {
+            try {
+                Object indexResult = handles.indexOfEntryMethod.invoke(rotationList, currentEntry);
+                return indexResult instanceof Integer index ? index : -1;
+            } catch (Throwable throwable) {
+                throw new IllegalStateException("Lrek.j(current) invocation failed", throwable);
+            }
+        }
+
+        @Override
+        public List<Object> getRotationEntries() {
+            try {
+                return extractEntryList(handles.rotationEntriesField.get(rotationList));
+            } catch (Throwable throwable) {
+                throw new IllegalStateException("Lrek.b read failed", throwable);
+            }
+        }
+
+        @Override
+        public InputMethodSubtype extractSubtype(Object entry) {
+            try {
+                Object subtypeObject = handles.entrySubtypeMethod.invoke(entry);
+                return subtypeObject instanceof InputMethodSubtype subtype ? subtype : null;
+            } catch (Throwable throwable) {
+                throw new IllegalStateException("Lpev.f() invocation failed", throwable);
+            }
+        }
+
+        @Override
+        public InputMethodSubtype findEnabledGboardSubtype(InputMethodSubtype targetSubtype) {
+            return findEnabledSubtypeForGboard(imm, gboardInfo, targetSubtype);
+        }
+
+        @Override
+        public boolean trySwitchViaGboardHelper(InputMethodSubtype verifiedSubtype) {
+            return GboardSpacebarLanguageNavigator.trySwitchViaGboardHelper(
+                    handles, pgaInstance, gboardInfo, token, verifiedSubtype);
+        }
+
+        @Override
+        @SuppressWarnings("deprecation")
+        public void switchViaInputMethodManager(
+                String gboardImeId, InputMethodSubtype verifiedSubtype) {
+            imm.setInputMethodAndSubtype(token, gboardImeId, verifiedSubtype);
+        }
+    }
+
+    private static final class LanguageRotationHandles {
         final Method getManagerMethod;
         final Method currentEntryMethod;
         final Field rotationListField;
@@ -327,7 +488,7 @@ public final class GboardSpacebarLanguageNavigator {
         final Method subtypeSwitchMethod;
         final Field subtypeSwitcherFieldOnManager;
 
-        PreviousReflectionHandles(ClassLoader classLoader) throws Throwable {
+        LanguageRotationHandles(ClassLoader classLoader) throws Throwable {
             Class<?> managerClass = Class.forName(MANAGER_CLASS, false, classLoader);
             Class<?> entryClass = Class.forName(ENTRY_CLASS, false, classLoader);
             Class<?> rotationListClass = Class.forName(ROTATION_LIST_CLASS, false, classLoader);

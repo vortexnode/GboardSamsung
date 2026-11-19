@@ -704,6 +704,7 @@ class GboardPortProductCatalogContractTest {
             "package_rename" to "generic",
             "quick_insert" to "version-sensitive",
             "rounded_keyboard_panel" to "version-sensitive",
+            "samsung_spacebar_gestures" to "version-sensitive",
             "settings_homepage_override" to "version-sensitive",
             "simple_calculator" to "version-sensitive",
             "swipe_down_to_dismiss_keyboard" to "version-sensitive",

@@ -1,4 +1,4 @@
-package dev.jason.gboardpatches.patches.gboard.features.swipedismiss
+package dev.jason.gboardpatches.patches.gboard.features.spacebargesture
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -30,10 +30,21 @@ class GboardSpacebarGestureResourcePatchTest {
         val remainingActions = (0 until doc.getElementsByTagName("action").length)
             .map { doc.getElementsByTagName("action").item(it).attributes }
         assertEquals(3, remainingActions.size)
-        assertTrue(remainingActions.any { it.getNamedItem("keycode")?.nodeValue == "SPACE" })
+        assertTrue(remainingActions.any {
+            it.getNamedItem("type")?.nodeValue == "PRESS" &&
+                it.getNamedItem("keycode")?.nodeValue == "SPACE"
+        })
         assertTrue(
             remainingActions.any {
-                it.getNamedItem("keycode")?.nodeValue == "SHOW_SYSTEM_IME_PICKER" &&
+                it.getNamedItem("type")?.nodeValue == "PRESS" &&
+                    it.getNamedItem("keycode")?.nodeValue == "SWITCH_TO_NEXT_LANGUAGE" &&
+                    it.getNamedItem("data")?.nodeValue == "globe"
+            },
+        )
+        assertTrue(
+            remainingActions.any {
+                it.getNamedItem("type")?.nodeValue == "LONG_PRESS" &&
+                    it.getNamedItem("keycode")?.nodeValue == "SHOW_SYSTEM_IME_PICKER" &&
                     it.getNamedItem("data")?.nodeValue == "globe"
             },
         )

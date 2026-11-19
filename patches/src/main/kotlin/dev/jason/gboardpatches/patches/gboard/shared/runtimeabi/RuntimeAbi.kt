@@ -131,6 +131,7 @@ internal enum class RuntimeCallId(internal val encodedAbi: String) {
     SPLIT_KEYBOARD_RUNTIME_AFTER_MODE_ENVIRONMENT_CHANGED("Ldev/jason/gboardpatches/extension/splitkeyboard/GboardSplitKeyboardRuntime;->afterModeEnvironmentChanged(Ljava/lang/Object;)V"),
     SPLIT_KEYBOARD_RUNTIME_INCLUDE_ACCESS_POINT_IN_ORDER("Ldev/jason/gboardpatches/extension/splitkeyboard/GboardSplitKeyboardRuntime;->includeAccessPointInOrder(Ljava/lang/Object;)Ljava/lang/Object;"),
     SPLIT_KEYBOARD_RUNTIME_INTERCEPT_SPLIT_ACTION("Ldev/jason/gboardpatches/extension/splitkeyboard/GboardSplitKeyboardRuntime;->interceptSplitAction(Ljava/lang/Object;)Z"),
+    SPACEBAR_GESTURE_RUNTIME_ON_HOLDER_TOUCH("Ldev/jason/gboardpatches/extension/spacebargesture/GboardSpacebarGestureRuntime;->onHolderTouch(Landroid/view/View;Landroid/view/MotionEvent;)Z"),
     SPACEBAR_LOGO_RUNTIME_AFTER_SOFT_KEY_BOUND("Ldev/jason/gboardpatches/extension/spacebarlogo/GboardSpacebarLogoAdapter;->afterSoftKeyBound(Ljava/lang/Object;Ljava/lang/Object;)V"),
     SPACEBAR_LOGO_RUNTIME_BEFORE_SOFT_KEY_BOUND("Ldev/jason/gboardpatches/extension/spacebarlogo/GboardSpacebarLogoAdapter;->beforeSoftKeyBound(Ljava/lang/Object;Ljava/lang/Object;)V"),
     SWIPE_DISMISS_RUNTIME_ON_HEADER_TOUCH("Ldev/jason/gboardpatches/extension/swipedismiss/GboardSwipeDismissRuntime;->onHeaderTouch(Landroid/view/View;Landroid/view/MotionEvent;)Z"),

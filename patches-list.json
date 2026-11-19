@@ -426,6 +426,18 @@
       "options": []
     },
     {
+      "name": "Samsung Spacebar Gestures",
+      "description": "在空白鍵啟用 Samsung 風格手勢：左右滑動切換語言，長按滑動移動游標。\nEnable Samsung-style spacebar gestures: swipe left/right to switch languages and long-press to move the cursor.",
+      "use": true,
+      "dependencies": [],
+      "compatiblePackages": {
+        "com.google.android.inputmethod.latin": [
+          "18.5.4.993608717-release-arm64-v8a"
+        ]
+      },
+      "options": []
+    },
+    {
       "name": "Settings Homepage Override",
       "description": "允許切換新版或舊版 Gboard 設定頁面\nAllow switching between the new and legacy Gboard settings pages.",
       "use": true,

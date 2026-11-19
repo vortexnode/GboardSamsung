@@ -13,7 +13,6 @@ import java.util.Map;
 import java.util.WeakHashMap;
 
 import dev.jason.gboardpatches.extension.settings.GboardPatchesSettings;
-import dev.jason.gboardpatches.extension.spacebargesture.GboardSpacebarGestureRuntime;
 
 public final class GboardSwipeDismissRuntime {
     private static final Map<View, GboardSwipeDismissGesture> GESTURES = new WeakHashMap<>();
@@ -31,11 +30,11 @@ public final class GboardSwipeDismissRuntime {
         if (holder == null || event == null) {
             return false;
         }
-        if (Boolean.TRUE.equals(CANCELLING.get()) || GboardSpacebarGestureRuntime.isCancelling()) {
+        if (Boolean.TRUE.equals(CANCELLING.get())) {
             return false;
         }
         if (!isHeaderHolder(holder)) {
-            return GboardSpacebarGestureRuntime.onHolderTouch(holder, event);
+            return false;
         }
         // A cached enabled value or an in-flight gesture cannot bypass Direct Boot.
         if (!GboardPatchesSettings.isUserUnlocked(holder.getContext())) {
@@ -165,7 +164,6 @@ public final class GboardSwipeDismissRuntime {
 
     public static void reset() {
         GESTURES.clear();
-        GboardSpacebarGestureRuntime.reset();
         headerId = 0;
         lastSettingsReadMs = -SETTINGS_CACHE_MS;
         cachedEnabled = false;

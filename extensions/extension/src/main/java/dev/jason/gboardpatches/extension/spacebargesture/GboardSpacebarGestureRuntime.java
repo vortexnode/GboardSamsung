@@ -1,5 +1,8 @@
 package dev.jason.gboardpatches.extension.spacebargesture;
 
+import android.content.Context;
+import android.content.ContextWrapper;
+import android.content.res.Resources;
 import android.inputmethodservice.InputMethodService;
 import android.os.Handler;
 import android.os.Looper;
@@ -13,16 +16,16 @@ import android.view.inputmethod.InputConnection;
 import java.util.Map;
 import java.util.WeakHashMap;
 
-import dev.jason.gboardpatches.extension.swipedismiss.GboardSwipeDismissRuntime;
-
 /**
- * Runtime touch coordinator for Samsung-like spacebar gestures, invoked from the existing
- * {@code KeyboardViewHolder.dispatchTouchEvent} hook in {@link GboardSwipeDismissRuntime} for
+ * Standalone runtime touch coordinator for Samsung-like spacebar gestures, invoked directly from
+ * {@code KeyboardViewHolder.dispatchTouchEvent} via the selected-only touch composer for
  * non-header keyboard holders.
  */
 public final class GboardSpacebarGestureRuntime {
+    private static final String HEADER_ID_NAME = "keyboard_header_view_holder";
     private static final Map<View, HolderSession> SESSIONS = new WeakHashMap<>();
     private static final ThreadLocal<Boolean> CANCELLING = ThreadLocal.withInitial(() -> false);
+    private static volatile int headerId;
     private static volatile Handler mainHandler;
 
     private GboardSpacebarGestureRuntime() {
@@ -33,7 +36,7 @@ public final class GboardSpacebarGestureRuntime {
     }
 
     public static boolean onHolderTouch(View holder, MotionEvent event) {
-        if (holder == null || event == null || isCancelling()) {
+        if (holder == null || event == null || isCancelling() || isHeaderHolder(holder)) {
             return false;
         }
         int action = event.getActionMasked();
@@ -100,7 +103,7 @@ public final class GboardSpacebarGestureRuntime {
         session.lastLocalY = event.getY(pointerIndex);
 
         if (session.state.getState() == GboardSpacebarGestureState.State.CURSOR_MODE) {
-            InputMethodService service = GboardSwipeDismissRuntime.resolveInputMethodService(holder);
+            InputMethodService service = resolveInputMethodService(holder);
             InputConnection connection = service == null ? null : service.getCurrentInputConnection();
             EditorInfo currentEditor = service == null ? null : service.getCurrentInputEditorInfo();
             if (connection == null || hasEditorChanged(session, currentEditor)) {
@@ -128,7 +131,7 @@ public final class GboardSpacebarGestureRuntime {
         }
 
         if (result.languageDirection != GboardSpacebarGestureState.LanguageDirection.NONE) {
-            InputMethodService service = GboardSwipeDismissRuntime.resolveInputMethodService(holder);
+            InputMethodService service = resolveInputMethodService(holder);
             if (result.languageDirection == GboardSpacebarGestureState.LanguageDirection.NEXT) {
                 GboardSpacebarLanguageNavigator.switchNext(service);
             } else if (result.languageDirection
@@ -138,7 +141,7 @@ public final class GboardSpacebarGestureRuntime {
         }
 
         if (result.dpadSteps != 0) {
-            InputMethodService service = GboardSwipeDismissRuntime.resolveInputMethodService(holder);
+            InputMethodService service = resolveInputMethodService(holder);
             InputConnection connection = service == null ? null : service.getCurrentInputConnection();
             if (connection == null) {
                 resetSession(session);
@@ -157,6 +160,43 @@ public final class GboardSpacebarGestureRuntime {
             }
         }
         SESSIONS.clear();
+        headerId = 0;
+    }
+
+    private static boolean isHeaderHolder(View holder) {
+        int expectedId = headerId;
+        if (expectedId != 0) {
+            return holder.getId() == expectedId;
+        }
+        if (holder.getId() == View.NO_ID) {
+            return false;
+        }
+        try {
+            if (HEADER_ID_NAME.equals(holder.getResources().getResourceEntryName(holder.getId()))) {
+                headerId = holder.getId();
+                return true;
+            }
+        } catch (Resources.NotFoundException ignored) {
+        }
+        return false;
+    }
+
+    private static InputMethodService resolveInputMethodService(View view) {
+        if (view == null) {
+            return null;
+        }
+        Context current = view.getContext();
+        while (current instanceof ContextWrapper wrapper) {
+            if (current instanceof InputMethodService ims) {
+                return ims;
+            }
+            Context base = wrapper.getBaseContext();
+            if (base == current || base == null) {
+                break;
+            }
+            current = base;
+        }
+        return null;
     }
 
     private static void scheduleLongPress(View holder, HolderSession session) {
@@ -185,7 +225,7 @@ public final class GboardSpacebarGestureRuntime {
             dispatchSyntheticCancelFromTimeout(holder, session);
         }
 
-        InputMethodService service = GboardSwipeDismissRuntime.resolveInputMethodService(holder);
+        InputMethodService service = resolveInputMethodService(holder);
         InputConnection connection = service == null ? null : service.getCurrentInputConnection();
         if (connection == null) {
             // ACTION_CANCEL was already delivered so no space will be inserted; terminate mode cleanly.
