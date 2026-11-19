@@ -143,7 +143,9 @@ public final class GboardSpacebarLanguageNavigator {
             }
 
             Object previousEntry = entries.get(previousIndex);
-            if (previousEntry == null || previousEntry == currentEntry) {
+            if (previousEntry == null
+                    || previousEntry == currentEntry
+                    || previousEntry.equals(currentEntry)) {
                 return false;
             }
 
@@ -189,14 +191,15 @@ public final class GboardSpacebarLanguageNavigator {
         }
         try {
             if (Modifier.isStatic(handles.subtypeSwitchMethod.getModifiers())) {
-                handles.subtypeSwitchMethod.invoke(null, gboardInfo, token, subtype);
-                return true;
+                Object result = handles.subtypeSwitchMethod.invoke(null, gboardInfo, token, subtype);
+                return !(result instanceof Boolean ok) || ok;
             }
             if (handles.subtypeSwitcherFieldOnManager != null) {
                 Object switcherInstance = handles.subtypeSwitcherFieldOnManager.get(pgaInstance);
                 if (switcherInstance != null) {
-                    handles.subtypeSwitchMethod.invoke(switcherInstance, gboardInfo, token, subtype);
-                    return true;
+                    Object result = handles.subtypeSwitchMethod.invoke(
+                            switcherInstance, gboardInfo, token, subtype);
+                    return !(result instanceof Boolean ok) || ok;
                 }
             }
         } catch (Throwable throwable) {

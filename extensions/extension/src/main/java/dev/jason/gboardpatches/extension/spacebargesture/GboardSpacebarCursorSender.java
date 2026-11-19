@@ -25,6 +25,11 @@ public final class GboardSpacebarCursorSender {
         }
     }
 
+    @FunctionalInterface
+    interface KeyActionEmitter {
+        boolean emit(int action, int keyCode);
+    }
+
     /**
      * Emits balanced {@code ACTION_DOWN}/{@code ACTION_UP} pairs strictly for
      * {@link KeyEvent#KEYCODE_DPAD_LEFT} (negative steps) or {@link KeyEvent#KEYCODE_DPAD_RIGHT}
@@ -39,9 +44,23 @@ public final class GboardSpacebarCursorSender {
                 : KeyEvent.KEYCODE_DPAD_RIGHT;
         int count = Math.min(Math.abs(signedSteps),
                 GboardSpacebarGestureState.MAX_DPAD_STEPS_PER_MOVE);
+        return sendHorizontalStepCount(keyCode, count, (action, code) -> {
+            long now = SystemClock.uptimeMillis();
+            return connection.sendKeyEvent(createKeyEvent(now, action, code));
+        });
+    }
+
+    static boolean sendHorizontalStepCount(int keyCode, int count, KeyActionEmitter emitter) {
+        if (emitter == null || count <= 0) {
+            return false;
+        }
+        if (keyCode != KeyEvent.KEYCODE_DPAD_LEFT && keyCode != KeyEvent.KEYCODE_DPAD_RIGHT) {
+            return false;
+        }
+        int clampedCount = Math.min(count, GboardSpacebarGestureState.MAX_DPAD_STEPS_PER_MOVE);
         boolean sentAny = false;
-        for (int index = 0; index < count; index++) {
-            if (!sendBalancedKeyEvent(connection, keyCode)) {
+        for (int index = 0; index < clampedCount; index++) {
+            if (!sendBalancedKeyEvent(keyCode, emitter)) {
                 break;
             }
             sentAny = true;
@@ -49,23 +68,22 @@ public final class GboardSpacebarCursorSender {
         return sentAny;
     }
 
-    private static boolean sendBalancedKeyEvent(InputConnection connection, int keyCode) {
-        long now = SystemClock.uptimeMillis();
-        boolean downAttempted = false;
-        boolean upCompleted = false;
+    static boolean sendBalancedKeyEvent(int keyCode, KeyActionEmitter emitter) {
+        boolean downSucceeded = false;
+        boolean upAttempted = false;
         try {
-            downAttempted = true;
-            if (!connection.sendKeyEvent(createKeyEvent(now, KeyEvent.ACTION_DOWN, keyCode))) {
+            if (!emitter.emit(KeyEvent.ACTION_DOWN, keyCode)) {
                 return false;
             }
-            upCompleted = connection.sendKeyEvent(createKeyEvent(now, KeyEvent.ACTION_UP, keyCode));
-            return upCompleted;
+            downSucceeded = true;
+            upAttempted = true;
+            return emitter.emit(KeyEvent.ACTION_UP, keyCode);
         } catch (Throwable ignored) {
             return false;
         } finally {
-            if (downAttempted && !upCompleted) {
+            if (downSucceeded && !upAttempted) {
                 try {
-                    connection.sendKeyEvent(createKeyEvent(now, KeyEvent.ACTION_UP, keyCode));
+                    emitter.emit(KeyEvent.ACTION_UP, keyCode);
                 } catch (Throwable ignored) {
                     // Cleanup must never crash keyboard touch handling.
                 }

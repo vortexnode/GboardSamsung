@@ -46,7 +46,7 @@ public final class GboardSpacebarKeyHitTester {
     }
 
     static boolean isSpaceSoftKeyView(View softKeyView) {
-        if (softKeyView == null || !SOFT_KEY_VIEW_CLASS.equals(softKeyView.getClass().getName())) {
+        if (!isSoftKeyViewInstance(softKeyView)) {
             return false;
         }
         try {
@@ -74,7 +74,7 @@ public final class GboardSpacebarKeyHitTester {
         if (!containsRawPoint(root, rawX, rawY, location)) {
             return null;
         }
-        if (SOFT_KEY_VIEW_CLASS.equals(root.getClass().getName())) {
+        if (isSoftKeyViewInstance(root)) {
             return root;
         }
         if (root instanceof ViewGroup group) {
@@ -98,6 +98,18 @@ public final class GboardSpacebarKeyHitTester {
         int left = location[0];
         int top = location[1];
         return rawX >= left && rawX < left + width && rawY >= top && rawY < top + height;
+    }
+
+    private static boolean isSoftKeyViewInstance(View view) {
+        if (view == null) {
+            return false;
+        }
+        for (Class<?> current = view.getClass(); current != null; current = current.getSuperclass()) {
+            if (SOFT_KEY_VIEW_CLASS.equals(current.getName())) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static MetadataHandles resolveHandles(ClassLoader classLoader) throws Throwable {

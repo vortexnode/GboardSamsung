@@ -23,13 +23,23 @@ private const val SHOW_SYSTEM_IME_PICKER_NUMERIC_KEYCODE = "-10022"
 private const val FREE_CURSOR_DATA = "free_cursor"
 private const val SPACE_DATA = "space"
 
-private val DIRECT_OBFUSCATED_XML_FILES = setOf(
+internal val DIRECT_OBFUSCATED_XML_FILES = setOf(
     "IEX.xml",
     "nB0.xml",
     "bsB.xml",
     "tER.xml",
     "kgx.xml",
 )
+
+internal val DIRECT_OBFUSCATED_XML_PATHS = listOf(
+    "res/IEX.xml",
+    "res/nB0.xml",
+    "res/bsB.xml",
+    "res/tER.xml",
+    "res/kgx.xml",
+)
+
+internal const val XML_RESOURCE_DECODE_PATTERN = "res/xml*/*.xml"
 
 private val CANDIDATE_TEXT_MARKERS = listOf(
     FREE_CURSOR_DATA,
@@ -81,23 +91,43 @@ internal val gboardSpacebarGestureResourcePatch = resourcePatch(
 
 context(context: ResourcePatchContext)
 private fun applySpacebarGestureResourcePatch() = with(context) {
-    // Patcher 2.x decodes XML resources on request.
-    decode("res/xml*/*.xml")
-
     val resDir = this["res", false]
-    if (!resDir.isDirectory) {
-        return@with
+    cleanupSpacebarGestureResources(
+        resDir = resDir,
+        decodePattern = { pattern -> decode(pattern) },
+        openDocument = { relativePath, block ->
+            document(relativePath).use(block)
+        },
+    )
+}
+
+internal fun cleanupSpacebarGestureResources(
+    resDir: File,
+    decodePattern: (String) -> Unit,
+    openDocument: (String, (Document) -> Unit) -> Unit,
+): SpacebarResourceCleanupResult {
+    // Patcher 2.x decodes XML resources lazily on request:
+    // 1. Decode all ARSC-mapped res/xml*/*.xml resources (including APKTOOL_RENAMED_0x7f17xxxx.xml).
+    // 2. Also explicitly decode the 5 shortened AAPT2 root paths in case any remain directly in res/.
+    runCatching { decodePattern(XML_RESOURCE_DECODE_PATTERN) }
+    for (directPath in DIRECT_OBFUSCATED_XML_PATHS) {
+        runCatching { decodePattern(directPath) }
     }
-    val apkRoot = resDir.parentFile ?: return@with
+
+    if (!resDir.isDirectory) {
+        return SpacebarResourceCleanupResult()
+    }
+    val apkRoot = resDir.parentFile ?: return SpacebarResourceCleanupResult()
     val candidateFiles = collectCandidateXmlFiles(resDir)
     if (candidateFiles.isEmpty()) {
-        return@with
+        return SpacebarResourceCleanupResult()
     }
 
     val builder = DocumentBuilderFactory.newInstance().apply {
         isNamespaceAware = true
     }.newDocumentBuilder()
 
+    var total = SpacebarResourceCleanupResult()
     for (file in candidateFiles) {
         val text = runCatching { file.readText(Charsets.UTF_8) }.getOrNull() ?: continue
         if (CANDIDATE_TEXT_MARKERS.none { marker -> text.contains(marker) }) {
@@ -108,10 +138,11 @@ private fun applySpacebarGestureResourcePatch() = with(context) {
             continue
         }
         val relativePath = file.toRelativeString(apkRoot).replace(File.separatorChar, '/')
-        document(relativePath).use { doc ->
-            applySpacebarGestureResourceCleanup(doc)
+        openDocument(relativePath) { doc ->
+            total += applySpacebarGestureResourceCleanup(doc)
         }
     }
+    return total
 }
 
 private fun collectCandidateXmlFiles(resDir: File): List<File> {
