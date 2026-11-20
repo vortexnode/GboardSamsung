@@ -55,8 +55,8 @@ public final class GboardPatchesBackupManagerTest {
     @Test
     public void selectedModulesCanBeRestoredWithoutTouchingUnselectedStores() {
         Map<String, SharedPreferences> stores = stores();
-        SharedPreferences clipboard = stores.get("gboard_clipboard_settings");
-        SharedPreferences symbolFooter = stores.get("gboard_symbol_footer_order_settings");
+        SharedPreferences clipboard = stores.get("gboard_clipboard");
+        SharedPreferences symbolFooter = stores.get("gboard_symbol_footer_order");
         clipboard.edit().putBoolean("pref_clipboard_show_sensitive_content", true).commit();
         symbolFooter.edit()
                 .putString("pref_symbol_footer_order", "emoji,sticker,gif")

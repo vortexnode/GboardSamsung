@@ -61,20 +61,18 @@ class GboardBluetoothMicrophonePatchContractTest {
     }
 
     @Test
-    fun readmeUsesConciseBluetoothMicrophoneDescription() {
+    fun readmeListsBluetoothMicrophoneAmongVoiceFeatures() {
         val readme = Files.readString(
             repositoryRoot().resolve("README.md"),
             StandardCharsets.UTF_8,
         )
 
-        assertTrue(readme.contains("<summary><code>Use Bluetooth Microphone</code></summary>"))
-        assertEquals(
-            "Enables the <code>Voice typing &gt; Use Bluetooth microphone</code> setting " +
-                "and its related rollout gate.",
-            readme.lineSequence()
-                .single { it.contains("Voice typing &gt; Use Bluetooth microphone") }
-                .trim(),
-        )
+        val voiceFeaturesSection = readme
+            .substringAfter("### Active patch catalog (34 patches)")
+            .substringAfter("Language, AI, suggestions & voice")
+            .substringBefore("\n### ")
+
+        assertTrue(voiceFeaturesSection.contains("`Use Bluetooth Microphone`"))
     }
 
     private fun repositoryRoot(): Path {
