@@ -16,8 +16,8 @@ jobs:
         with:
           script: |
             const tag = "v4.3.0";
-            const expectedOldCommit = "a9e2a6a5d8f7f6f22a5602b13ff632608179085c";
-            const verifiedCommit = "e10ef9021553404029d7e44473c68fb7ba0d6da7";
+            const expectedOldCommit = "e10ef9021553404029d7e44473c68fb7ba0d6da7";
+            const verifiedCommit = "92a80b1637c38f7918c7e1b41d5a372dae408b2d";
 
             const ref = await github.rest.git.getRef({
               ...context.repo,
