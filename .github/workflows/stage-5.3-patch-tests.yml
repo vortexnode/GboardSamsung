@@ -1,4 +1,4 @@
-name: Stage 5.3 Patch JUnit and MPP Artifact
+name: Stage 5.3 Patch JUnit and Android MPP Artifact
 
 on:
   push:
@@ -15,7 +15,7 @@ concurrency:
 
 jobs:
   patch-tests:
-    name: Build MPP and run patch JUnit tests
+    name: Test patches and build Android-compatible MPP
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
@@ -43,34 +43,50 @@ jobs:
           chmod +x ./gradlew
           ./gradlew --version
 
-      - name: Build MPP and execute patch JUnit tests
+      # This task runs the existing JVM JUnit suite and also creates a JVM jar.
+      # Its MPP output is deliberately NOT uploaded or treated as installable.
+      - name: Run patch JUnit tests
+        id: junit
+        continue-on-error: true
         env:
           GITHUB_ACTOR: ${{ github.actor }}
           GITHUB_TOKEN: ${{ github.token }}
-        run: |
-          ./gradlew --no-daemon --stacktrace :patches:test
+        run: ./gradlew --no-daemon --stacktrace :patches:test
 
-      # Always inspect the output: Gradle can create the MPP before a later test fails.
-      - name: Locate MPP even when tests fail
+      # Morphe's Android packaging task must run AFTER :patches:test because
+      # :patches:test depends on :patches:jar and would otherwise overwrite the MPP.
+      - name: Build Android-compatible MPP
+        id: android_mpp
+        env:
+          GITHUB_ACTOR: ${{ github.actor }}
+          GITHUB_TOKEN: ${{ github.token }}
+        run: ./gradlew --no-daemon --stacktrace :patches:buildAndroid
+
+      - name: Verify Android DEX payload and locate final MPP
         id: mpp
-        if: always()
         shell: bash
         run: |
-          mapfile -t files < <(find patches/build/libs -maxdepth 1 -type f -name '*.mpp' -print 2>/dev/null | sort)
-          if [ "${#files[@]}" -eq 1 ]; then
-            echo "path=${files[0]}" >> "$GITHUB_OUTPUT"
-            ls -lh "${files[0]}"
-          else
-            echo "No unique MPP found; found ${#files[@]} file(s). Artifact upload will be skipped."
+          set -euo pipefail
+          mapfile -t files < <(find patches/build/libs -maxdepth 1 -type f -name '*.mpp' -print | sort)
+          if [ "${#files[@]}" -ne 1 ]; then
+            echo "Expected exactly one final MPP, found ${#files[@]}."
             printf '%s\\n' "${files[@]}"
-            echo "path=" >> "$GITHUB_OUTPUT"
+            exit 1
           fi
+          mpp="${files[0]}"
+          if ! unzip -Z1 "$mpp" | grep -Fxq 'classes.dex'; then
+            echo "Rejected MPP: root classes.dex entry is missing."
+            unzip -Z1 "$mpp" | head -80
+            exit 1
+          fi
+          echo "path=$mpp" >> "$GITHUB_OUTPUT"
+          sha256sum "$mpp"
+          ls -lh "$mpp"
 
-      - name: Upload MPP build output (tests may have failed)
+      - name: Upload verified Android MPP
         uses: actions/upload-artifact@v4
-        if: always() && steps.mpp.outputs.path != ''
         with:
-          name: gboard-samsung-stage-5.3-mpp-build
+          name: gboard-samsung-stage-5.3-android-mpp
           path: ${{ steps.mpp.outputs.path }}
           if-no-files-found: error
           retention-days: 7
@@ -83,3 +99,12 @@ jobs:
           path: patches/build/reports/tests/test/
           if-no-files-found: warn
           retention-days: 7
+
+      - name: Report JUnit status
+        if: always()
+        run: |
+          if [ "${{ steps.junit.outcome }}" = "success" ]; then
+            echo "Patch JUnit suite passed."
+          else
+            echo "::warning::Patch JUnit suite has failures. Android MPP packaging was still attempted and independently verified."
+          fi
