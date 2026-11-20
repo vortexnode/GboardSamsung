@@ -1,0 +1,56 @@
+name: Repair v4.3.0 tag and publish
+
+on:
+  workflow_dispatch:
+
+permissions:
+  actions: write
+  contents: write
+
+jobs:
+  repair-and-publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Move the release tag safely and start the release workflow
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const tag = "v4.3.0";
+            const expectedOldCommit = "a9e2a6a5d8f7f6f22a5602b13ff632608179085c";
+            const verifiedCommit = "e10ef9021553404029d7e44473c68fb7ba0d6da7";
+
+            const ref = await github.rest.git.getRef({
+              ...context.repo,
+              ref: `tags/${tag}`
+            });
+
+            let currentCommit = ref.data.object.sha;
+            if (ref.data.object.type === "tag") {
+              const annotated = await github.rest.git.getTag({
+                ...context.repo,
+                tag_sha: currentCommit
+              });
+              currentCommit = annotated.data.object.sha;
+            }
+
+            if (currentCommit === expectedOldCommit) {
+              await github.rest.git.updateRef({
+                ...context.repo,
+                ref: `tags/${tag}`,
+                sha: verifiedCommit,
+                force: true
+              });
+              core.info(`Moved ${tag} from the old commit to verified main commit ${verifiedCommit}.`);
+            } else if (currentCommit === verifiedCommit) {
+              core.info(`${tag} already points to the verified commit.`);
+            } else {
+              core.setFailed(`Safety stop: ${tag} points to unexpected commit ${currentCommit}; no changes made.`);
+              return;
+            }
+
+            await github.rest.actions.createWorkflowDispatch({
+              ...context.repo,
+              workflow_id: "release.yml",
+              ref: tag
+            });
+            core.info("Dispatched release.yml for v4.3.0.");
