@@ -1516,16 +1516,20 @@
     {
       "feature_id": "samsung_spacebar_gestures",
       "public_patch_name": "Samsung Spacebar Gestures",
-      "feature_marker": null,
+      "feature_marker": "dev.jason.gboardpatches.feature.samsung_spacebar_gestures",
       "target_family_ids": [
+        "softkey.bind",
         "spacebargesture"
       ],
       "migration_scope": "version-sensitive",
       "consumer_files": [
         "patches/src/main/kotlin/dev/jason/gboardpatches/patches/gboard/features/spacebargesture/GboardSpacebarGestureBytecodePatch.kt",
+        "patches/src/main/kotlin/dev/jason/gboardpatches/patches/gboard/features/spacebargesture/GboardSpacebarGestureFeatureMarkerPatch.kt",
         "patches/src/main/kotlin/dev/jason/gboardpatches/patches/gboard/features/spacebargesture/GboardSpacebarGestureResourcePatch.kt",
+        "patches/src/main/kotlin/dev/jason/gboardpatches/patches/gboard/features/spacebargesture/GboardSpacebarGestureSoftKeyPatch.kt",
         "patches/src/main/kotlin/dev/jason/gboardpatches/patches/gboard/registry/GboardPatchRegistry.kt",
-        "patches/src/main/kotlin/dev/jason/gboardpatches/patches/gboard/shared/GboardKeyboardViewHolderTouchComposer.kt"
+        "patches/src/main/kotlin/dev/jason/gboardpatches/patches/gboard/shared/GboardKeyboardViewHolderTouchComposer.kt",
+        "patches/src/main/kotlin/dev/jason/gboardpatches/patches/gboard/shared/GboardSoftKeyFamilyComposer.kt"
       ],
       "contributions": [
         {
@@ -1538,6 +1542,19 @@
           ],
           "runtime_calls": [
             "SPACEBAR_GESTURE_RUNTIME_ON_HOLDER_TOUCH"
+          ]
+        },
+        {
+          "contribution_id": "samsung_spacebar_gestures.soft_key",
+          "anchor_family_id": "soft_key_bind",
+          "phase": "after_stock",
+          "order": 900,
+          "required_bindings": [
+            "soft_key_bind",
+            "soft_key_metadata_type"
+          ],
+          "runtime_calls": [
+            "SPACEBAR_GESTURE_RUNTIME_AFTER_SOFT_KEY_BIND"
           ]
         }
       ]

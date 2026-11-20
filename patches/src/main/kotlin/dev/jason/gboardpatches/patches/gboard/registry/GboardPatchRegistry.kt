@@ -67,7 +67,7 @@ import dev.jason.gboardpatches.patches.gboard.features.signaturebypass.gboardSig
 import dev.jason.gboardpatches.patches.gboard.features.splitkeyboard.gboardSplitKeyboardFeatureMarkerPatch
 import dev.jason.gboardpatches.patches.gboard.features.splitkeyboard.gboardSplitKeyboardAccessPointPatch
 import dev.jason.gboardpatches.patches.gboard.features.splitkeyboard.gboardSplitKeyboardModePatch
-import dev.jason.gboardpatches.patches.gboard.features.spacebargesture.gboardSpacebarGestureBytecodePatch
+import dev.jason.gboardpatches.patches.gboard.features.spacebargesture.gboardSpacebarGestureFeatureMarkerPatch
 import dev.jason.gboardpatches.patches.gboard.features.spacebargesture.gboardSpacebarGestureResourcePatch
 import dev.jason.gboardpatches.patches.gboard.features.symbolfooter.gboardSymbolFooterOrderBytecodePatch
 import dev.jason.gboardpatches.patches.gboard.features.symbolfooter.gboardSymbolFooterOrderFeatureMarkerPatch
@@ -85,7 +85,8 @@ import dev.jason.gboardpatches.patches.shared.Constants.COMPATIBILITY_GBOARD
 val gboardLanguageModelVersionsPatch = gboardPublicResourcePatch(
     featureId = "language_model_versions",
     name = "Dictionaries & Predictions",
-    description = "可選擇字典、預測及輸入修正的資源版本\nChoose resource versions for dictionaries, predictions, and input correction.",
+    description = "Choose resource versions for dictionaries, predictions, and input correction.\n" +
+        "Выбор версий ресурсов для словарей, подсказок и исправления ввода.",
     default = true,
 ) {
     compatibleWith(COMPATIBILITY_GBOARD)
@@ -98,7 +99,8 @@ val gboardLanguageModelVersionsPatch = gboardPublicResourcePatch(
 val gboardKeypressHapticsPatch = gboardPublicResourcePatch(
     featureId = "keypress_haptics",
     name = "Keypress Vibration Intensity Control",
-    description = "將按鍵震動由持續時間改為力度控制。\nControl keypress vibration intensity instead of duration.",
+    description = "Control keypress vibration intensity instead of duration.\n" +
+        "Управление силой вибрации при нажатии клавиш вместо её длительности.",
     default = true,
 ) {
     compatibleWith(COMPATIBILITY_GBOARD)
@@ -130,9 +132,9 @@ private fun gboardPublicResourcePatch(
 val gboardLongPressQuickActionsPatch = gboardPublicResourcePatch(
     featureId = "long_press_editing_shortcuts",
     name = "Long-Press Editing Shortcuts",
-    description = "在英文 QWERTY 與注音鍵盤加入全選、復原、複製、剪下、貼上與重做長按快捷鍵\n" +
-        "Add Select all, Undo, Copy, Cut, Paste, and Redo long-press shortcuts " +
-        "to English QWERTY and Zhuyin.",
+    description = "Add Select all, Undo, Copy, Cut, Paste, and Redo long-press shortcuts " +
+        "to English QWERTY and Zhuyin.\n" +
+        "Добавляет быстрые действия по долгому нажатию (Выбрать всё, Отменить, Копировать, Вырезать, Вставить, Повторить) на английской QWERTY и Zhuyin.",
     default = true,
 ) {
     compatibleWith(COMPATIBILITY_GBOARD)
@@ -147,8 +149,8 @@ val gboardLongPressQuickActionsPatch = gboardPublicResourcePatch(
 val gboardManualIncognitoModePatch = gboardPublicResourcePatch(
     featureId = "incognito_mode_toggle",
     name = "Incognito Mode Toggle",
-    description = "在 Access Point 工具列新增無痕模式切換按鈕，並可設定無痕模式下是否啟用剪貼簿與語音輸入\n" +
-        "Add an Incognito toggle to the Access Point toolbar and configure clipboard and voice typing availability while Incognito mode is active.",
+    description = "Add an Incognito toggle to the Access Point toolbar and configure clipboard and voice typing availability while Incognito mode is active.\n" +
+        "Добавляет переключатель режима инкогнито на панель инструментов и позволяет настроить работу буфера обмена и голосового ввода в этом режиме.",
     default = true,
 ) {
     compatibleWith(COMPATIBILITY_GBOARD)
@@ -166,8 +168,8 @@ val gboardManualIncognitoModePatch = gboardPublicResourcePatch(
 val gboardEditingAccessPointsPatch = gboardPublicResourcePatch(
     featureId = "editing_access_points",
     name = "Toolbar Editing Buttons",
-    description = "將全選、複製、剪下與貼上加入選單。\n" +
-        "Add Select All, Copy, Cut and Paste to the menu.",
+    description = "Add Select All, Copy, Cut and Paste to the menu.\n" +
+        "Добавляет кнопки «Выбрать всё», «Копировать», «Вырезать» и «Вставить» в меню панели инструментов.",
     default = true,
 ) {
     compatibleWith(COMPATIBILITY_GBOARD)
@@ -183,8 +185,8 @@ val gboardEditingAccessPointsPatch = gboardPublicResourcePatch(
 val gboardFloatingWebSearchPatch = gboardPublicResourcePatch(
     featureId = "floating_web_search",
     name = "Floating Web Search",
-    description = "直接從 Gboard 開啟懸浮網頁，快速搜尋需要的資訊。\n" +
-        "Open a floating web page directly from Gboard to quickly search for the information you need.",
+    description = "Open a floating web page directly from Gboard to quickly search for the information you need.\n" +
+        "Открывает плавающее окно веб-поиска прямо из Gboard для быстрого поиска информации.",
     default = true,
 ) {
     compatibleWith(COMPATIBILITY_GBOARD)
@@ -201,8 +203,8 @@ val gboardFloatingWebSearchPatch = gboardPublicResourcePatch(
 val gboardSimpleCalculatorPatch = gboardPublicResourcePatch(
     featureId = "simple_calculator",
     name = "Simple Calculator",
-    description = "直接輸入算式，在 Gboard 推薦列顯示可捲動算式與答案。\n" +
-        "Type an expression and show a scrollable equation plus its answer in Gboard's suggestion row.",
+    description = "Type an expression and show a scrollable equation plus its answer in Gboard's suggestion row.\n" +
+        "Показывает введённое математическое выражение и результат вычисления в строке подсказок Gboard.",
     default = true,
 ) {
     compatibleWith(COMPATIBILITY_GBOARD)
@@ -218,8 +220,8 @@ val gboardSimpleCalculatorPatch = gboardPublicResourcePatch(
 val gboardSwipeDismissPatch = gboardPublicResourcePatch(
     featureId = "swipe_down_to_dismiss_keyboard",
     name = "Swipe Down to Dismiss Keyboard",
-    description = "從建議列或工具列向下滑動以關閉鍵盤。\n" +
-        "Swipe down from the suggestions or toolbar to close the keyboard.",
+    description = "Swipe down from the suggestions or toolbar to close the keyboard.\n" +
+        "Свайп вниз от строки подсказок или панели инструментов для закрытия клавиатуры.",
     default = true,
 ) {
     compatibleWith(COMPATIBILITY_GBOARD)
@@ -235,14 +237,15 @@ val gboardSwipeDismissPatch = gboardPublicResourcePatch(
 val gboardSamsungSpacebarGesturesPatch = gboardPublicResourcePatch(
     featureId = "samsung_spacebar_gestures",
     name = "Samsung Spacebar Gestures",
-    description = "在空白鍵啟用 Samsung 風格手勢：左右滑動切換語言，長按滑動移動游標。\n" +
-        "Enable Samsung-style spacebar gestures: swipe left/right to switch languages and long-press to move the cursor.",
+    description = "Enable Samsung-style spacebar gestures: swipe left/right to switch languages, long-press to move the cursor, and optionally hide the language switch key.\n" +
+        "Жесты на пробеле в стиле Samsung: свайп влево/вправо переключает язык, удержание перемещает курсор, а также доступна настройка скрытия клавиши переключения языка.",
     default = true,
 ) {
     compatibleWith(COMPATIBILITY_GBOARD)
 
     dependsOn(
-        gboardSpacebarGestureBytecodePatch,
+        gboardPatchesSettingsPatch,
+        gboardSpacebarGestureFeatureMarkerPatch,
         gboardSpacebarGestureResourcePatch,
     )
 }
@@ -251,8 +254,8 @@ val gboardSamsungSpacebarGesturesPatch = gboardPublicResourcePatch(
 val gboardAdvancedVoiceTypingPatch = gboardPublicResourcePatch(
     featureId = "advanced_voice_typing",
     name = "Advanced Voice Typing",
-    description = "啟用進階語音輸入（包含自動標點功能），並另外為不支援進階語音輸入的繁體中文語音啟用自動標點\n" +
-        "Enable Advanced Voice Typing with automatic punctuation, and separately enable automatic punctuation for Traditional Chinese voice typing, which does not support Advanced Voice Typing.",
+    description = "Enable Advanced Voice Typing with automatic punctuation, and separately enable automatic punctuation for Traditional Chinese voice typing, which does not support Advanced Voice Typing.\n" +
+        "Включает расширенный голосовой ввод с автопунктуацией, а также отдельно включает автопунктуацию для традиционного китайского.",
     default = true,
 ) {
     compatibleWith(COMPATIBILITY_GBOARD)
@@ -267,8 +270,8 @@ val gboardAdvancedVoiceTypingPatch = gboardPublicResourcePatch(
 val gboardBluetoothMicrophonePatch = gboardPublicResourcePatch(
     featureId = "use_bluetooth_microphone",
     name = "Use Bluetooth Microphone",
-    description = "啟用 語音輸入 -> 使用藍芽麥克風\n" +
-        "Enable Voice typing -> Use Bluetooth microphone.",
+    description = "Enable Voice typing -> Use Bluetooth microphone.\n" +
+        "Включает опцию «Голосовой ввод -> Использовать Bluetooth-микрофон».",
     default = true,
 ) {
     compatibleWith(COMPATIBILITY_GBOARD)
@@ -284,7 +287,8 @@ val gboardBluetoothMicrophonePatch = gboardPublicResourcePatch(
 val gboardEmojiSizePatch = gboardPublicResourcePatch(
     featureId = "change_emoji_size",
     name = "Change emoji size",
-    description = "變更表情符號大小\nChange emoji size.",
+    description = "Change emoji size.\n" +
+        "Позволяет изменять размер эмодзи на клавиатуре.",
     default = true,
 ) {
     compatibleWith(COMPATIBILITY_GBOARD)
@@ -300,8 +304,8 @@ val gboardEmojiSizePatch = gboardPublicResourcePatch(
 val gboardAccessPointsMenuStylePatch = gboardPublicResourcePatch(
     featureId = "access_points_menu_style",
     name = "Access Points menu style",
-    description = "切換新版或舊版 Access Points 選單樣式\n" +
-        "Switch between the new and legacy Access Points menu styles.",
+    description = "Switch between the new and legacy Access Points menu styles.\n" +
+        "Переключает стиль меню панели инструментов между новым и классическим.",
     default = true,
 ) {
     compatibleWith(COMPATIBILITY_GBOARD)
@@ -317,7 +321,8 @@ val gboardAccessPointsMenuStylePatch = gboardPublicResourcePatch(
 val gboardSplitKeyboardPatch = gboardPublicResourcePatch(
     featureId = "enable_split_keyboard",
     name = "Enable split keyboard",
-    description = "啟用分離式鍵盤\nEnable the split keyboard layout.",
+    description = "Enable the split keyboard layout.\n" +
+        "Включает разделённую раскладку клавиатуры.",
     default = true,
 ) {
     compatibleWith(COMPATIBILITY_GBOARD)
@@ -334,8 +339,8 @@ val gboardSplitKeyboardPatch = gboardPublicResourcePatch(
 val gboardRoundedKeyboardPanelPatch = gboardPublicResourcePatch(
     featureId = "rounded_keyboard_panel",
     name = "Rounded Keyboard Panel",
-    description = "自訂鍵盤面板哪些角落呈現圓角，並分別設定上方與下方半徑。\n" +
-        "Customize which corners of the keyboard panel are rounded, and set the top and bottom radii separately.",
+    description = "Customize which corners of the keyboard panel are rounded, and set the top and bottom radii separately.\n" +
+        "Позволяет выбрать скругляемые углы панели клавиатуры и отдельно задать верхний и нижний радиусы.",
     default = true,
 ) {
     compatibleWith(COMPATIBILITY_GBOARD)
@@ -350,8 +355,8 @@ val gboardRoundedKeyboardPanelPatch = gboardPublicResourcePatch(
 val gboardFrostedGlassPatch = gboardPublicResourcePatch(
     featureId = "frosted_glass",
     name = "Frosted Glass",
-    description = "為鍵盤加入即時背景模糊與自訂主題透明度。\n" +
-        "Add live background blur and custom-theme opacity to the keyboard.",
+    description = "Add live background blur and custom-theme opacity to the keyboard.\n" +
+        "Добавляет размытие фона в реальном времени и настройку прозрачности пользовательских тем.",
     default = true,
 ) {
     compatibleWith(COMPATIBILITY_GBOARD)
@@ -367,8 +372,8 @@ val gboardFrostedGlassPatch = gboardPublicResourcePatch(
 val gboardAccessPointCountPatch = gboardPublicResourcePatch(
     featureId = "access_point_count",
     name = "Top Toolbar Item Count",
-    description = "自訂 Gboard 頂端工具列項目數量\n" +
-        "Customize the Gboard top toolbar item count.",
+    description = "Customize the Gboard top toolbar item count.\n" +
+        "Позволяет настроить количество значков на верхней панели инструментов Gboard.",
     default = true,
 ) {
     compatibleWith(COMPATIBILITY_GBOARD)
@@ -384,8 +389,8 @@ val gboardAccessPointCountPatch = gboardPublicResourcePatch(
 val gboardCloseProactiveSuggestionsPatch = gboardPublicResourcePatch(
     featureId = "close_proactive_suggestions",
     name = "Close Proactive Suggestions",
-    description = "在主動建議列顯示關閉按鈕\n" +
-        "Show a dismiss button in the proactive suggestions bar.",
+    description = "Show a dismiss button in the proactive suggestions bar.\n" +
+        "Показывает кнопку закрытия на панели проактивных подсказок.",
     default = true,
 ) {
     compatibleWith(COMPATIBILITY_GBOARD)
@@ -401,8 +406,8 @@ val gboardCloseProactiveSuggestionsPatch = gboardPublicResourcePatch(
 val gboardCustomThemePatch = gboardPublicResourcePatch(
     featureId = "custom_theme",
     name = "Custom Theme",
-    description = "支援匯入自訂 ZIP 主題，並支援從 Rboard 官方儲存庫匯入精美主題。\n" +
-        "Import custom ZIP themes and beautiful themes from the official Rboard repository.",
+    description = "Import custom ZIP themes and beautiful themes from the official Rboard repository.\n" +
+        "Поддерживает импорт пользовательских ZIP-тем и тем из официального репозитория Rboard.",
     default = true,
 ) {
     compatibleWith(COMPATIBILITY_GBOARD)
@@ -419,8 +424,8 @@ val gboardCustomThemePatch = gboardPublicResourcePatch(
 val gboardQuickInsertPatch = gboardPublicResourcePatch(
     featureId = "quick_insert",
     name = "Quick Insert",
-    description = "啟用快速插入面板與工具列入口\n" +
-        "Enable the Quick Insert panel and toolbar access point.",
+    description = "Enable the Quick Insert panel and toolbar access point.\n" +
+        "Включает панель быстрой вставки и её значок на панели инструментов.",
     default = true,
 ) {
     compatibleWith(COMPATIBILITY_GBOARD)
@@ -436,8 +441,9 @@ val gboardQuickInsertPatch = gboardPublicResourcePatch(
 val gboardCustomSymbolsPatch = gboardPublicResourcePatch(
     featureId = "custom_symbols",
     name = "Custom Symbols",
-    description = "新增獨立的特殊符號分頁，長按逗號->愛心\nAdd a dedicated custom symbols tab and replace the long-press comma entry with a heart shortcut.",
-    default = true
+    description = "Add a dedicated custom symbols tab and replace the long-press comma entry with a heart shortcut.\n" +
+        "Добавляет отдельную вкладку специальных символов и заменяет долгое нажатие запятой на быстрый переход к символам.",
+    default = true,
 ) {
     compatibleWith(COMPATIBILITY_GBOARD)
 
@@ -451,8 +457,9 @@ val gboardCustomSymbolsPatch = gboardPublicResourcePatch(
 val gboardDeveloperOptionsPatch = gboardPublicResourcePatch(
     featureId = "developer_options",
     name = "Developer options",
-    description = "啟用 開發人員選項 與 Flag 編輯器，你可以自己修改Flag的值\nEnable Developer options and the Flag Editor, allowing you to modify flag values.",
-    default = true
+    description = "Enable Developer options and the Flag Editor, allowing you to modify flag values.\n" +
+        "Включает параметры разработчика и редактор флагов для ручного изменения значений флагов Gboard.",
+    default = true,
 ) {
     compatibleWith(COMPATIBILITY_GBOARD)
 
@@ -466,8 +473,8 @@ val gboardDeveloperOptionsPatch = gboardPublicResourcePatch(
 val gboardBackupRestorePatch = gboardPublicResourcePatch(
     featureId = "backup_restore",
     name = "Backup & Restore",
-    description = "匯出或還原全部 Patches 設定，並備份、比較及還原 Gboard PB/XML flag store\n" +
-        "Export or restore all Patches settings, and back up, compare, or restore the Gboard PB/XML flag store.",
+    description = "Export or restore all Patches settings, and back up, compare, or restore the Gboard PB/XML flag store.\n" +
+        "Экспорт и восстановление всех настроек патчей, а также резервное копирование и сравнение хранилища флагов Gboard (PB/XML).",
     default = true,
 ) {
     compatibleWith(COMPATIBILITY_GBOARD)
@@ -483,8 +490,9 @@ val gboardBackupRestorePatch = gboardPublicResourcePatch(
 val gboardSymbolsFooterOrderPatch = gboardPublicResourcePatch(
     featureId = "emojis_stickers_gifs_tab_order",
     name = "Emojis, stickers & GIFs Tab Order",
-    description = "自訂 Gboard「Emojis, stickers & GIFs」底部 tabs 的排序，支援拖曳調整\nCustomize the bottom tab order in Gboard's Emojis, stickers & GIFs panel with drag-and-drop reordering.",
-    default = true
+    description = "Customize the bottom tab order in Gboard's Emojis, stickers & GIFs panel with drag-and-drop reordering.\n" +
+        "Позволяет менять порядок нижних вкладок панели эмодзи, стикеров и GIF перетаскиванием.",
+    default = true,
 ) {
     compatibleWith(COMPATIBILITY_GBOARD)
 
@@ -499,8 +507,9 @@ val gboardSymbolsFooterOrderPatch = gboardPublicResourcePatch(
 val gboardClipboardEnhancementsPatch = gboardPublicResourcePatch(
     featureId = "clipboard_enhancements",
     name = "Clipboard Enhancements",
-    description = "增強剪貼簿的保留時間、數量上限、預覽行數、倒數/建立時間、順序編號與欄數\nEnhance clipboard retention time, item count limit, preview lines, countdown/creation time labels, order index, and column count.",
-    default = true
+    description = "Enhance clipboard retention time, item count limit, preview lines, countdown/creation time labels, order index, and column count.\n" +
+        "Расширяет буфер обмена: срок хранения, лимит записей, строки предпросмотра, таймер/время создания, нумерацию и число столбцов.",
+    default = true,
 ) {
     compatibleWith(COMPATIBILITY_GBOARD)
 
@@ -520,8 +529,9 @@ val gboardClipboardEnhancementsPatch = gboardPublicResourcePatch(
 val gboardClipboardContentLimitPatch = gboardPublicResourcePatch(
     featureId = "clipboard_custom_character_limit",
     name = "Clipboard Custom Character Limit",
-    description = "自訂每個文字剪貼簿項目的最大字元數\nCustomize the maximum character count for each text clipboard item.",
-    default = true
+    description = "Customize the maximum character count for each text clipboard item.\n" +
+        "Позволяет задать максимальное количество символов для каждой текстовой записи буфера обмена.",
+    default = true,
 ) {
     compatibleWith(COMPATIBILITY_GBOARD)
 
@@ -536,8 +546,9 @@ val gboardClipboardContentLimitPatch = gboardPublicResourcePatch(
 val gboardDeviceIntelligencePatch = gboardPublicResourcePatch(
     featureId = "enable_inline_autofill_suggestions",
     name = "Enable Inline Autofill Suggestions",
-    description = "啟用內嵌自動填入建議\nEnable Inline Autofill Suggestions",
-    default = true
+    description = "Enable Inline Autofill Suggestions.\n" +
+        "Включает встроенные подсказки автозаполнения в строке предложений.",
+    default = true,
 ) {
     compatibleWith(COMPATIBILITY_GBOARD)
 
@@ -552,8 +563,9 @@ val gboardDeviceIntelligencePatch = gboardPublicResourcePatch(
 val gboardGrammarCheckerFlagPatch = gboardPublicResourcePatch(
     featureId = "grammar_checker",
     name = "Grammar Checker",
-    description = "啟用 修正和建議 > 文法檢查\nEnable Text correction > Grammar check.",
-    default = true
+    description = "Enable Text correction > Grammar check.\n" +
+        "Включает раздел «Исправление текста > Проверка грамматики».",
+    default = true,
 ) {
     compatibleWith(COMPATIBILITY_GBOARD)
 
@@ -568,8 +580,9 @@ val gboardGrammarCheckerFlagPatch = gboardPublicResourcePatch(
 val gboardInlineSuggestionsFlagPatch = gboardPublicResourcePatch(
     featureId = "inline_suggestions",
     name = "Inline Suggestions",
-    description = "啟用 修正和建議 > 智慧撰寫\nEnable Text correction > Smart Compose.",
-    default = true
+    description = "Enable Text correction > Smart Compose.\n" +
+        "Включает функцию «Исправление текста > Умный ввод».",
+    default = true,
 ) {
     compatibleWith(COMPATIBILITY_GBOARD)
 
@@ -584,8 +597,9 @@ val gboardInlineSuggestionsFlagPatch = gboardPublicResourcePatch(
 val gboardKeyShapeSelectionFlagPatch = gboardPublicResourcePatch(
     featureId = "key_shape_selection",
     name = "Key Shape Selection",
-    description = "啟用圓角按鍵，主題詳情 > 按鍵形狀\nEnable Key shape in Theme details.",
-    default = true
+    description = "Enable Key shape in Theme details.\n" +
+        "Включает выбор формы клавиш (включая скруглённые) в параметрах темы.",
+    default = true,
 ) {
     compatibleWith(COMPATIBILITY_GBOARD)
 
@@ -600,8 +614,9 @@ val gboardKeyShapeSelectionFlagPatch = gboardPublicResourcePatch(
 val gboardAiWritingToolsPatch = gboardPublicResourcePatch(
     featureId = "ai_writing_tools",
     name = "AI Writing Tools",
-    description = "啟用 AI 撰寫工具，支援所有語言\nEnable AI writing tools with support for all languages.",
-    default = true
+    description = "Enable AI writing tools with support for all languages.\n" +
+        "Включает ИИ-инструменты для работы с текстом с поддержкой всех языков.",
+    default = true,
 ) {
     compatibleWith(COMPATIBILITY_GBOARD)
 
@@ -616,8 +631,9 @@ val gboardAiWritingToolsPatch = gboardPublicResourcePatch(
 val gboardSettingsHomepagePatch = gboardPublicResourcePatch(
     featureId = "settings_homepage_override",
     name = "Settings Homepage Override",
-    description = "允許切換新版或舊版 Gboard 設定頁面\nAllow switching between the new and legacy Gboard settings pages.",
-    default = true
+    description = "Allow switching between the new and legacy Gboard settings pages.\n" +
+        "Позволяет переключаться между новой и классической главной страницей настроек Gboard.",
+    default = true,
 ) {
     compatibleWith(COMPATIBILITY_GBOARD)
 
@@ -632,10 +648,10 @@ val gboardSettingsHomepagePatch = gboardPublicResourcePatch(
 val gboardPackageRenamePatch = gboardPublicResourcePatch(
     featureId = "package_rename",
     name = "Package Rename",
-    description = "將套件名稱改成 dev.jason.com.google.android.inputmethod.latin，並可自訂 App 名稱，以便共存安裝\n" +
-        "Rename the package to dev.jason.com.google.android.inputmethod.latin and allow " +
-        "a custom app name so it can be installed alongside the official Gboard.",
-    default = true
+    description = "Rename the package to dev.jason.com.google.android.inputmethod.latin and allow " +
+        "a custom app name so it can be installed alongside the official Gboard.\n" +
+        "Переименовывает пакет в dev.jason.com.google.android.inputmethod.latin и позволяет задать название приложения для установки рядом с официальным Gboard.",
+    default = true,
 ) {
     compatibleWith(COMPATIBILITY_GBOARD)
 
@@ -649,7 +665,7 @@ val gboardPackageRenamePatch = gboardPublicResourcePatch(
             "Gboard Patches" to "Gboard Patches",
             "Gboard Mod" to "Gboard Mod",
         ),
-        title = "App 名稱 / App name",
+        title = "App name / Название приложения",
         description = "",
         required = true,
     ) { value ->
@@ -669,8 +685,9 @@ val gboardPackageRenamePatch = gboardPublicResourcePatch(
 val gboardSignatureBypassPatch = gboardPublicResourcePatch(
     featureId = "add_gboard_signature_bypass",
     name = "Add Gboard Signature Bypass",
-    description = "攔截 Gboard 的簽章白名單檢查並強制通過\nBypass Gboard signature whitelist checks and force them to pass.",
-    default = true
+    description = "Bypass Gboard signature whitelist checks and force them to pass.\n" +
+        "Обходит проверки белого списка подписей Gboard и принудительно пропускает их.",
+    default = true,
 ) {
     compatibleWith(COMPATIBILITY_GBOARD)
 

@@ -38,6 +38,13 @@ internal enum class GboardSoftKeyFamilyFeature(
             RuntimeCallId.ADD_SYMBOLS_SOFT_KEY_RUNTIME_PATCH_SOFT_KEY_METADATA,
         ),
     ),
+    SAMSUNG_SPACEBAR_GESTURES(
+        beforeOrder = null,
+        afterOrder = 900,
+        afterRuntimeCalls = listOf(
+            RuntimeCallId.SPACEBAR_GESTURE_RUNTIME_AFTER_SOFT_KEY_BIND,
+        ),
+    ),
     ;
 
     val runtimeCalls: List<RuntimeCallId>
@@ -272,10 +279,15 @@ internal fun GboardSoftKeyFamilyFeature.beforeDelegate(): String = when (this) {
         metadataTransformDelegate(beforeRuntimeCalls.single(), "p0, p1")
     GboardSoftKeyFamilyFeature.LONG_PRESS_QUICK_ACTIONS ->
         metadataTransformDelegate(beforeRuntimeCalls.single(), "p1, p0")
+    GboardSoftKeyFamilyFeature.SAMSUNG_SPACEBAR_GESTURES ->
+        error("$this has no before-stock contribution")
 }
 
-internal fun GboardSoftKeyFamilyFeature.afterDelegate(): String =
-    error("$this has no after-stock contribution")
+internal fun GboardSoftKeyFamilyFeature.afterDelegate(): String = when (this) {
+    GboardSoftKeyFamilyFeature.SAMSUNG_SPACEBAR_GESTURES ->
+        emitSoftKeyRuntimeCall(afterRuntimeCalls.single(), "p0")
+    else -> error("$this has no after-stock contribution")
+}
 
 private fun metadataTransformDelegate(call: RuntimeCallId, registers: String): String = """
     ${emitSoftKeyRuntimeCall(call, registers)}

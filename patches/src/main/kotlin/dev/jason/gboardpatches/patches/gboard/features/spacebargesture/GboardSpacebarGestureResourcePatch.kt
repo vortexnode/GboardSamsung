@@ -80,7 +80,7 @@ internal data class SpacebarResourceCleanupResult(
  * spacebar without disabling ScrubDelete (preference 0x7f14096a) or InlineSuggestionScrubSpace.
  */
 internal val gboardSpacebarGestureResourcePatch = resourcePatch(
-    description = "移除原生空白鍵長按 FreeCursor/IME 選擇器與 ScrubMove/TriggerFreeCursor 衝突註冊。",
+    description = "Removes conflicting native spacebar long-press FreeCursor/IME picker actions and ScrubMove/TriggerFreeCursor handlers.",
 ) {
     compatibleWith(COMPATIBILITY_GBOARD)
 

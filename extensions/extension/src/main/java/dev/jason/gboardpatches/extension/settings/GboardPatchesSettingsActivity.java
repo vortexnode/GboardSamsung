@@ -4131,12 +4131,12 @@ public final class GboardPatchesSettingsActivity extends Activity
                         GboardSettingsText.get(context,
                                 R.string.gboard_patches_language_english_label),
                         GboardSettingsText.get(context,
-                                R.string.gboard_patches_language_traditional_chinese_label)
+                                R.string.gboard_patches_language_russian_label)
                 },
                 new String[] {
                         GboardSettingsLocaleManager.LANGUAGE_SYSTEM,
                         GboardSettingsLocaleManager.LANGUAGE_ENGLISH,
-                        GboardSettingsLocaleManager.LANGUAGE_TRADITIONAL_CHINESE
+                        GboardSettingsLocaleManager.LANGUAGE_RUSSIAN
                 },
                 context == null
                         ? GboardSettingsLocaleManager.LANGUAGE_SYSTEM
@@ -4163,9 +4163,9 @@ public final class GboardPatchesSettingsActivity extends Activity
                 ? null
                 : GboardPatchesSettings.preferences(context);
         String preference = GboardSettingsLocaleManager.readLanguagePreference(preferences);
-        if (GboardSettingsLocaleManager.LANGUAGE_TRADITIONAL_CHINESE.equals(preference)) {
+        if (GboardSettingsLocaleManager.LANGUAGE_RUSSIAN.equals(preference)) {
             return GboardSettingsText.get(context,
-                    R.string.gboard_patches_language_traditional_chinese_label);
+                    R.string.gboard_patches_language_russian_label);
         }
         if (GboardSettingsLocaleManager.LANGUAGE_ENGLISH.equals(preference)) {
             return GboardSettingsText.get(context,
@@ -4175,9 +4175,9 @@ public final class GboardPatchesSettingsActivity extends Activity
                 preference,
                 Locale.getDefault());
         String effectiveLabel =
-                GboardSettingsLocaleManager.LANGUAGE_TRADITIONAL_CHINESE.equals(effectiveLanguage)
+                GboardSettingsLocaleManager.LANGUAGE_RUSSIAN.equals(effectiveLanguage)
                         ? GboardSettingsText.get(context,
-                                R.string.gboard_patches_language_traditional_chinese_label)
+                                R.string.gboard_patches_language_russian_label)
                         : GboardSettingsText.get(context,
                                 R.string.gboard_patches_language_english_label);
         return GboardSettingsText.format(context,

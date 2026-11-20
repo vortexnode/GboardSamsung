@@ -114,6 +114,7 @@ internal enum class RuntimeCallId(internal val encodedAbi: String) {
     SPLIT_KEYBOARD_RUNTIME_INCLUDE_ACCESS_POINT_IN_ORDER("Ldev/jason/gboardpatches/extension/splitkeyboard/GboardSplitKeyboardRuntime;->includeAccessPointInOrder(Ljava/lang/Object;)Ljava/lang/Object;"),
     SPLIT_KEYBOARD_RUNTIME_INTERCEPT_SPLIT_ACTION("Ldev/jason/gboardpatches/extension/splitkeyboard/GboardSplitKeyboardRuntime;->interceptSplitAction(Ljava/lang/Object;)Z"),
     SPACEBAR_GESTURE_RUNTIME_ON_HOLDER_TOUCH("Ldev/jason/gboardpatches/extension/spacebargesture/GboardSpacebarGestureRuntime;->onHolderTouch(Landroid/view/View;Landroid/view/MotionEvent;)Z"),
+    SPACEBAR_GESTURE_RUNTIME_AFTER_SOFT_KEY_BIND("Ldev/jason/gboardpatches/extension/spacebargesture/GboardSpacebarGlobeKeyRuntime;->afterSoftKeyBind(Landroid/view/View;)V"),
     SWIPE_DISMISS_RUNTIME_ON_HEADER_TOUCH("Ldev/jason/gboardpatches/extension/swipedismiss/GboardSwipeDismissRuntime;->onHeaderTouch(Landroid/view/View;Landroid/view/MotionEvent;)Z"),
     SYMBOL_FOOTER_ORDER_RUNTIME_REORDER_EXPRESSION_CORPUS_LIST("Ldev/jason/gboardpatches/extension/symbolfooter/GboardSymbolFooterOrderRuntime;->reorderExpressionCorpusList(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;"),
     AI_WRITING_TOOLS_RUNTIME_APPLY_OVERRIDDEN_FLAG_VALUE("Ldev/jason/gboardpatches/extension/writingtools/GboardAiWritingToolsRuntime;->applyOverriddenFlagValue(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;"),

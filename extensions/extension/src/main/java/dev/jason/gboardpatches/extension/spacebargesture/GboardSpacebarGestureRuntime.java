@@ -46,7 +46,8 @@ public final class GboardSpacebarGestureRuntime {
             if (session != null) {
                 resetSession(session);
             }
-            if (!holder.isShown()
+            if (!holder.isAttachedToWindow()
+                    || !holder.isShown()
                     || !GboardSpacebarKeyHitTester.isSpaceKeyAt(
                             holder, event.getRawX(), event.getRawY())) {
                 return false;
@@ -58,6 +59,9 @@ public final class GboardSpacebarGestureRuntime {
             session.lastDownTime = event.getDownTime();
             session.lastLocalX = event.getX();
             session.lastLocalY = event.getY();
+            InputMethodService downService = resolveInputMethodService(holder);
+            session.captureActiveEditor(
+                    downService == null ? null : downService.getCurrentInputEditorInfo());
             session.state.beginSpaceTracking(
                     event.getPointerId(0),
                     event.getRawX(),
@@ -88,7 +92,10 @@ public final class GboardSpacebarGestureRuntime {
             return session.state.isConsumingStream();
         }
 
-        if (!holder.isShown() || event.getPointerCount() != 1) {
+        if (!holder.isAttachedToWindow()
+                || !holder.isShown()
+                || event.getPointerCount() != 1
+                || event.getDownTime() != session.lastDownTime) {
             resetSession(session);
             return false;
         }
@@ -102,11 +109,18 @@ public final class GboardSpacebarGestureRuntime {
         session.lastLocalX = event.getX(pointerIndex);
         session.lastLocalY = event.getY(pointerIndex);
 
+        InputMethodService activeService = resolveInputMethodService(holder);
+        EditorInfo currentEditor =
+                activeService == null ? null : activeService.getCurrentInputEditorInfo();
+        if (hasEditorChanged(session, currentEditor)) {
+            resetSession(session);
+            return false;
+        }
+
         if (session.state.getState() == GboardSpacebarGestureState.State.CURSOR_MODE) {
-            InputMethodService service = resolveInputMethodService(holder);
-            InputConnection connection = service == null ? null : service.getCurrentInputConnection();
-            EditorInfo currentEditor = service == null ? null : service.getCurrentInputEditorInfo();
-            if (connection == null || hasEditorChanged(session, currentEditor)) {
+            InputConnection connection =
+                    activeService == null ? null : activeService.getCurrentInputConnection();
+            if (connection == null) {
                 resetSession(session);
                 return false;
             }
@@ -114,13 +128,16 @@ public final class GboardSpacebarGestureRuntime {
 
         float density = holder.getResources().getDisplayMetrics().density;
         float touchSlop = ViewConfiguration.get(holder.getContext()).getScaledTouchSlop();
+        boolean languageSwipeEnabled =
+                GboardSpacebarGestureSettings.isSpacebarLanguageSwipeEnabled(holder.getContext());
         GboardSpacebarGestureState.MoveResult result = session.state.onMove(
                 event.getPointerId(pointerIndex),
                 event.getRawX(),
                 event.getRawY(),
                 density,
                 touchSlop,
-                event.getEventTime());
+                event.getEventTime(),
+                languageSwipeEnabled);
 
         if (session.state.getState() != GboardSpacebarGestureState.State.SPACE_TRACKING) {
             cancelPendingLongPress(session);
@@ -131,7 +148,8 @@ public final class GboardSpacebarGestureRuntime {
         }
 
         if (result.languageDirection != GboardSpacebarGestureState.LanguageDirection.NONE) {
-            InputMethodService service = resolveInputMethodService(holder);
+            InputMethodService service =
+                    activeService != null ? activeService : resolveInputMethodService(holder);
             if (result.languageDirection == GboardSpacebarGestureState.LanguageDirection.NEXT) {
                 GboardSpacebarLanguageNavigator.switchNext(service);
             } else if (result.languageDirection
@@ -141,7 +159,8 @@ public final class GboardSpacebarGestureRuntime {
         }
 
         if (result.dpadSteps != 0) {
-            InputMethodService service = resolveInputMethodService(holder);
+            InputMethodService service =
+                    activeService != null ? activeService : resolveInputMethodService(holder);
             InputConnection connection = service == null ? null : service.getCurrentInputConnection();
             if (connection == null) {
                 resetSession(session);
@@ -212,8 +231,15 @@ public final class GboardSpacebarGestureRuntime {
 
     private static void onLongPressTimeout(View holder, HolderSession session) {
         session.pendingLongPress = null;
-        if (!holder.isShown()
+        if (!holder.isAttachedToWindow()
+                || !holder.isShown()
                 || session.state.getState() != GboardSpacebarGestureState.State.SPACE_TRACKING) {
+            return;
+        }
+        InputMethodService service = resolveInputMethodService(holder);
+        EditorInfo currentEditor = service == null ? null : service.getCurrentInputEditorInfo();
+        if (hasEditorChanged(session, currentEditor)) {
+            resetSession(session);
             return;
         }
         GboardSpacebarGestureState.LongPressResult result = session.state.onLongPressTimeout();
@@ -225,7 +251,6 @@ public final class GboardSpacebarGestureRuntime {
             dispatchSyntheticCancelFromTimeout(holder, session);
         }
 
-        InputMethodService service = resolveInputMethodService(holder);
         InputConnection connection = service == null ? null : service.getCurrentInputConnection();
         if (connection == null) {
             // ACTION_CANCEL was already delivered so no space will be inserted; terminate mode cleanly.
@@ -233,7 +258,7 @@ public final class GboardSpacebarGestureRuntime {
             return;
         }
 
-        session.captureActiveEditor(service.getCurrentInputEditorInfo());
+        session.captureActiveEditor(currentEditor);
         if (result.finishComposing) {
             GboardSpacebarCursorSender.finishComposingText(connection);
         }

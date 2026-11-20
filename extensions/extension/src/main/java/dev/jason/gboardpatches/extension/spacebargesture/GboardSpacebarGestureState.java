@@ -104,6 +104,11 @@ public final class GboardSpacebarGestureState {
 
     public MoveResult onMove(int pointerId, float rawX, float rawY, float density,
             float touchSlop, long eventTime) {
+        return onMove(pointerId, rawX, rawY, density, touchSlop, eventTime, true);
+    }
+
+    public MoveResult onMove(int pointerId, float rawX, float rawY, float density,
+            float touchSlop, long eventTime, boolean languageSwipeEnabled) {
         if (state == State.IDLE) {
             return MoveResult.NOT_CONSUMED;
         }
@@ -133,6 +138,10 @@ public final class GboardSpacebarGestureState {
             float swipeThreshold = Math.max(Math.max(touchSlop, 0f), MIN_SWIPE_SLOP_DP * safeDensity);
 
             if (absDx >= swipeThreshold && absDx >= absDy * HORIZONTAL_DOMINANCE_RATIO) {
+                if (!languageSwipeEnabled) {
+                    reset();
+                    return MoveResult.NOT_CONSUMED;
+                }
                 state = State.LANGUAGE_SWIPE_CONSUMED;
                 LanguageDirection direction = dx > 0f
                         ? LanguageDirection.NEXT

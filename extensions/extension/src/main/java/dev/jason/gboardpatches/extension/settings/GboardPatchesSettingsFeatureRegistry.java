@@ -9,6 +9,7 @@ import java.util.Collections;
 import java.util.List;
 
 import dev.jason.gboardpatches.extension.languagemodels.GboardLanguageModelSettingsFeature;
+import dev.jason.gboardpatches.extension.spacebargesture.GboardLanguageSettingsFeature;
 import dev.jason.gboardpatches.extension.clipboard.GboardClipboardSettingsFeature;
 import dev.jason.gboardpatches.extension.keyboard.GboardAiVoiceSettingsGroupFeature;
 import dev.jason.gboardpatches.extension.keyboard.GboardKeyboardLayoutSettingsGroupFeature;
@@ -33,6 +34,7 @@ public final class GboardPatchesSettingsFeatureRegistry {
     public static List<GboardPatchesSettingsContract.Feature> allFeatures(Context context) {
         return Collections.unmodifiableList(Arrays.asList(
                 new GboardAiVoiceSettingsGroupFeature(context),
+                new GboardLanguageSettingsFeature(context),
                 new GboardLanguageModelSettingsFeature(context),
                 new GboardKeyboardToolsSettingsGroupFeature(context),
                 new GboardKeyboardLayoutSettingsGroupFeature(context),

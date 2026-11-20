@@ -3,6 +3,7 @@ package dev.jason.gboardpatches.extension.spacebargesture;
 import android.app.Dialog;
 import android.content.Context;
 import android.inputmethodservice.InputMethodService;
+import android.os.Build;
 import android.os.IBinder;
 import android.util.Log;
 import android.view.Window;
@@ -18,24 +19,36 @@ import java.lang.reflect.Modifier;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.WeakHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * Switches languages strictly within the active Gboard IME using ONE unified ordered list and ONE
- * verified Gboard-only switch mechanism for both directions:
+ * Switches languages strictly within the active Gboard IME using ONE unified ordered list and a
+ * verified Gboard-only switch chain for both directions:
  * <ul>
  *   <li>Reads Gboard's confirmed internal rotation list:
  *       {@code Lpga.F(Context)} -> {@code Lpga.C()} (current {@code Lpev}) ->
- *       {@code Lpga.Y} ({@code Lrek}) -> {@code Lrek.j(current)} -> {@code Lrek.b}.</li>
+ *       {@code Lpga.Y} ({@code Lrek}) -> {@code Lrek.j(current)} (with identity/subtype fallback
+ *       scanning on {@code Lrek.b} when {@code Lpev} was re-instantiated across app switches).</li>
  *   <li>{@code NEXT}: {@code (index + 1) % size} (matching Gboard's {@code Lrek.k(current, boolean)}).</li>
  *   <li>{@code PREVIOUS}: {@code (index - 1 + size) % size} on the exact same {@code Lrek.b} list.</li>
- *   <li>Extracts {@code Lpev.f()} ({@link InputMethodSubtype}), verifies that both the target
- *       {@link InputMethodInfo} and enabled subtype strictly belong to the active Gboard IME, and
- *       switches via {@code Lsex.k} or verified {@code imm.setInputMethodAndSubtype}.</li>
+ *   <li>Verifies that both the active {@link InputMethodInfo} and target {@code Lpev.f()}
+ *       {@link InputMethodSubtype} strictly belong to the active Gboard IME.</li>
+ *   <li><strong>Primary switch path (in-process, zero animation artifact, token-independent):</strong>
+ *       invokes Gboard's internal {@code Lpga.l(nextEntry, source)} (the same in-process entry
+ *       switch used by Gboard's own Globe key after {@code Lrek.k}) and verifies that
+ *       {@code Lpga.C()} actually changed. This avoids OS-level IMMS subtype round-trips that tear
+ *       down the accessory header (preventing WhatsApp window-resize jumps) and does not break
+ *       after app switches when {@code window.getAttributes().token} is stale or null.</li>
+ *   <li><strong>Verified fallback chain</strong> if {@code Lpga.l} is unavailable or does not
+ *       change {@code Lpga.C()}: API 28+ {@link InputMethodService#switchInputMethod(String, InputMethodSubtype)},
+ *       then {@code Lsex.k(gboardInfo, token, verifiedSubtype)}, then verified
+ *       {@code imm.setInputMethodAndSubtype(token, gboardImeId, verifiedSubtype)}.</li>
  *   <li>Never calls {@code Lpga.az}, {@code imm.setInputMethod}, or {@code imm.switchToNextInputMethod},
- *       so an external IME can never be selected and {@code NEXT}/{@code PREVIOUS} never diverge in order.</li>
+ *       so an external IME (e.g. TalkBack or Samsung Keyboard) can never be selected and
+ *       {@code NEXT}/{@code PREVIOUS} never diverge in order.</li>
  * </ul>
  */
 public final class GboardSpacebarLanguageNavigator {
@@ -112,10 +125,9 @@ public final class GboardSpacebarLanguageNavigator {
         if (service == null) {
             return false;
         }
-        IBinder token = resolveWindowToken(service);
         InputMethodManager imm = resolveInputMethodManager(service);
-        if (token == null || imm == null) {
-            logWarn(directionLabel + " aborted: missing IME token or InputMethodManager", null);
+        if (imm == null) {
+            logWarn(directionLabel + " aborted: missing InputMethodManager", null);
             return false;
         }
         InputMethodInfo gboardInfo = resolveCurrentGboardImeInfo(service, imm);
@@ -124,6 +136,9 @@ public final class GboardSpacebarLanguageNavigator {
                     null);
             return false;
         }
+        // Token may be null or stale briefly across app switches; primary Lpga.l and API 28+
+        // InputMethodService.switchInputMethod(id, subtype) do not depend on window token.
+        IBinder token = resolveWindowToken(service);
 
         try {
             LanguageRotationHandles handles = resolveHandles(service.getClass().getClassLoader());
@@ -207,6 +222,22 @@ public final class GboardSpacebarLanguageNavigator {
             return false;
         }
 
+        // Primary path: Gboard's own in-process entry switch (Lpga.l) with post-switch verification.
+        // Avoids OS IMMS window teardown (WhatsApp animation jump) and stale/null window tokens.
+        if (backend.trySwitchInProcess(targetEntry, currentEntry)) {
+            return true;
+        }
+
+        // Secondary fallback: API 28+ InputMethodService.switchInputMethod(gboardImeId, subtype),
+        // which does not rely on dialog window token across app transitions.
+        if (!isSameImePackage(backend.getServicePackageName(), backend.getTargetImePackageName())) {
+            return false;
+        }
+        if (backend.trySwitchViaInputMethodService(targetImeId, verifiedSubtype)) {
+            return true;
+        }
+
+        // Tertiary fallback: Gboard's Lsex.k subtype switcher (requires non-null window token).
         if (backend.trySwitchViaGboardHelper(verifiedSubtype)) {
             return true;
         }
@@ -215,8 +246,62 @@ public final class GboardSpacebarLanguageNavigator {
         if (!isSameImePackage(backend.getServicePackageName(), backend.getTargetImePackageName())) {
             return false;
         }
+        if (!backend.hasWindowToken()) {
+            logWarn(directionLabel + " aborted: no window token for legacy IMM fallback", null);
+            return false;
+        }
         backend.switchViaInputMethodManager(targetImeId, verifiedSubtype);
         return true;
+    }
+
+    static <E> int findEntryIndexByIdentity(
+            List<E> entries, E currentEntry, EntryIdentityMatcher<E> matcher) {
+        if (entries == null || entries.isEmpty() || currentEntry == null) {
+            return -1;
+        }
+        for (int i = 0; i < entries.size(); i++) {
+            E candidate = entries.get(i);
+            if (candidate == currentEntry || currentEntry.equals(candidate)) {
+                return i;
+            }
+        }
+        if (matcher != null) {
+            for (int i = 0; i < entries.size(); i++) {
+                E candidate = entries.get(i);
+                if (candidate != null && matcher.matches(candidate, currentEntry)) {
+                    return i;
+                }
+            }
+        }
+        return -1;
+    }
+
+    private static boolean trySwitchInProcess(
+            LanguageRotationHandles handles,
+            Object pgaInstance,
+            Object targetEntry,
+            Object previousEntry) {
+        if (handles.inProcessSwitchMethod == null) {
+            return false;
+        }
+        try {
+            if (handles.inProcessSwitchMethod.getParameterCount() == 2) {
+                handles.inProcessSwitchMethod.invoke(
+                        pgaInstance, targetEntry, handles.inProcessSwitchSourceArg);
+            } else {
+                handles.inProcessSwitchMethod.invoke(pgaInstance, targetEntry);
+            }
+            Object afterEntry = handles.currentEntryMethod.invoke(pgaInstance);
+            if (afterEntry == null) {
+                return false;
+            }
+            return entriesMatch(handles, afterEntry, targetEntry)
+                    || !entriesMatch(handles, afterEntry, previousEntry);
+        } catch (Throwable throwable) {
+            logWarn("Lpga.l in-process switch failed; falling back to verified subtype switch",
+                    throwable);
+            return false;
+        }
     }
 
     private static boolean trySwitchViaGboardHelper(
@@ -225,7 +310,7 @@ public final class GboardSpacebarLanguageNavigator {
             InputMethodInfo gboardInfo,
             IBinder token,
             InputMethodSubtype subtype) {
-        if (handles.subtypeSwitchMethod == null) {
+        if (handles.subtypeSwitchMethod == null || token == null) {
             return false;
         }
         try {
@@ -246,6 +331,64 @@ public final class GboardSpacebarLanguageNavigator {
                     throwable);
         }
         return false;
+    }
+
+    private static boolean entriesMatch(
+            LanguageRotationHandles handles, Object first, Object second) {
+        if (first == second) {
+            return true;
+        }
+        if (first == null || second == null) {
+            return false;
+        }
+        if (first.equals(second)) {
+            return true;
+        }
+        InputMethodSubtype firstSub = safeExtractSubtype(handles, first);
+        InputMethodSubtype secondSub = safeExtractSubtype(handles, second);
+        if (firstSub != null && secondSub != null && subtypesMatch(firstSub, secondSub)) {
+            return true;
+        }
+        Object firstLocale = safeInvokeZeroArg(handles.entryLocaleMethod, first);
+        Object secondLocale = safeInvokeZeroArg(handles.entryLocaleMethod, second);
+        Object firstId = safeInvokeZeroArg(handles.entryIdMethod, first);
+        Object secondId = safeInvokeZeroArg(handles.entryIdMethod, second);
+        return firstLocale != null
+                && firstId != null
+                && firstLocale.equals(secondLocale)
+                && firstId.equals(secondId);
+    }
+
+    private static InputMethodSubtype safeExtractSubtype(
+            LanguageRotationHandles handles, Object entry) {
+        Object result = safeInvokeZeroArg(handles.entrySubtypeMethod, entry);
+        return result instanceof InputMethodSubtype subtype ? subtype : null;
+    }
+
+    private static Object safeInvokeZeroArg(Method method, Object target) {
+        if (method == null || target == null) {
+            return null;
+        }
+        try {
+            return method.invoke(target);
+        } catch (Throwable ignored) {
+            return null;
+        }
+    }
+
+    private static boolean subtypesMatch(InputMethodSubtype first, InputMethodSubtype second) {
+        if (first == second) {
+            return true;
+        }
+        if (first == null || second == null) {
+            return false;
+        }
+        if (first.equals(second)) {
+            return true;
+        }
+        return first.hashCode() == second.hashCode()
+                && equalsNullable(first.getMode(), second.getMode())
+                && equalsNullable(first.getExtraValue(), second.getExtraValue());
     }
 
     private static InputMethodInfo resolveCurrentGboardImeInfo(
@@ -284,9 +427,7 @@ public final class GboardSpacebarLanguageNavigator {
             }
         }
         for (InputMethodSubtype candidate : enabledSubtypes) {
-            if (candidate != null && candidate.hashCode() == target.hashCode()
-                    && equalsNullable(candidate.getMode(), target.getMode())
-                    && equalsNullable(candidate.getExtraValue(), target.getExtraValue())) {
+            if (candidate != null && subtypesMatch(candidate, target)) {
                 return candidate;
             }
         }
@@ -357,6 +498,10 @@ public final class GboardSpacebarLanguageNavigator {
         }
     }
 
+    interface EntryIdentityMatcher<E> {
+        boolean matches(E candidate, E target);
+    }
+
     interface RotationSwitchBackend<E, S> {
         String getServicePackageName();
 
@@ -374,7 +519,19 @@ public final class GboardSpacebarLanguageNavigator {
 
         S findEnabledGboardSubtype(S targetSubtype);
 
+        default boolean trySwitchInProcess(E targetEntry, E previousEntry) {
+            return false;
+        }
+
+        default boolean trySwitchViaInputMethodService(String gboardImeId, S verifiedSubtype) {
+            return false;
+        }
+
         boolean trySwitchViaGboardHelper(S verifiedSubtype);
+
+        default boolean hasWindowToken() {
+            return true;
+        }
 
         void switchViaInputMethodManager(String gboardImeId, S verifiedSubtype);
     }
@@ -432,12 +589,21 @@ public final class GboardSpacebarLanguageNavigator {
 
         @Override
         public int indexOfEntry(Object currentEntry) {
+            List<Object> entries = getRotationEntries();
             try {
                 Object indexResult = handles.indexOfEntryMethod.invoke(rotationList, currentEntry);
-                return indexResult instanceof Integer index ? index : -1;
+                if (indexResult instanceof Integer index
+                        && index >= 0
+                        && index < entries.size()) {
+                    return index;
+                }
             } catch (Throwable throwable) {
-                throw new IllegalStateException("Lrek.j(current) invocation failed", throwable);
+                logWarn("Lrek.j(current) failed; attempting identity scan on Lrek.b", throwable);
             }
+            return findEntryIndexByIdentity(
+                    entries,
+                    currentEntry,
+                    (candidate, target) -> entriesMatch(handles, candidate, target));
         }
 
         @Override
@@ -465,15 +631,45 @@ public final class GboardSpacebarLanguageNavigator {
         }
 
         @Override
+        public boolean trySwitchInProcess(Object targetEntry, Object previousEntry) {
+            return GboardSpacebarLanguageNavigator.trySwitchInProcess(
+                    handles, pgaInstance, targetEntry, previousEntry);
+        }
+
+        @Override
+        public boolean trySwitchViaInputMethodService(
+                String gboardImeId, InputMethodSubtype verifiedSubtype) {
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) {
+                return false;
+            }
+            try {
+                service.switchInputMethod(gboardImeId, verifiedSubtype);
+                return true;
+            } catch (Throwable throwable) {
+                logWarn("InputMethodService.switchInputMethod failed; trying next fallback",
+                        throwable);
+                return false;
+            }
+        }
+
+        @Override
         public boolean trySwitchViaGboardHelper(InputMethodSubtype verifiedSubtype) {
             return GboardSpacebarLanguageNavigator.trySwitchViaGboardHelper(
                     handles, pgaInstance, gboardInfo, token, verifiedSubtype);
         }
 
         @Override
+        public boolean hasWindowToken() {
+            return token != null;
+        }
+
+        @Override
         @SuppressWarnings("deprecation")
         public void switchViaInputMethodManager(
                 String gboardImeId, InputMethodSubtype verifiedSubtype) {
+            if (token == null) {
+                return;
+            }
             imm.setInputMethodAndSubtype(token, gboardImeId, verifiedSubtype);
         }
     }
@@ -485,6 +681,10 @@ public final class GboardSpacebarLanguageNavigator {
         final Method indexOfEntryMethod;
         final Field rotationEntriesField;
         final Method entrySubtypeMethod;
+        final Method entryLocaleMethod;
+        final Method entryIdMethod;
+        final Method inProcessSwitchMethod;
+        final Object inProcessSwitchSourceArg;
         final Method subtypeSwitchMethod;
         final Field subtypeSwitcherFieldOnManager;
 
@@ -510,6 +710,39 @@ public final class GboardSpacebarLanguageNavigator {
             rotationEntriesField.setAccessible(true);
             entrySubtypeMethod.setAccessible(true);
 
+            entryLocaleMethod = findOptionalZeroArgMethod(entryClass, "i");
+            entryIdMethod = findOptionalZeroArgMethod(entryClass, "q");
+
+            Method resolvedInProcessMethod = null;
+            Object resolvedSourceArg = null;
+            try {
+                for (Method candidate : managerClass.getDeclaredMethods()) {
+                    if (!"l".equals(candidate.getName())
+                            || Modifier.isStatic(candidate.getModifiers())) {
+                        continue;
+                    }
+                    Class<?>[] params = candidate.getParameterTypes();
+                    if (params.length == 2 && params[0].isAssignableFrom(entryClass)) {
+                        Object source = resolveSwitchSourceConstant(params[1]);
+                        if (source != null) {
+                            candidate.setAccessible(true);
+                            resolvedInProcessMethod = candidate;
+                            resolvedSourceArg = source;
+                            break;
+                        }
+                    } else if (params.length == 1
+                            && params[0].isAssignableFrom(entryClass)
+                            && resolvedInProcessMethod == null) {
+                        candidate.setAccessible(true);
+                        resolvedInProcessMethod = candidate;
+                    }
+                }
+            } catch (Throwable ignored) {
+                // Optional: falls back to API 28+ switchInputMethod / Lsex.k / IMM.
+            }
+            inProcessSwitchMethod = resolvedInProcessMethod;
+            inProcessSwitchSourceArg = resolvedSourceArg;
+
             Method resolvedSwitchMethod = null;
             Field resolvedSwitcherField = null;
             try {
@@ -527,10 +760,57 @@ public final class GboardSpacebarLanguageNavigator {
                     }
                 }
             } catch (Throwable ignored) {
-                // Optional: verified imm.setInputMethodAndSubtype fallback handles switching.
+                // Optional: verified switchInputMethod / imm.setInputMethodAndSubtype handles it.
             }
             subtypeSwitchMethod = resolvedSwitchMethod;
             subtypeSwitcherFieldOnManager = resolvedSwitcherField;
+        }
+
+        private static Method findOptionalZeroArgMethod(Class<?> owner, String name) {
+            try {
+                Method method = owner.getDeclaredMethod(name);
+                method.setAccessible(true);
+                return method;
+            } catch (Throwable ignored) {
+                return null;
+            }
+        }
+
+        private static Object resolveSwitchSourceConstant(Class<?> sourceClass) {
+            if (sourceClass == null || sourceClass.isPrimitive()) {
+                return null;
+            }
+            Object[] enumConstants = sourceClass.getEnumConstants();
+            if (enumConstants != null && enumConstants.length > 0) {
+                for (Object constant : enumConstants) {
+                    if (constant instanceof Enum<?> enumConstant) {
+                        String upper = enumConstant.name().toUpperCase(Locale.ROOT);
+                        if (upper.contains("GLOBE")
+                                || upper.contains("SWITCH")
+                                || upper.contains("SPACE")
+                                || upper.contains("USER")
+                                || upper.contains("KEY")) {
+                            return enumConstant;
+                        }
+                    }
+                }
+                return enumConstants[0];
+            }
+            for (Field field : sourceClass.getDeclaredFields()) {
+                if (Modifier.isStatic(field.getModifiers())
+                        && sourceClass.isAssignableFrom(field.getType())) {
+                    try {
+                        field.setAccessible(true);
+                        Object value = field.get(null);
+                        if (value != null) {
+                            return value;
+                        }
+                    } catch (Throwable ignored) {
+                        // Continue scanning static constants.
+                    }
+                }
+            }
+            return null;
         }
     }
 }

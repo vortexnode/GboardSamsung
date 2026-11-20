@@ -25,6 +25,8 @@ import dev.jason.gboardpatches.patches.gboard.features.languagemodels.gboardLang
 import dev.jason.gboardpatches.patches.gboard.features.languagemodels.gboardLanguageModelCachePatch
 import dev.jason.gboardpatches.patches.gboard.features.languagemodels.gboardLanguageModelHmmPatch
 import dev.jason.gboardpatches.patches.gboard.features.languagemodels.gboardLanguageModelDecoderPatch
+import dev.jason.gboardpatches.patches.gboard.features.spacebargesture.gboardSpacebarGestureBytecodePatch
+import dev.jason.gboardpatches.patches.gboard.features.spacebargesture.gboardSpacebarGestureSoftKeyPatch
 
 internal class GboardContributionWiringUnit(
     val contributionIds: Set<String>,
@@ -94,6 +96,14 @@ internal object GboardContributionWiring {
                 "rounded_keyboard_panel.style",
             ) {
                 arrayOf(gboardRoundedKeyboardBytecodePatch)
+            },
+        ),
+        "samsung_spacebar_gestures" to listOf(
+            unit("samsung_spacebar_gestures.dispatch") {
+                arrayOf(gboardSpacebarGestureBytecodePatch)
+            },
+            unit("samsung_spacebar_gestures.soft_key") {
+                arrayOf(gboardSpacebarGestureSoftKeyPatch)
             },
         ),
     )

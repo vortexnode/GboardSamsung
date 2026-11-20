@@ -8,7 +8,8 @@ import java.util.Locale;
 
 public final class GboardSettingsText {
     private static final String LANGUAGE_ENGLISH = "en";
-    private static final String LANGUAGE_TRADITIONAL_CHINESE = "zh-Hant";
+    private static final String LANGUAGE_RUSSIAN = "ru";
+    private static final Locale LOCALE_RUSSIAN = Locale.forLanguageTag(LANGUAGE_RUSSIAN);
 
     private GboardSettingsText() {
     }
@@ -84,8 +85,8 @@ public final class GboardSettingsText {
         if (args == null || args.length == 0) {
             return template;
         }
-        Locale formatLocale = LANGUAGE_TRADITIONAL_CHINESE.equals(languageTag)
-                ? Locale.TRADITIONAL_CHINESE
+        Locale formatLocale = LANGUAGE_RUSSIAN.equals(languageTag)
+                ? LOCALE_RUSSIAN
                 : Locale.US;
         return String.format(formatLocale, template, args);
     }
@@ -102,8 +103,8 @@ public final class GboardSettingsText {
                 // Static feature initialization can request stable text without a usable context.
             }
         }
-        return isTraditionalChinese(locale)
-                ? LANGUAGE_TRADITIONAL_CHINESE
+        return isRussian(locale)
+                ? LANGUAGE_RUSSIAN
                 : LANGUAGE_ENGLISH;
     }
 
@@ -134,30 +135,20 @@ public final class GboardSettingsText {
     }
 
     private static String normalizeLanguageTag(String languageTag) {
-        if (LANGUAGE_TRADITIONAL_CHINESE.equals(languageTag)) {
-            return LANGUAGE_TRADITIONAL_CHINESE;
+        if (LANGUAGE_RUSSIAN.equals(languageTag)) {
+            return LANGUAGE_RUSSIAN;
         }
         if (languageTag != null && !languageTag.isBlank()) {
             Locale locale = Locale.forLanguageTag(languageTag);
-            if (isTraditionalChinese(locale)) {
-                return LANGUAGE_TRADITIONAL_CHINESE;
+            if (isRussian(locale)) {
+                return LANGUAGE_RUSSIAN;
             }
         }
         return LANGUAGE_ENGLISH;
     }
 
-    private static boolean isTraditionalChinese(Locale locale) {
-        if (locale == null || !"zh".equalsIgnoreCase(locale.getLanguage())) {
-            return false;
-        }
-        String script = locale.getScript();
-        if ("Hant".equalsIgnoreCase(script)) {
-            return true;
-        }
-        String country = locale.getCountry();
-        return "TW".equalsIgnoreCase(country)
-                || "HK".equalsIgnoreCase(country)
-                || "MO".equalsIgnoreCase(country);
+    private static boolean isRussian(Locale locale) {
+        return locale != null && "ru".equalsIgnoreCase(locale.getLanguage());
     }
 
     private static Context requireContext(Context context) {

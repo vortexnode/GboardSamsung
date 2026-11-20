@@ -120,7 +120,7 @@ val generateSettingsText = tasks.register("generateSettingsText") {
     outputs.dir(generatedSettingsTextJavaDir)
 
     doLast {
-        val requiredLocales = linkedSetOf("en", "zh-Hant")
+        val requiredLocales = linkedSetOf("en", "ru")
         val documentBuilderFactory = DocumentBuilderFactory.newInstance().apply {
             setFeature("http://apache.org/xml/features/disallow-doctype-decl", true)
             setFeature("http://xml.org/sax/features/external-general-entities", false)
@@ -176,7 +176,7 @@ val generateSettingsText = tasks.register("generateSettingsText") {
         require(entries.isNotEmpty()) { "Settings text authority must not be empty" }
 
         val resRoot = generatedSettingsTextResDir.get().asFile
-        mapOf("en" to "values", "zh-Hant" to "values-b+zh+Hant").forEach { (locale, qualifier) ->
+        mapOf("en" to "values", "ru" to "values-ru").forEach { (locale, qualifier) ->
             val output = resRoot.resolve("$qualifier/gboard_settings_strings.xml")
             output.parentFile.mkdirs()
             output.writeText(buildString {
@@ -226,15 +226,14 @@ val generateSettingsText = tasks.register("generateSettingsText") {
             appendLine()
             appendLine("final class GboardSettingsTextCatalog {")
             appendLine("    private static final Map<Integer, String> ENGLISH = createEnglish();")
-            appendLine("    private static final Map<Integer, String> TRADITIONAL_CHINESE =")
-            appendLine("            createTraditionalChinese();")
+            appendLine("    private static final Map<Integer, String> RUSSIAN = createRussian();")
             appendLine()
             appendLine("    private GboardSettingsTextCatalog() {")
             appendLine("    }")
             appendLine()
             appendLine("    static String template(int resId, String languageTag) {")
-            appendLine("        return \"zh-Hant\".equals(languageTag)")
-            appendLine("                ? TRADITIONAL_CHINESE.get(resId)")
+            appendLine("        return \"ru\".equals(languageTag)")
+            appendLine("                ? RUSSIAN.get(resId)")
             appendLine("                : ENGLISH.get(resId);")
             appendLine("    }")
             appendLine()
@@ -244,12 +243,21 @@ val generateSettingsText = tasks.register("generateSettingsText") {
                     ?: entry.quantities.first().second
                 val other = entry.quantities.firstOrNull { it.first == "other" }?.second
                     ?: entry.quantities.last().second
+                val few = entry.quantities.firstOrNull { it.first == "few" }?.second ?: other
+                val many = entry.quantities.firstOrNull { it.first == "many" }?.second ?: other
                 append("        if (resId == R.plurals.")
                 append(entry.name)
                 appendLine(") {")
-                append("            return \"zh-Hant\".equals(languageTag) ? \"")
-                append(escapeJavaString(other.getValue("zh-Hant")))
-                append("\" : quantity == 1 ? \"")
+                appendLine("            if (\"ru\".equals(languageTag)) {")
+                append("                return russianQuantity(quantity, \"")
+                append(escapeJavaString(one.getValue("ru")))
+                append("\", \"")
+                append(escapeJavaString(few.getValue("ru")))
+                append("\", \"")
+                append(escapeJavaString(many.getValue("ru")))
+                appendLine("\");")
+                appendLine("            }")
+                append("            return quantity == 1 ? \"")
                 append(escapeJavaString(one.getValue("en")))
                 append("\" : \"")
                 append(escapeJavaString(other.getValue("en")))
@@ -258,9 +266,22 @@ val generateSettingsText = tasks.register("generateSettingsText") {
             }
             appendLine("        return null;")
             appendLine("    }")
+            appendLine()
+            appendLine("    private static String russianQuantity(int quantity, String one, String few, String many) {")
+            appendLine("        int abs = Math.abs(quantity);")
+            appendLine("        int mod10 = abs % 10;")
+            appendLine("        int mod100 = abs % 100;")
+            appendLine("        if (mod10 == 1 && mod100 != 11) {")
+            appendLine("            return one;")
+            appendLine("        }")
+            appendLine("        if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) {")
+            appendLine("            return few;")
+            appendLine("        }")
+            appendLine("        return many;")
+            appendLine("    }")
             listOf(
                 "English" to "en",
-                "TraditionalChinese" to "zh-Hant",
+                "Russian" to "ru",
             ).forEach { (methodSuffix, locale) ->
                 appendLine()
                 append("    private static Map<Integer, String> create")

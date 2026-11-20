@@ -46,24 +46,31 @@ public final class GboardSpacebarKeyHitTester {
     }
 
     static boolean isSpaceSoftKeyView(View softKeyView) {
+        return extractPressKeycode(softKeyView) == KeyEvent.KEYCODE_SPACE;
+    }
+
+    /**
+     * Reads the primary {@code PRESS} action keycode from a {@code SoftKeyView}'s bound
+     * {@code SoftKeyDef} metadata, or returns {@code 0} if unavailable.
+     */
+    static int extractPressKeycode(View softKeyView) {
         if (!isSoftKeyViewInstance(softKeyView)) {
-            return false;
+            return 0;
         }
         try {
             MetadataHandles handles = resolveHandles(softKeyView.getClass().getClassLoader());
             Object softKeyDef = handles.softKeyMetadataField.get(softKeyView);
             if (softKeyDef == null) {
-                return false;
+                return 0;
             }
             Object pressAction = handles.exactActionLookupMethod.invoke(
                     softKeyDef, handles.pressActionType);
             if (pressAction == null) {
-                return false;
+                return 0;
             }
-            int pressKeycode = handles.extractFirstKeycode(pressAction);
-            return pressKeycode == KeyEvent.KEYCODE_SPACE;
+            return handles.extractFirstKeycode(pressAction);
         } catch (Throwable ignored) {
-            return false;
+            return 0;
         }
     }
 

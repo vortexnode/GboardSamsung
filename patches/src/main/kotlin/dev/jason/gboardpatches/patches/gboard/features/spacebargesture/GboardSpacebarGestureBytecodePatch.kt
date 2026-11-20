@@ -6,7 +6,7 @@ import dev.jason.gboardpatches.patches.gboard.shared.applyKeyboardViewHolderTouc
 import dev.jason.gboardpatches.patches.gboard.shared.gboardKeyboardViewHolderTouchFeaturePatch
 
 internal val gboardSpacebarGestureBytecodePatch = gboardKeyboardViewHolderTouchFeaturePatch(
-    description = "在 KeyboardViewHolder.dispatchTouchEvent 注入 Samsung 空白鍵手勢攔截器。",
+    description = "Injects the Samsung spacebar gesture interceptor into KeyboardViewHolder.dispatchTouchEvent.",
     feature = GboardKeyboardViewHolderTouchFeature.SAMSUNG_SPACEBAR_GESTURES,
 )
 
