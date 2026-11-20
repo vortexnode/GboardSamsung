@@ -79,14 +79,16 @@ jobs:
 
       - name: Generate MPP SHA-256 checksum
         shell: bash
+        env:
+          VERSION: ${{ steps.bundle.outputs.version }}
         run: |
           set -euo pipefail
-          bundle="patches/build/libs/patches-${version}.mpp"
+          bundle="patches/build/libs/patches-${VERSION}.mpp"
           if [[ ! -s "${bundle}" ]]; then
             echo "::error::Expected versioned MPP output ${bundle} is missing or empty."
             exit 1
           fi
-          (cd patches/build/libs && sha256sum "patches-${version}.mpp" > SHA256SUMS)
+          (cd patches/build/libs && sha256sum "patches-${VERSION}.mpp" > SHA256SUMS)
 
       - name: Upload Morphe Android patch bundle
         uses: actions/upload-artifact@v4
