@@ -52,7 +52,7 @@ public final class GboardSymbolFooterOrderSettingsFeatureTest {
                     "Текущий порядок",
                     screen.getSections().get(0).getItems().get(0).getTitle().toString());
             Assert.assertTrue(
-                    screen.getSections().get(0).getItems().get(0).getSummary().contains("стикеров"));
+                    screen.getSections().get(0).getItems().get(0).getSummary().contains("Стикеры"));
         } finally {
             Locale.setDefault(originalLocale);
         }
