@@ -97,21 +97,6 @@ public final class GboardPatchesSettingsFeatureHostTest {
 
     @Test
     public void customFeatureDialogsUseManagedIntentSeam() throws Exception {
-        String topRow = new String(Files.readAllBytes(Path.of(
-                "src/main/java/dev/jason/gboardpatches/extension/toprowswipe/"
-                        + "GboardTopRowSwipeSettingsFeature.java")), StandardCharsets.UTF_8);
-        for (String operation : Arrays.asList(
-                "show Top Row Swipe import error dialog",
-                "show info dialog",
-                "show JavaScript examples dialog",
-                "show global JavaScript dialog",
-                "show JavaScript runtime limits dialog")) {
-            Assert.assertTrue(operation, topRow.contains(
-                    "showManagedAlertDialog(host, activity, \"" + operation + "\""));
-        }
-        Assert.assertTrue(topRow.contains(
-                "GboardPatchesSettingsContract.showManagedDialog(host, onDismiss ->"));
-
         String symbolFooter = new String(Files.readAllBytes(Path.of(
                 "src/main/java/dev/jason/gboardpatches/extension/symbolfooter/"
                         + "GboardSymbolFooterOrderSettingsFeature.java")),

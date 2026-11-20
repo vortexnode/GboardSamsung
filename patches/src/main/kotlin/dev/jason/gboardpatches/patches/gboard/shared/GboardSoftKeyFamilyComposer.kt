@@ -10,8 +10,6 @@ import com.android.tools.smali.dexlib2.Opcode
 import com.android.tools.smali.dexlib2.iface.instruction.ReferenceInstruction
 import com.android.tools.smali.dexlib2.iface.reference.FieldReference
 import com.android.tools.smali.dexlib2.iface.reference.MethodReference
-import dev.jason.gboardpatches.patches.gboard.features.englishqwerty.GBOARD_ENGLISH_SOFT_KEY_HELPER_NAMES
-import dev.jason.gboardpatches.patches.gboard.features.englishqwerty.installGboardEnglishQwertySoftKeyHelpers
 import dev.jason.gboardpatches.patches.gboard.shared.generated.GboardVersionBindings
 import dev.jason.gboardpatches.patches.gboard.shared.runtimeabi.RuntimeAbi
 import dev.jason.gboardpatches.patches.gboard.shared.runtimeabi.RuntimeAbiCatalog
@@ -26,26 +24,6 @@ internal enum class GboardSoftKeyFamilyFeature(
     val beforeRuntimeCalls: List<RuntimeCallId> = emptyList(),
     val afterRuntimeCalls: List<RuntimeCallId> = emptyList(),
 ) {
-    ZHUYIN_TOGGLE(
-        beforeOrder = 100,
-        afterOrder = 400,
-        beforeRuntimeCalls = listOf(
-            RuntimeCallId.ZHUYIN_TRADITIONAL_SIMPLIFIED_TOGGLE_RUNTIME_PATCH_INCOMING_SOFT_KEY_METADATA,
-        ),
-        afterRuntimeCalls = listOf(
-            RuntimeCallId.ZHUYIN_TRADITIONAL_SIMPLIFIED_TOGGLE_RUNTIME_AFTER_SOFT_KEY_BOUND,
-        ),
-    ),
-    TOP_ROW_SWIPE(
-        beforeOrder = 200,
-        afterOrder = 200,
-        beforeRuntimeCalls = listOf(
-            RuntimeCallId.TOP_ROW_SWIPE_RUNTIME_PATCH_INCOMING_SOFT_KEY_METADATA,
-        ),
-        afterRuntimeCalls = listOf(
-            RuntimeCallId.TOP_ROW_SWIPE_RUNTIME_AFTER_SOFT_KEY_BOUND,
-        ),
-    ),
     LONG_PRESS_QUICK_ACTIONS(
         beforeOrder = 300,
         afterOrder = null,
@@ -53,45 +31,11 @@ internal enum class GboardSoftKeyFamilyFeature(
             RuntimeCallId.LONG_PRESS_QUICK_ACTIONS_RUNTIME_MAYBE_PATCH_METADATA,
         ),
     ),
-    SPACEBAR_LOGO(
-        beforeOrder = 400,
-        afterOrder = 100,
-        beforeRuntimeCalls = listOf(
-            RuntimeCallId.SPACEBAR_LOGO_RUNTIME_BEFORE_SOFT_KEY_BOUND,
-        ),
-        afterRuntimeCalls = listOf(
-            RuntimeCallId.SPACEBAR_LOGO_RUNTIME_AFTER_SOFT_KEY_BOUND,
-        ),
-    ),
-    ENGLISH_QWERTY(
-        beforeOrder = 500,
-        afterOrder = null,
-        beforeRuntimeCalls = listOf(
-            RuntimeCallId.ENGLISH_UPPERCASE_TOGGLE_RUNTIME_CACHE_PATCHED_METADATA,
-            RuntimeCallId.ENGLISH_UPPERCASE_TOGGLE_RUNTIME_GET_CACHED_PATCHED_METADATA,
-            RuntimeCallId.ENGLISH_UPPERCASE_TOGGLE_RUNTIME_IS_ENABLED,
-            RuntimeCallId.ENGLISH_UPPERCASE_TOGGLE_RUNTIME_IS_PATCHED_METADATA,
-        ),
-    ),
-    ZHUYIN_SLIDE(
-        beforeOrder = 600,
-        afterOrder = null,
-        beforeRuntimeCalls = listOf(
-            RuntimeCallId.ZHUYIN_SLIDE_RUNTIME_PATCH_INCOMING_SOFT_KEY_METADATA,
-        ),
-    ),
     CUSTOM_SYMBOLS(
         beforeOrder = 700,
         afterOrder = null,
         beforeRuntimeCalls = listOf(
             RuntimeCallId.ADD_SYMBOLS_SOFT_KEY_RUNTIME_PATCH_SOFT_KEY_METADATA,
-        ),
-    ),
-    ZHUYIN_BOTTOM_ROW(
-        beforeOrder = null,
-        afterOrder = 300,
-        afterRuntimeCalls = listOf(
-            RuntimeCallId.ZHUYIN_BOTTOM_ROW_WEIGHT_RUNTIME_AFTER_SOFT_KEY_BOUND,
         ),
     ),
     ;
@@ -196,9 +140,6 @@ private data class GboardSoftKeyFamilyTransformationPlan(
 
             target.requireSupportedSoftKeyStock()
             val candidate = MutableClass(ownerClass)
-            if (GboardSoftKeyFamilyFeature.ENGLISH_QWERTY in selected) {
-                candidate.installGboardEnglishQwertySoftKeyHelpers()
-            }
             val candidateTarget = GboardVersionBindings.softKeyBind.resolve(candidate)
             candidateTarget.applySelectedSoftKeyFamily(selected)
             candidate.verifyExactSoftKeyFamilyState(selected)
@@ -206,11 +147,7 @@ private data class GboardSoftKeyFamilyTransformationPlan(
             val originalTarget = target
             val committed = ownerClass.methods.toMutableSet().apply {
                 remove(originalTarget)
-                removeAll { method -> method.name in GBOARD_ENGLISH_SOFT_KEY_HELPER_NAMES }
                 add(MutableMethod(candidateTarget))
-                candidate.methods
-                    .filter { method -> method.name in GBOARD_ENGLISH_SOFT_KEY_HELPER_NAMES }
-                    .mapTo(this) { method -> MutableMethod(method) }
             }
             return GboardSoftKeyFamilyTransformationPlan(ownerClass, committed)
         }
@@ -300,21 +237,17 @@ private fun Set<GboardSoftKeyFamilyFeature>.verifyCanonicalOrders() {
 
 private fun Set<GboardSoftKeyFamilyFeature>.verifyRuntimeAbis() {
     forEach { feature ->
-        when (feature) {
-            GboardSoftKeyFamilyFeature.ENGLISH_QWERTY -> Unit
-            else -> feature.runtimeCalls.forEach { call ->
-                val abi = RuntimeAbiCatalog.abi(call)
-                check(abi.returnType in setOf("V", "Ljava/lang/Object;")) {
-                    "Unexpected SoftKey Runtime ABI for $call: ${abi.reference}"
-                }
+        feature.runtimeCalls.forEach { call ->
+            val abi = RuntimeAbiCatalog.abi(call)
+            check(abi.returnType in setOf("V", "Ljava/lang/Object;")) {
+                "Unexpected SoftKey Runtime ABI for $call: ${abi.reference}"
             }
         }
     }
 }
 
 private fun MutableClass.hasAnySoftKeyFamilyState(target: MutableMethod): Boolean =
-    target.implementation!!.instructions.any { instruction -> instruction.softKeyFamilyCall() != null } ||
-        methods.any { method -> method.name in GBOARD_ENGLISH_SOFT_KEY_HELPER_NAMES }
+    target.implementation!!.instructions.any { instruction -> instruction.softKeyFamilyCall() != null }
 
 internal fun MutableMethod.applySelectedSoftKeyFamily(
     selected: Set<GboardSoftKeyFamilyFeature>,
@@ -335,34 +268,14 @@ internal fun MutableMethod.applySelectedSoftKeyFamily(
 }
 
 internal fun GboardSoftKeyFamilyFeature.beforeDelegate(): String = when (this) {
-    GboardSoftKeyFamilyFeature.ZHUYIN_TOGGLE,
-    GboardSoftKeyFamilyFeature.TOP_ROW_SWIPE,
-    GboardSoftKeyFamilyFeature.ZHUYIN_SLIDE,
-    GboardSoftKeyFamilyFeature.CUSTOM_SYMBOLS,
-    -> metadataTransformDelegate(beforeRuntimeCalls.single(), "p0, p1")
+    GboardSoftKeyFamilyFeature.CUSTOM_SYMBOLS ->
+        metadataTransformDelegate(beforeRuntimeCalls.single(), "p0, p1")
     GboardSoftKeyFamilyFeature.LONG_PRESS_QUICK_ACTIONS ->
         metadataTransformDelegate(beforeRuntimeCalls.single(), "p1, p0")
-    GboardSoftKeyFamilyFeature.SPACEBAR_LOGO ->
-        emitSoftKeyRuntimeCall(beforeRuntimeCalls.single(), "p0, p1")
-    GboardSoftKeyFamilyFeature.ENGLISH_QWERTY -> """
-        invoke-direct {p0, p1}, ${GboardVersionBindings.softKeyBind.ownerDescriptor}->
-            jasondevPatchIncomingMetadata(${GboardVersionBindings.softKeyMetadataType.descriptor})${GboardVersionBindings.softKeyMetadataType.descriptor}
-
-        move-result-object p1
-    """.trimIndent().replace("->\n            ", "->")
-    GboardSoftKeyFamilyFeature.ZHUYIN_BOTTOM_ROW ->
-        emitSoftKeyRuntimeCall(beforeRuntimeCalls.single(), "p0")
 }
 
-internal fun GboardSoftKeyFamilyFeature.afterDelegate(): String = when (this) {
-    GboardSoftKeyFamilyFeature.SPACEBAR_LOGO ->
-        emitSoftKeyRuntimeCall(afterRuntimeCalls.single(), "p0, p1")
-    GboardSoftKeyFamilyFeature.TOP_ROW_SWIPE,
-    GboardSoftKeyFamilyFeature.ZHUYIN_BOTTOM_ROW,
-    GboardSoftKeyFamilyFeature.ZHUYIN_TOGGLE,
-    -> emitSoftKeyRuntimeCall(afterRuntimeCalls.single(), "p0")
-    else -> error("$this has no after-stock contribution")
-}
+internal fun GboardSoftKeyFamilyFeature.afterDelegate(): String =
+    error("$this has no after-stock contribution")
 
 private fun metadataTransformDelegate(call: RuntimeCallId, registers: String): String = """
     ${emitSoftKeyRuntimeCall(call, registers)}
@@ -383,16 +296,7 @@ private fun MutableClass.verifyExactSoftKeyFamilyState(
     selected: Set<GboardSoftKeyFamilyFeature>,
 ) {
     val actualTarget = GboardVersionBindings.softKeyBind.resolve(this)
-    val expectedEnglish = GboardSoftKeyFamilyFeature.ENGLISH_QWERTY in selected
-    val actualHelpers = methods.filter { method ->
-        method.name in GBOARD_ENGLISH_SOFT_KEY_HELPER_NAMES
-    }
-    check(actualHelpers.size == if (expectedEnglish) GBOARD_ENGLISH_SOFT_KEY_HELPER_NAMES.size else 0) {
-        "Malformed or unselected English SoftKey helpers"
-    }
-
     val normalized = MutableClass(this)
-    normalized.methods.removeAll { method -> method.name in GBOARD_ENGLISH_SOFT_KEY_HELPER_NAMES }
     val normalizedTarget = GboardVersionBindings.softKeyBind.resolve(normalized)
     normalizedTarget.stripExpectedSoftKeyFamilySlots(selected)
     check(normalizedTarget.implementation!!.instructions.none { it.softKeyFamilyCall() != null }) {
@@ -401,21 +305,10 @@ private fun MutableClass.verifyExactSoftKeyFamilyState(
     normalizedTarget.requireSupportedSoftKeyStock()
 
     val expected = MutableClass(normalized)
-    if (expectedEnglish) expected.installGboardEnglishQwertySoftKeyHelpers()
     val expectedTarget = GboardVersionBindings.softKeyBind.resolve(expected)
     expectedTarget.applySelectedSoftKeyFamily(selected)
     check(actualTarget.gboardStructuralFingerprint() == expectedTarget.gboardStructuralFingerprint()) {
         "Malformed SoftKey-family target transformation"
-    }
-
-    val expectedHelpers = expected.methods
-        .filter { method -> method.name in GBOARD_ENGLISH_SOFT_KEY_HELPER_NAMES }
-        .associate { method -> method.name to method.gboardStructuralFingerprint() }
-    val actualHelperFingerprints = actualHelpers.associate { method ->
-        method.name to method.gboardStructuralFingerprint()
-    }
-    check(actualHelperFingerprints == expectedHelpers) {
-        "Malformed English SoftKey helper implementation"
     }
 }
 
@@ -440,21 +333,12 @@ private fun MutableMethod.stripExpectedSoftKeyFamilySlots(
 
 private fun GboardSoftKeyFamilyFeature.beforeInstructionCount(): Int = when {
     beforeOrder == null -> 0
-    this == GboardSoftKeyFamilyFeature.ENGLISH_QWERTY -> 2
-    this == GboardSoftKeyFamilyFeature.SPACEBAR_LOGO -> 1
-    this == GboardSoftKeyFamilyFeature.ZHUYIN_BOTTOM_ROW -> 1
     else -> 3
 }
 
 private fun com.android.tools.smali.dexlib2.iface.instruction.Instruction.softKeyFamilyCall():
     String? {
     val reference = (this as? ReferenceInstruction)?.reference as? MethodReference ?: return null
-    if (
-        reference.definingClass == GboardVersionBindings.softKeyBind.ownerDescriptor &&
-        reference.name == "jasondevPatchIncomingMetadata"
-    ) {
-        return "ENGLISH_QWERTY"
-    }
     return ALL_SOFT_KEY_RUNTIME_CALLS.firstOrNull { call ->
         reference.matches(RuntimeAbiCatalog.abi(call))
     }?.name

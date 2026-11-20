@@ -14,12 +14,8 @@ import org.robolectric.RuntimeEnvironment;
 import java.util.Arrays;
 import java.util.List;
 
-import dev.jason.gboardpatches.extension.accessibilitylayout.GboardAccessibilityLayoutSettings;
-import dev.jason.gboardpatches.extension.accessibilitylayout.GboardAccessibilityLayoutSettingsFeature;
 import dev.jason.gboardpatches.extension.accesspointsmenu.GboardAccessPointsMenuSettings;
 import dev.jason.gboardpatches.extension.accesspointsmenu.GboardAccessPointsMenuSettingsFeature;
-import dev.jason.gboardpatches.extension.cursortrackpad.GboardCursorTrackpadSettings;
-import dev.jason.gboardpatches.extension.cursortrackpad.GboardCursorTrackpadSettingsFeature;
 import dev.jason.gboardpatches.extension.emojisize.GboardEmojiSizeSettings;
 import dev.jason.gboardpatches.extension.emojisize.GboardEmojiSizeSettingsFeature;
 import dev.jason.gboardpatches.extension.keyboard.GboardKeyboardLayoutSettingsGroupFeature;
@@ -51,11 +47,6 @@ public final class GboardFiveFlagSettingsContractTest {
         Assert.assertTrue(GboardEmojiSizeSettings.DEFAULT_ENABLED);
         Assert.assertTrue(GboardEmojiSizeSettings.readEnabled(preferences));
 
-        Assert.assertEquals("pref_force_cursor_trackpad_mode",
-                GboardCursorTrackpadSettings.PREF_KEY_ENABLED);
-        Assert.assertFalse(GboardCursorTrackpadSettings.DEFAULT_ENABLED);
-        Assert.assertFalse(GboardCursorTrackpadSettings.readEnabled(preferences));
-
         Assert.assertEquals("pref_access_points_menu_redesign_enabled",
                 GboardAccessPointsMenuSettings.PREF_KEY_ENABLED);
         Assert.assertTrue(GboardAccessPointsMenuSettings.DEFAULT_ENABLED);
@@ -69,20 +60,10 @@ public final class GboardFiveFlagSettingsContractTest {
                 GboardSplitKeyboardSettings.PREF_KEY_AUTO_SPLIT_ENABLED);
         Assert.assertFalse(GboardSplitKeyboardSettings.DEFAULT_AUTO_SPLIT_ENABLED);
         Assert.assertFalse(GboardSplitKeyboardSettings.readAutoSplitEnabled(preferences));
-
-        Assert.assertEquals("pref_show_accessibility_layout",
-                GboardAccessibilityLayoutSettings.PREF_KEY_ENABLED);
-        Assert.assertTrue(GboardAccessibilityLayoutSettings.DEFAULT_ENABLED);
-        Assert.assertTrue(GboardAccessibilityLayoutSettings.readEnabled(preferences));
     }
 
     @Test
     public void previewsKeepSuppliedNumberOrderAndStackedLayout() {
-        assertPreview(
-                new GboardCursorTrackpadSettingsFeature(null),
-                "Enable cursor trackpad mode",
-                "settings-previews/cursortrackpad/01_cursor_trackpad_mode.png",
-                "settings-previews/cursortrackpad/02_cursor_trackpad_setting.jpg");
         assertPreview(
                 new GboardAccessPointsMenuSettingsFeature(null),
                 "Enable new Access Points menu style",
@@ -92,11 +73,6 @@ public final class GboardFiveFlagSettingsContractTest {
                 new GboardEmojiSizeSettingsFeature(null),
                 "Change emoji size",
                 "settings-previews/emojisize/05_emoji_size_setting.jpg");
-        assertPreview(
-                new GboardAccessibilityLayoutSettingsFeature(null),
-                "Show accessibility layout",
-                "settings-previews/accessibilitylayout/06_accessibility_keyboard.png",
-                "settings-previews/accessibilitylayout/07_accessibility_layout_setting.jpg");
         GboardPatchesSettingsContract.Screen splitScreen =
                 new GboardSplitKeyboardSettingsFeature(null).buildScreenForState(
                         true,
@@ -172,23 +148,19 @@ public final class GboardFiveFlagSettingsContractTest {
     }
 
     @Test
-    public void unselectedFiveFlagPatchesDoNotAppearInPatchesUi() {
+    public void unselectedFlagPatchesDoNotAppearInPatchesUi() {
         Context context = RuntimeEnvironment.getApplication();
         Bundle markers = new Bundle();
-        markers.putBoolean(GboardPatchesFeatureAvailability.FEATURE_TOP_ROW_SWIPE, true);
-        markers.putBoolean(
-                GboardPatchesFeatureAvailability.FEATURE_LATIN_GLOBE_KEY_IGNORE_INTERVAL,
-                true);
+        markers.putBoolean(GboardPatchesFeatureAvailability.FEATURE_SWIPE_DISMISS, true);
+        markers.putBoolean(GboardPatchesFeatureAvailability.FEATURE_ROUNDED_KEYBOARD_PANEL, true);
         context.getApplicationInfo().metaData = markers;
 
         try {
-            List<GboardPatchesSettingsContract.Feature> fiveFlagFeatures = Arrays.asList(
+            List<GboardPatchesSettingsContract.Feature> flagFeatures = Arrays.asList(
                     new GboardEmojiSizeSettingsFeature(context),
-                    new GboardCursorTrackpadSettingsFeature(context),
                     new GboardAccessPointsMenuSettingsFeature(context),
-                    new GboardSplitKeyboardSettingsFeature(context),
-                    new GboardAccessibilityLayoutSettingsFeature(context));
-            for (GboardPatchesSettingsContract.Feature feature : fiveFlagFeatures) {
+                    new GboardSplitKeyboardSettingsFeature(context));
+            for (GboardPatchesSettingsContract.Feature feature : flagFeatures) {
                 Assert.assertFalse(feature.isAvailable(context));
             }
 
@@ -201,7 +173,7 @@ public final class GboardFiveFlagSettingsContractTest {
                     .map(row -> row.getTitle().toString())
                     .collect(java.util.stream.Collectors.toList());
 
-            for (GboardPatchesSettingsContract.Feature feature : fiveFlagFeatures) {
+            for (GboardPatchesSettingsContract.Feature feature : flagFeatures) {
                 Assert.assertFalse(visibleTitles.contains(feature.getEntryTitle()));
             }
         } finally {

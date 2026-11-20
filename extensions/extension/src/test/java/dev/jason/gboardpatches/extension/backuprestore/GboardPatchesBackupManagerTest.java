@@ -6,8 +6,6 @@ import static org.junit.Assert.assertTrue;
 
 import android.content.SharedPreferences;
 
-import org.json.JSONArray;
-import org.json.JSONObject;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.robolectric.RobolectricTestRunner;
@@ -15,12 +13,8 @@ import org.robolectric.RobolectricTestRunner;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
-
-import dev.jason.gboardpatches.extension.keyboard.GboardLatinGlobeKeyIgnoreIntervalSettings;
-import dev.jason.gboardpatches.extension.zhuyinbottomrow.GboardZhuyinBottomRowWeightSettings;
 
 @RunWith(RobolectricTestRunner.class)
 public final class GboardPatchesBackupManagerTest {
@@ -59,34 +53,31 @@ public final class GboardPatchesBackupManagerTest {
     }
 
     @Test
-    public void credentialsAndCompleteTopRowScriptsCanBeRestoredSelectively() {
+    public void selectedModulesCanBeRestoredWithoutTouchingUnselectedStores() {
         Map<String, SharedPreferences> stores = stores();
-        SharedPreferences ftp = stores.get("lan_ftp_settings");
-        SharedPreferences topRow = stores.get("gboard_top_row_swipe_settings");
-        ftp.edit().putString("pref_lan_ftp_password", "secret-password").commit();
-        topRow.edit()
-                .putString("slot_1_script", "return input + '\\n完整腳本';")
-                .putString("slot_1_label", "JS")
-                .putInt("slot_1_timeout_ms", 4321)
+        SharedPreferences clipboard = stores.get("gboard_clipboard_settings");
+        SharedPreferences symbolFooter = stores.get("gboard_symbol_footer_order_settings");
+        clipboard.edit().putBoolean("pref_clipboard_show_sensitive_content", true).commit();
+        symbolFooter.edit()
+                .putString("pref_symbol_footer_order", "emoji,sticker,gif")
+                .putInt("pref_symbol_footer_version", 2)
                 .commit();
         String exported = GboardPatchesBackupManager.exportBackup(stores);
 
-        ftp.edit().clear().putString("current", "replace").commit();
-        topRow.edit().clear().putString("current", "replace").commit();
+        clipboard.edit().clear().putString("current", "replace").commit();
+        symbolFooter.edit().clear().putString("current", "replace").commit();
         SharedPreferences core = stores.get("gboard_patches_settings");
         core.edit().putString("current", "leave alone").commit();
         GboardPatchesBackupManager.RestoreResult result =
                 GboardPatchesBackupManager.restoreBackup(stores, exported, Set.of(
-                        "gboard-patches.lan-ftp",
-                        "gboard-patches.custom-top-row"));
+                        "gboard-patches.clipboard",
+                        "gboard-patches.symbol-footer"));
 
         assertTrue(result.isSuccess());
-        assertEquals("secret-password",
-                ftp.getString("pref_lan_ftp_password", null));
-        assertEquals("return input + '\\n完整腳本';",
-                topRow.getString("slot_1_script", null));
-        assertEquals("JS", topRow.getString("slot_1_label", null));
-        assertEquals(4321, topRow.getInt("slot_1_timeout_ms", 0));
+        assertTrue(clipboard.getBoolean("pref_clipboard_show_sensitive_content", false));
+        assertEquals("emoji,sticker,gif",
+                symbolFooter.getString("pref_symbol_footer_order", null));
+        assertEquals(2, symbolFooter.getInt("pref_symbol_footer_version", 0));
         assertEquals(Map.of("current", "leave alone"), core.getAll());
     }
 
@@ -143,7 +134,7 @@ public final class GboardPatchesBackupManagerTest {
 
         assertFalse(result.isSuccess());
         assertTrue(result.isPartialSuccess());
-        assertEquals(14, result.getRestoredStoreCount());
+        assertEquals(7, result.getRestoredStoreCount());
         assertEquals(1, result.getFailedModuleCount());
         for (Map.Entry<String, SharedPreferences> entry : stores.entrySet()) {
             assertEquals(entry.getKey().equals(failingName)
@@ -156,135 +147,17 @@ public final class GboardPatchesBackupManagerTest {
     }
 
     @Test
-    public void zhuyinStringBackupRestoresNativeTypesAndExportsPortableTypes()
-            throws Exception {
-        Map<String, SharedPreferences> stores = stores();
-        SharedPreferences zhuyin = stores.get(GboardZhuyinBottomRowWeightSettings.PREF_FILE);
-        zhuyin.edit()
-                .putBoolean(GboardZhuyinBottomRowWeightSettings.PREF_KEY_ENABLED, true)
-                .putInt(GboardZhuyinBottomRowWeightSettings.PREF_KEY_WEIGHT_SWITCH_TO_SYMBOL, 150)
-                .putInt(GboardZhuyinBottomRowWeightSettings.PREF_KEY_WEIGHT_A02, 100)
-                .putInt(GboardZhuyinBottomRowWeightSettings.PREF_KEY_WEIGHT_SWITCH_TO_NEXT_LANGUAGE,
-                        100)
-                .putInt(GboardZhuyinBottomRowWeightSettings.PREF_KEY_WEIGHT_SPACE, 200)
-                .putInt(GboardZhuyinBottomRowWeightSettings.PREF_KEY_WEIGHT_A06, 100)
-                .putInt(GboardZhuyinBottomRowWeightSettings.PREF_KEY_WEIGHT_A08, 200)
-                .putInt(GboardZhuyinBottomRowWeightSettings.PREF_KEY_WEIGHT_IME_ACTION, 150)
-                .commit();
-        JSONObject backup = new JSONObject(GboardPatchesBackupManager.exportBackup(stores));
-        JSONObject entries = entriesByModuleId(backup)
-                .get("gboard-patches.zhuyin-bottom-row");
-
-        assertEquals("boolean", entries
-                .getJSONObject(GboardZhuyinBottomRowWeightSettings.PREF_KEY_ENABLED)
-                .getString("type"));
-        List<String> weightKeys = List.of(
-                GboardZhuyinBottomRowWeightSettings.PREF_KEY_WEIGHT_SWITCH_TO_SYMBOL,
-                GboardZhuyinBottomRowWeightSettings.PREF_KEY_WEIGHT_A02,
-                GboardZhuyinBottomRowWeightSettings.PREF_KEY_WEIGHT_SWITCH_TO_NEXT_LANGUAGE,
-                GboardZhuyinBottomRowWeightSettings.PREF_KEY_WEIGHT_SPACE,
-                GboardZhuyinBottomRowWeightSettings.PREF_KEY_WEIGHT_A06,
-                GboardZhuyinBottomRowWeightSettings.PREF_KEY_WEIGHT_A08,
-                GboardZhuyinBottomRowWeightSettings.PREF_KEY_WEIGHT_IME_ACTION);
-        for (String key : weightKeys) {
-            assertEquals("int", entries.getJSONObject(key).getString("type"));
-        }
-        replaceWithString(entries, GboardZhuyinBottomRowWeightSettings.PREF_KEY_ENABLED, "true");
-        for (String key : weightKeys) {
-            replaceWithString(entries, key, entries.getJSONObject(key).getString("value"));
-        }
-        zhuyin.edit().clear().commit();
-
-        String stringBackup = backup.toString();
-        GboardPatchesBackupManager.RestoreResult result =
-                GboardPatchesBackupManager.restoreBackup(stores, stringBackup,
-                        Set.of("gboard-patches.zhuyin-bottom-row"));
-        GboardPatchesBackupManager.RestorePreview preview =
-                GboardPatchesBackupManager.inspectRestore(stores, stringBackup,
-                        Set.of("gboard-patches.zhuyin-bottom-row"));
-
-        assertTrue(result.isSuccess());
-        assertTrue(zhuyin.getAll().get(
-                GboardZhuyinBottomRowWeightSettings.PREF_KEY_ENABLED) instanceof Boolean);
-        for (String key : weightKeys) {
-            assertTrue(zhuyin.getAll().get(key) instanceof Integer);
-        }
-        assertEquals(0, preview.getDifferenceCount());
-        assertEquals(8, preview.getUnchangedCount());
-    }
-
-    @Test
-    public void latinGlobeStringBackupRestoresNativeTypesAndExportsPortableTypes()
-            throws Exception {
-        Map<String, SharedPreferences> stores = stores();
-        SharedPreferences latin = stores.get(
-                GboardLatinGlobeKeyIgnoreIntervalSettings.PREF_FILE);
-        latin.edit()
-                .putBoolean(GboardLatinGlobeKeyIgnoreIntervalSettings.PREF_KEY_ENABLED, true)
-                .putInt(GboardLatinGlobeKeyIgnoreIntervalSettings.PREF_KEY_INTERVAL_MS, 0)
-                .commit();
-        JSONObject backup = new JSONObject(GboardPatchesBackupManager.exportBackup(stores));
-        JSONObject entries = entriesByModuleId(backup).get("gboard-patches.latin-globe");
-
-        assertEquals("boolean", entries
-                .getJSONObject(GboardLatinGlobeKeyIgnoreIntervalSettings.PREF_KEY_ENABLED)
-                .getString("type"));
-        assertEquals("int", entries
-                .getJSONObject(GboardLatinGlobeKeyIgnoreIntervalSettings.PREF_KEY_INTERVAL_MS)
-                .getString("type"));
-        replaceWithString(entries,
-                GboardLatinGlobeKeyIgnoreIntervalSettings.PREF_KEY_ENABLED, "true");
-        replaceWithString(entries,
-                GboardLatinGlobeKeyIgnoreIntervalSettings.PREF_KEY_INTERVAL_MS, "0");
-        latin.edit().clear().commit();
-
-        String stringBackup = backup.toString();
-        GboardPatchesBackupManager.RestoreResult result =
-                GboardPatchesBackupManager.restoreBackup(stores, stringBackup,
-                        Set.of("gboard-patches.latin-globe"));
-        GboardPatchesBackupManager.RestorePreview preview =
-                GboardPatchesBackupManager.inspectRestore(stores, stringBackup,
-                        Set.of("gboard-patches.latin-globe"));
-
-        assertTrue(result.isSuccess());
-        assertTrue(latin.getAll().get(
-                GboardLatinGlobeKeyIgnoreIntervalSettings.PREF_KEY_ENABLED) instanceof Boolean);
-        assertTrue(latin.getAll().get(
-                GboardLatinGlobeKeyIgnoreIntervalSettings.PREF_KEY_INTERVAL_MS)
-                instanceof Integer);
-        assertEquals(0, preview.getDifferenceCount());
-        assertEquals(2, preview.getUnchangedCount());
-    }
-
-    @Test
     public void moduleCatalogUsesStableIdsAndEnglishDisplayNames() {
         GboardPatchesBackupManager.BackupPlan plan =
                 GboardPatchesBackupManager.inspectBackup(
                         GboardPatchesBackupManager.exportBackup(stores()));
         Set<String> ids = new HashSet<>();
 
-        assertEquals(15, plan.getModules().size());
+        assertEquals(8, plan.getModules().size());
         for (GboardPatchesBackupManager.ModulePlan module : plan.getModules()) {
             assertTrue(ids.add(module.getModuleId()));
             assertTrue(module.getModuleName().chars().allMatch(character -> character < 128));
         }
-    }
-
-    private static Map<String, JSONObject> entriesByModuleId(JSONObject backup)
-            throws Exception {
-        JSONArray modules = backup.getJSONObject("sections")
-                .getJSONObject("gboardPatches").getJSONArray("modules");
-        Map<String, JSONObject> entries = new LinkedHashMap<>();
-        for (int index = 0; index < modules.length(); index++) {
-            JSONObject module = modules.getJSONObject(index);
-            entries.put(module.getString("moduleId"), module.getJSONObject("entries"));
-        }
-        return entries;
-    }
-
-    private static void replaceWithString(JSONObject entries, String key, String value)
-            throws Exception {
-        entries.put(key, new JSONObject().put("type", "string").put("value", value));
     }
 
     private static Map<String, SharedPreferences> stores() {

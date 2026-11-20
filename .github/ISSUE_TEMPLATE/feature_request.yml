@@ -1,12 +1,12 @@
 name: Feature Request
-description: Suggest an improvement or a new feature for Gboard Patches.
+description: Suggest an improvement or a new feature for GboardSamsung.
 title: "[Feature] "
 labels: [enhancement]
 body:
   - type: markdown
     attributes:
       value: |
-        Issue titles must be written in English. English and 繁體中文 are welcome in the issue body. Please suggest one feature per issue.
+        Issue titles must be written in English. English and Russian are welcome in the issue body. Please suggest one feature per issue.
   - type: textarea
     id: requested-behavior
     attributes:

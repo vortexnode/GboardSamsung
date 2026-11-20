@@ -23,8 +23,8 @@ class GboardPublishedPatchCatalogContractTest {
             registrations.single { patch -> patch.name == "Add Gboard Signature Bypass" },
         )
         assertSame(
-            gboardOcrScanTextPatch,
-            registrations.single { patch -> patch.name == "Enable OCR / Scan Text" },
+            gboardSamsungSpacebarGesturesPatch,
+            registrations.single { patch -> patch.name == "Samsung Spacebar Gestures" },
         )
     }
 

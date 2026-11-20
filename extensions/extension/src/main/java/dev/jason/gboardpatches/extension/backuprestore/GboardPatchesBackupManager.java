@@ -20,19 +20,11 @@ import java.util.Set;
 import dev.jason.gboardpatches.extension.BuildConfig;
 import dev.jason.gboardpatches.extension.clipboard.GboardClipboardSettings;
 import dev.jason.gboardpatches.extension.clipboardcontentlimit.GboardClipboardContentLimitSettings;
-import dev.jason.gboardpatches.extension.lanftp.config.LanFtpPreferences;
-import dev.jason.gboardpatches.extension.keyboard.GboardEnglishUppercaseToggleSettings;
-import dev.jason.gboardpatches.extension.keyboard.GboardLatinGlobeKeyIgnoreIntervalSettings;
 import dev.jason.gboardpatches.extension.manualincognito.GboardManualIncognitoSettings;
-import dev.jason.gboardpatches.extension.ocr.GboardOcrSettings;
 import dev.jason.gboardpatches.extension.settingshomepage.GboardSettingsHomepageSettings;
 import dev.jason.gboardpatches.extension.symbolfooter.GboardSymbolFooterOrderSettings;
-import dev.jason.gboardpatches.extension.toprowswipe.GboardTopRowSwipeSettings;
-import dev.jason.gboardpatches.extension.webclipboard.WebClipboardPreferences;
 import dev.jason.gboardpatches.extension.writingtools.GboardAiWritingToolsSettings;
-import dev.jason.gboardpatches.extension.zhuyinbottomrow.GboardZhuyinBottomRowWeightSettings;
 import dev.jason.gboardpatches.extension.settings.GboardPatchesSettings;
-import dev.jason.gboardpatches.extension.spacebarlogo.GboardSpacebarLogoSettings;
 
 /** Lossless typed JSON backup for Gboard Patches-owned settings stores. */
 public final class GboardPatchesBackupManager {
@@ -47,42 +39,20 @@ public final class GboardPatchesBackupManager {
     private static final String TYPE_STRING_SET = "string_set";
     private static final ModuleValueAdapter IDENTITY_VALUE_ADAPTER =
             new IdentityValueAdapter();
-    private static final ModuleValueAdapter ZHUYIN_VALUE_ADAPTER =
-            new ZhuyinBottomRowValueAdapter();
-    private static final ModuleValueAdapter LATIN_GLOBE_VALUE_ADAPTER =
-            new LatinGlobeValueAdapter();
 
     /** The only registration point for dedicated Patches settings stores. */
     private static final List<BackupModuleDescriptor> MODULE_CATALOG = validatedCatalog(List.of(
             new BackupModuleDescriptor("gboard-patches.core", "Core Patches settings",
-                    GboardPatchesSettings.PREF_FILE,
-                    GboardSpacebarLogoSettings::refreshRuntime),
-            new BackupModuleDescriptor("gboard-patches.custom-top-row", "Custom Top Row",
-                    GboardTopRowSwipeSettings.PREF_FILE,
-                    null),
+                    GboardPatchesSettings.PREF_FILE, null),
             new BackupModuleDescriptor("gboard-patches.manual-incognito", "Manual Incognito",
                     GboardManualIncognitoSettings.PREF_FILE,
                     null),
             new BackupModuleDescriptor("gboard-patches.settings-homepage", "Settings homepage",
                     GboardSettingsHomepageSettings.PREF_FILE, null),
-            new BackupModuleDescriptor("gboard-patches.zhuyin-bottom-row", "Zhuyin bottom row",
-                    GboardZhuyinBottomRowWeightSettings.PREF_FILE,
-                    ZHUYIN_VALUE_ADAPTER, null),
-            new BackupModuleDescriptor("gboard-patches.latin-globe", "Latin globe key",
-                    GboardLatinGlobeKeyIgnoreIntervalSettings.PREF_FILE,
-                    LATIN_GLOBE_VALUE_ADAPTER, null),
-            new BackupModuleDescriptor("gboard-patches.lan-ftp", "LAN FTP",
-                    LanFtpPreferences.PREF_FILE, null),
             new BackupModuleDescriptor("gboard-patches.clipboard", "Clipboard",
                     GboardClipboardSettings.PREF_FILE, null),
-            new BackupModuleDescriptor("gboard-patches.web-clipboard", "Web Clipboard",
-                    WebClipboardPreferences.PREF_FILE, null),
-            new BackupModuleDescriptor("gboard-patches.ocr", "OCR",
-                    GboardOcrSettings.PREF_FILE, null),
             new BackupModuleDescriptor("gboard-patches.symbol-footer", "Symbol footer order",
                     GboardSymbolFooterOrderSettings.PREF_FILE, null),
-            new BackupModuleDescriptor("gboard-patches.english-uppercase", "English uppercase",
-                    GboardEnglishUppercaseToggleSettings.PREF_FILE, null),
             new BackupModuleDescriptor("gboard-patches.ai-writing-tools", "AI Writing Tools",
                     GboardAiWritingToolsSettings.PREF_FILE, null),
             new BackupModuleDescriptor("gboard-patches.clipboard-content-limit",
@@ -423,12 +393,6 @@ public final class GboardPatchesBackupManager {
         Map<String, PreferenceValue> normalized = new LinkedHashMap<>();
         for (Map.Entry<String, PreferenceValue> entry : values.entrySet()) {
             String key = entry.getKey();
-            if ("gboard-patches.core".equals(descriptor.logicalId)
-                    && key.startsWith("pref_spacebar_g_logo_")) {
-                key = "pref_spacebar_logo_" + key.substring("pref_spacebar_g_logo_".length());
-                // Preserve an explicit current key when a backup includes both spellings.
-                if (values.containsKey(key)) continue;
-            }
             normalized.put(key, descriptor.valueAdapter.toPortable(key, entry.getValue()));
         }
         return normalized;
@@ -822,105 +786,6 @@ public final class GboardPatchesBackupManager {
         public void putPhysical(SharedPreferences.Editor editor, String key,
                 PreferenceValue value) {
             value.put(editor, key);
-        }
-    }
-
-    private static final class ZhuyinBottomRowValueAdapter implements ModuleValueAdapter {
-        private static final Set<String> WEIGHT_KEYS = Set.of(
-                GboardZhuyinBottomRowWeightSettings.PREF_KEY_WEIGHT_SWITCH_TO_SYMBOL,
-                GboardZhuyinBottomRowWeightSettings.PREF_KEY_WEIGHT_A02,
-                GboardZhuyinBottomRowWeightSettings.PREF_KEY_WEIGHT_SWITCH_TO_NEXT_LANGUAGE,
-                GboardZhuyinBottomRowWeightSettings.PREF_KEY_WEIGHT_SPACE,
-                GboardZhuyinBottomRowWeightSettings.PREF_KEY_WEIGHT_A06,
-                GboardZhuyinBottomRowWeightSettings.PREF_KEY_WEIGHT_A08,
-                GboardZhuyinBottomRowWeightSettings.PREF_KEY_WEIGHT_IME_ACTION);
-
-        @Override
-        public PreferenceValue toPortable(String key, PreferenceValue value) {
-            if (GboardZhuyinBottomRowWeightSettings.PREF_KEY_ENABLED.equals(key)) {
-                if (TYPE_BOOLEAN.equals(value.type)) {
-                    return value;
-                }
-                if (TYPE_STRING.equals(value.type)) {
-                    if (Boolean.TRUE.toString().equals(value.value)) {
-                        return new PreferenceValue(TYPE_BOOLEAN, Boolean.TRUE);
-                    }
-                    if (Boolean.FALSE.toString().equals(value.value)) {
-                        return new PreferenceValue(TYPE_BOOLEAN, Boolean.FALSE);
-                    }
-                }
-                throw new IllegalArgumentException(
-                        "Invalid Zhuyin bottom row enabled value");
-            }
-            if (!WEIGHT_KEYS.contains(key)) {
-                return value;
-            }
-            int weight;
-            if (TYPE_INT.equals(value.type)) {
-                weight = ((Integer) value.value).intValue();
-            } else if (TYPE_STRING.equals(value.type)) {
-                try {
-                    weight = Integer.parseInt((String) value.value);
-                } catch (NumberFormatException exception) {
-                    throw new IllegalArgumentException(
-                            "Invalid Zhuyin bottom row weight: " + key, exception);
-                }
-            } else {
-                throw new IllegalArgumentException(
-                        "Invalid Zhuyin bottom row weight type: " + key);
-            }
-            return new PreferenceValue(TYPE_INT,
-                    Integer.valueOf(GboardZhuyinBottomRowWeightSettings.sanitizeWeight(weight)));
-        }
-
-        @Override
-        public void putPhysical(SharedPreferences.Editor editor, String key,
-                PreferenceValue value) {
-            toPortable(key, value).put(editor, key);
-        }
-    }
-
-    private static final class LatinGlobeValueAdapter implements ModuleValueAdapter {
-        @Override
-        public PreferenceValue toPortable(String key, PreferenceValue value) {
-            if (GboardLatinGlobeKeyIgnoreIntervalSettings.PREF_KEY_ENABLED.equals(key)) {
-                if (TYPE_BOOLEAN.equals(value.type)) {
-                    return value;
-                }
-                if (TYPE_STRING.equals(value.type)) {
-                    if (Boolean.TRUE.toString().equals(value.value)) {
-                        return new PreferenceValue(TYPE_BOOLEAN, Boolean.TRUE);
-                    }
-                    if (Boolean.FALSE.toString().equals(value.value)) {
-                        return new PreferenceValue(TYPE_BOOLEAN, Boolean.FALSE);
-                    }
-                }
-                throw new IllegalArgumentException("Invalid Latin globe enabled value");
-            }
-            if (!GboardLatinGlobeKeyIgnoreIntervalSettings.PREF_KEY_INTERVAL_MS.equals(key)) {
-                return value;
-            }
-            int intervalMs;
-            if (TYPE_INT.equals(value.type)) {
-                intervalMs = ((Integer) value.value).intValue();
-            } else if (TYPE_STRING.equals(value.type)) {
-                try {
-                    intervalMs = Integer.parseInt((String) value.value);
-                } catch (NumberFormatException exception) {
-                    throw new IllegalArgumentException(
-                            "Invalid Latin globe interval", exception);
-                }
-            } else {
-                throw new IllegalArgumentException("Invalid Latin globe interval type");
-            }
-            return new PreferenceValue(TYPE_INT, Integer.valueOf(
-                    GboardLatinGlobeKeyIgnoreIntervalSettings.sanitizeIntervalMs(intervalMs)));
-        }
-
-        @Override
-        public void putPhysical(SharedPreferences.Editor editor, String key,
-                PreferenceValue value) {
-            toPortable(key, value).put(editor, key);
         }
     }
 

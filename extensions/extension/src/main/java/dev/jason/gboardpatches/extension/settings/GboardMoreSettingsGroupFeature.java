@@ -5,7 +5,6 @@ import java.util.List;
 import dev.jason.gboardpatches.extension.R;
 import dev.jason.gboardpatches.extension.backuprestore.GboardBackupRestoreSettingsFeature;
 import dev.jason.gboardpatches.extension.developeroptions.GboardDeveloperOptionsSettingsFeature;
-import dev.jason.gboardpatches.extension.lanftp.settings.GboardLanFtpSettingsFeature;
 import dev.jason.gboardpatches.extension.settingshomepage.GboardSettingsHomepageSettingsFeature;
 import dev.jason.gboardpatches.extension.settings.GboardPatchesSettingsContract;
 import dev.jason.gboardpatches.extension.settings.GboardFeatureGroup;
@@ -21,8 +20,7 @@ public final class GboardMoreSettingsGroupFeature implements GboardPatchesSettin
                 GboardSettingsText.get(context, R.string.gboard_patches_header_badge), summary,
                 GboardSettingsText.get(context, R.string.gboard_patches_group_more_empty_title),
                 GboardSettingsText.get(context, R.string.gboard_patches_group_more_empty_summary),
-                List.of(new GboardLanFtpSettingsFeature(context),
-                        new GboardSettingsHomepageSettingsFeature(),
+                List.of(new GboardSettingsHomepageSettingsFeature(),
                         new GboardBackupRestoreSettingsFeature(context),
                         new GboardDeveloperOptionsSettingsFeature(context)));
     }

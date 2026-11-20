@@ -6,9 +6,9 @@ body:
   - type: markdown
     attributes:
       value: |
-        Issue titles must be written in English. English and 繁體中文 are welcome in the issue body. Please report one problem per issue.
+        Issue titles must be written in English. English and Russian are welcome in the issue body. Please report one problem per issue.
 
-        Mixed source sets are unsupported. Before reporting, patch an original, unmodified Gboard APK using only the Gboard Patches source set and confirm that the problem still occurs.
+        Mixed source sets are unsupported. Before reporting, patch an original, unmodified Gboard APK using only the GboardSamsung source set and confirm that the problem still occurs.
   - type: textarea
     id: bug-description
     attributes:
@@ -34,7 +34,7 @@ body:
   - type: input
     id: patches-version
     attributes:
-      label: Gboard Patches version
+      label: GboardSamsung patch bundle version
       description: Find this under Gboard settings > Patches > About.
       placeholder: Exact patch bundle version, not the Gboard or Manager version
     validations:
@@ -45,7 +45,7 @@ body:
       label: Device and Android version
       description: Include your device model and Android version.
       placeholder: |
-        Device: Samsung Galaxy S25
+        Device: Samsung Galaxy S22 5G
         Android: Android 16
     validations:
       required: true
@@ -63,5 +63,5 @@ body:
       options:
         - label: I have checked existing issues and this is not a duplicate.
           required: true
-        - label: I reproduced this problem after patching an original, unmodified Gboard APK using only the Gboard Patches source set in Morphe, without applying patches from any other source set.
+        - label: I reproduced this problem after patching an original, unmodified Gboard APK using only the GboardSamsung source set in Morphe, without applying patches from any other source set.
           required: true

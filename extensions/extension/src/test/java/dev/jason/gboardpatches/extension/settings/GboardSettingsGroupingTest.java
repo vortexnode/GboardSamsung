@@ -104,31 +104,27 @@ public final class GboardSettingsGroupingTest {
                 "new GboardAdvancedVoiceSettingsFeature(context)",
                 "new GboardBluetoothMicrophoneSettingsFeature(context)");
         assertInOrder(toolsGroupSource.substring(toolsGroupSource.indexOf("Arrays.asList(")),
-                "new GboardTopRowSwipeSettingsFeature(context)",
                 "new GboardManualIncognitoSettingsFeature(context)",
                 "new GboardLongPressQuickActionsSettingsFeature(context)",
-                "new GboardCursorTrackpadSettingsFeature(context)",
-                "new GboardOcrSettingsFeature(context)",
+                "new GboardEditingAccessPointsSettingsFeature(context)",
                 "new GboardQuickInsertSettingsFeature(context)",
                 "new GboardFloatingWebSearchSettingsFeature(context)",
                 "new GboardCalculatorSettingsFeature(context)",
-                "new GboardSwipeDismissSettingsFeature(context)");
+                "new GboardSwipeDismissSettingsFeature(context)",
+                "new GboardKeypressHapticsSettingsFeature(context)");
         assertInOrder(layoutGroupSource.substring(layoutGroupSource.indexOf("Arrays.asList(")),
-                "new GboardSpacebarLogoSettingsFeature(context)",
                 "new GboardCloseProactiveSuggestionsSettingsFeature(context)",
-                "new GboardLatinGlobeKeyIgnoreIntervalSettingsFeature(context)",
-                "new GboardEnglishUppercaseToggleSettingsFeature(context)",
-                "new GboardZhuyinBottomRowWeightSettingsFeature(context)",
                 "new GboardSymbolFooterOrderSettingsFeature(context)",
                 "new GboardEmojiSizeSettingsFeature(context)",
                 "new GboardAccessPointsMenuSettingsFeature(context)",
                 "new GboardSplitKeyboardSettingsFeature(context)",
-                "new GboardAccessibilityLayoutSettingsFeature(context)",
                 "new GboardRoundedKeyboardSettingsFeature(context)",
-                "new GboardAccessPointCountSettingsFeature(context)");
+                "new GboardAccessPointCountSettingsFeature(context)",
+                "new GboardCustomThemeSettingsFeature(context)",
+                "new GboardFrostedGlassSettingsFeature(context)");
         Assert.assertFalse(registrySource.contains("GboardKeyboardSettingsGroupFeature"));
         String more = readSource("src/main/java/dev/jason/gboardpatches/extension/settings/GboardMoreSettingsGroupFeature.java");
-        assertInOrder(more, "new GboardLanFtpSettingsFeature(context)",
+        assertInOrder(more,
                 "new GboardSettingsHomepageSettingsFeature()",
                 "new GboardBackupRestoreSettingsFeature(context)",
                 "new GboardDeveloperOptionsSettingsFeature(context)");
@@ -162,7 +158,7 @@ public final class GboardSettingsGroupingTest {
     }
 
     @Test
-    public void featureAvailabilityIncludesLatinGlobeMarkerAndRegistryUsesIt() throws Exception {
+    public void featureAvailabilityIncludesKeptMarkersAndRegistryUsesThem() throws Exception {
         String availabilitySource = readSource(
                 "src/main/java/dev/jason/gboardpatches/extension/settings/"
                         + "GboardPatchesFeatureAvailability.java");
@@ -170,26 +166,22 @@ public final class GboardSettingsGroupingTest {
                 "../../patches/src/main/kotlin/dev/jason/gboardpatches/patches/gboard/registry/"
                         + "GboardPatchRegistry.kt");
 
-        Assert.assertTrue(availabilitySource.contains(
-                "FEATURE_LATIN_GLOBE_KEY_IGNORE_INTERVAL"));
-        Assert.assertTrue(availabilitySource.contains(
-                "dev.jason.gboardpatches.feature.latin_globe_key_ignore_interval"));
-        Assert.assertTrue(availabilitySource.contains("FEATURE_ENGLISH_UPPERCASE_TOGGLE"));
-        Assert.assertTrue(availabilitySource.contains(
-                "dev.jason.gboardpatches.feature.english_uppercase_toggle"));
         Assert.assertTrue(availabilitySource.contains("FEATURE_AI_WRITING_TOOLS"));
         Assert.assertTrue(availabilitySource.contains(
                 "dev.jason.gboardpatches.feature.ai_writing_tools"));
-        Assert.assertTrue(availabilitySource.contains("FEATURE_ZHUYIN_BOTTOM_ROW_WEIGHT"));
+        Assert.assertTrue(availabilitySource.contains("FEATURE_SYMBOL_FOOTER_ORDER"));
         Assert.assertTrue(availabilitySource.contains(
-                "dev.jason.gboardpatches.feature.zhuyin_bottom_row_weight"));
-        Assert.assertTrue(patchSource.contains(
-                "gboardLatinGlobeKeyIgnoreIntervalFeatureMarkerPatch"));
-        Assert.assertTrue(patchSource.contains(
-                "gboardEnglishUppercaseToggleFeatureMarkerPatch"));
+                "dev.jason.gboardpatches.feature.symbol_footer_order"));
+        Assert.assertTrue(availabilitySource.contains("FEATURE_SPLIT_KEYBOARD"));
+        Assert.assertTrue(availabilitySource.contains(
+                "dev.jason.gboardpatches.feature.split_keyboard"));
+        Assert.assertTrue(availabilitySource.contains("FEATURE_ROUNDED_KEYBOARD_PANEL"));
+        Assert.assertTrue(availabilitySource.contains(
+                "dev.jason.gboardpatches.feature.rounded_keyboard_panel"));
         Assert.assertTrue(patchSource.contains("gboardAiWritingToolsFeatureMarkerPatch"));
-        Assert.assertTrue(patchSource.contains(
-                "gboardZhuyinBottomRowWeightFeatureMarkerPatch"));
+        Assert.assertTrue(patchSource.contains("gboardSymbolFooterOrderFeatureMarkerPatch"));
+        Assert.assertTrue(patchSource.contains("gboardSplitKeyboardFeatureMarkerPatch"));
+        Assert.assertTrue(patchSource.contains("gboardRoundedKeyboardFeatureMarkerPatch"));
     }
 
     @Test

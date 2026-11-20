@@ -9,8 +9,6 @@ import app.morphe.patcher.patch.resourcePatch
 import app.morphe.patcher.patch.stringOption
 import com.google.gson.GsonBuilder
 import com.google.gson.JsonObject
-import dev.jason.gboardpatches.patches.gboard.features.accessibilitylayout.gboardAccessibilityLayoutFeatureMarkerPatch
-import dev.jason.gboardpatches.patches.gboard.features.accessibilitylayout.gboardAccessibilityLayoutFlagValuePatch
 import dev.jason.gboardpatches.patches.gboard.features.accesspointcount.gboardAccessPointCountFeatureMarkerPatch
 import dev.jason.gboardpatches.patches.gboard.features.accesspointcount.gboardAccessPointCountFlagValuePatch
 import dev.jason.gboardpatches.patches.gboard.features.accesspointsmenu.gboardAccessPointsMenuFeatureMarkerPatch
@@ -35,21 +33,14 @@ import dev.jason.gboardpatches.patches.gboard.features.clipboardcontentlimit.gbo
 import dev.jason.gboardpatches.patches.gboard.features.closeproactivesuggestions.gboardCloseProactiveSuggestionsFeatureMarkerPatch
 import dev.jason.gboardpatches.patches.gboard.features.closeproactivesuggestions.gboardCloseProactiveSuggestionsFlagValuePatch
 import dev.jason.gboardpatches.patches.gboard.features.developeroptions.gboardDeveloperOptionsFeatureMarkerPatch
-import dev.jason.gboardpatches.patches.gboard.features.cursortrackpad.gboardCursorTrackpadFeatureMarkerPatch
-import dev.jason.gboardpatches.patches.gboard.features.cursortrackpad.gboardCursorTrackpadFlagValuePatch
 import dev.jason.gboardpatches.patches.gboard.features.customtheme.gboardCustomThemeAssetsPatch
 import dev.jason.gboardpatches.patches.gboard.features.customtheme.gboardCustomThemeFeatureMarkerPatch
 import dev.jason.gboardpatches.patches.gboard.features.customtheme.gboardCustomThemeManifestPatch
 import dev.jason.gboardpatches.patches.gboard.features.customtheme.gboardCustomThemeOfficialImportPatch
 import dev.jason.gboardpatches.patches.gboard.features.emojisize.gboardEmojiSizeFeatureMarkerPatch
 import dev.jason.gboardpatches.patches.gboard.features.emojisize.gboardEmojiSizeFlagValuePatch
-import dev.jason.gboardpatches.patches.gboard.features.webclipboard.gboardWebClipboardAssetsPatch
-import dev.jason.gboardpatches.patches.gboard.features.webclipboard.gboardWebClipboardCapturePatch
-import dev.jason.gboardpatches.patches.gboard.features.webclipboard.gboardWebClipboardFeatureMarkerPatch
-import dev.jason.gboardpatches.patches.gboard.features.webclipboard.gboardWebClipboardManifestPatch
 import dev.jason.gboardpatches.patches.gboard.features.websearch.gboardFloatingWebSearchFeatureMarkerPatch
 import dev.jason.gboardpatches.patches.gboard.features.websearch.gboardFloatingWebSearchManifestPatch
-import dev.jason.gboardpatches.patches.gboard.features.englishqwerty.gboardEnglishUppercaseToggleFeatureMarkerPatch
 import dev.jason.gboardpatches.patches.gboard.features.featureflags.gboardDeviceIntelligenceFeatureMarkerPatch
 import dev.jason.gboardpatches.patches.gboard.features.featureflags.gboardDeviceIntelligenceFlagValuePatch
 import dev.jason.gboardpatches.patches.gboard.features.featureflags.gboardGrammarCheckerFeatureMarkerPatch
@@ -58,15 +49,10 @@ import dev.jason.gboardpatches.patches.gboard.features.featureflags.gboardInline
 import dev.jason.gboardpatches.patches.gboard.features.featureflags.gboardInlineSuggestionsFlagValuePatch
 import dev.jason.gboardpatches.patches.gboard.features.featureflags.gboardKeyShapeSelectionFeatureMarkerPatch
 import dev.jason.gboardpatches.patches.gboard.features.featureflags.gboardKeyShapeSelectionFlagValuePatch
-import dev.jason.gboardpatches.patches.gboard.features.lanftp.gboardLanFtpFeatureMarkerPatch
-import dev.jason.gboardpatches.patches.gboard.features.lanftp.gboardLanFtpManifestPatch
-import dev.jason.gboardpatches.patches.gboard.features.latinglobe.gboardLatinGlobeKeyIgnoreIntervalBytecodePatch
-import dev.jason.gboardpatches.patches.gboard.features.latinglobe.gboardLatinGlobeKeyIgnoreIntervalFeatureMarkerPatch
 import dev.jason.gboardpatches.patches.gboard.features.longpressquickactions.gboardLongPressQuickActionsFeatureMarkerPatch
 import dev.jason.gboardpatches.patches.gboard.features.manualincognito.gboardManualIncognitoFeatureMarkerPatch
 import dev.jason.gboardpatches.patches.gboard.features.manualincognito.gboardManualIncognitoLifecyclePatch
 import dev.jason.gboardpatches.patches.gboard.features.manualincognito.gboardManualIncognitoPolicyPatch
-import dev.jason.gboardpatches.patches.gboard.features.ocr.gboardOcrFeatureMarkerPatch
 import dev.jason.gboardpatches.patches.gboard.features.packagerename.applyGboardApplicationDisplayName
 import dev.jason.gboardpatches.patches.gboard.features.packagerename.gboardPackageRenameResourcePatch
 import dev.jason.gboardpatches.patches.gboard.features.packagerename.isValidGboardAppDisplayName
@@ -83,20 +69,16 @@ import dev.jason.gboardpatches.patches.gboard.features.splitkeyboard.gboardSplit
 import dev.jason.gboardpatches.patches.gboard.features.splitkeyboard.gboardSplitKeyboardModePatch
 import dev.jason.gboardpatches.patches.gboard.features.spacebargesture.gboardSpacebarGestureBytecodePatch
 import dev.jason.gboardpatches.patches.gboard.features.spacebargesture.gboardSpacebarGestureResourcePatch
-import dev.jason.gboardpatches.patches.gboard.features.spacebarlogo.gboardSpacebarLogoFeatureMarkerPatch
 import dev.jason.gboardpatches.patches.gboard.features.symbolfooter.gboardSymbolFooterOrderBytecodePatch
 import dev.jason.gboardpatches.patches.gboard.features.symbolfooter.gboardSymbolFooterOrderFeatureMarkerPatch
 import dev.jason.gboardpatches.patches.gboard.features.swipedismiss.gboardSwipeDismissBytecodePatch
 import dev.jason.gboardpatches.patches.gboard.features.swipedismiss.gboardSwipeDismissFeatureMarkerPatch
-import dev.jason.gboardpatches.patches.gboard.features.toprowswipe.gboardTopRowSwipeFeatureMarkerPatch
 import dev.jason.gboardpatches.patches.gboard.features.writingtools.gboardAiWritingToolsFeatureMarkerPatch
 import dev.jason.gboardpatches.patches.gboard.features.writingtools.gboardAiWritingToolsFlagValuePatch
 import dev.jason.gboardpatches.patches.gboard.shared.gboardPatchesExtensionCarrierPatch
 import dev.jason.gboardpatches.patches.gboard.shared.gboardPatchesSettingsPatch
 import dev.jason.gboardpatches.patches.gboard.shared.accesspoint.gboardAccessPointContributions1803Patch
 import dev.jason.gboardpatches.patches.gboard.shared.generated.GboardTargetAdmission
-import dev.jason.gboardpatches.patches.gboard.features.zhuyinbottomrow.gboardZhuyinBottomRowWeightFeatureMarkerPatch
-import dev.jason.gboardpatches.patches.gboard.features.zhuyinbottomrow.gboardZhuyinBottomRowWeightSoftKeyPatch
 import dev.jason.gboardpatches.patches.shared.Constants.COMPATIBILITY_GBOARD
 
 @Suppress("unused")
@@ -145,37 +127,6 @@ private fun gboardPublicResourcePatch(
 }
 
 @Suppress("unused")
-val gboardZhuyinSlideInputPatch = gboardPublicResourcePatch(
-    featureId = "zhuyin_slide_input",
-    name = "Zhuyin Slide Input",
-    description = "注音鍵盤支持上下滑輸入\nEnable slide-up and slide-down input on the Zhuyin keyboard.",
-    default = true
-) {
-    compatibleWith(COMPATIBILITY_GBOARD)
-
-    dependsOn(
-        gboardAboutPageResourcePatch,
-        gboardPatchesExtensionCarrierPatch,
-    )
-}
-
-@Suppress("unused")
-val gboardEnglishQwertySlideUppercaseTogglePatch = gboardPublicResourcePatch(
-    featureId = "english_qwerty_up_flick_uppercase",
-    name = "English QWERTY Up-Flick Uppercase",
-    description = "英文 QWERTY 鍵盤上滑大小寫\nFlick up on the English QWERTY keyboard to toggle uppercase and lowercase.",
-    default = true
-) {
-    compatibleWith(COMPATIBILITY_GBOARD)
-
-    dependsOn(
-        gboardAboutPageResourcePatch,
-        gboardPatchesSettingsPatch,
-        gboardEnglishUppercaseToggleFeatureMarkerPatch,
-    )
-}
-
-@Suppress("unused")
 val gboardLongPressQuickActionsPatch = gboardPublicResourcePatch(
     featureId = "long_press_editing_shortcuts",
     name = "Long-Press Editing Shortcuts",
@@ -189,22 +140,6 @@ val gboardLongPressQuickActionsPatch = gboardPublicResourcePatch(
     dependsOn(
         gboardPatchesSettingsPatch,
         gboardLongPressQuickActionsFeatureMarkerPatch,
-    )
-}
-
-@Suppress("unused")
-val gboardSpacebarLogoPatch = gboardPublicResourcePatch(
-    featureId = "g_logo_on_spacebar",
-    name = "G Logo on Spacebar",
-    description = "自訂空白鍵圖示、圖片、顏色及大小，並隱藏語言名稱\n" +
-        "Choose a built-in or imported spacebar image, its colors and size, and hide the language label.",
-    default = true,
-) {
-    compatibleWith(COMPATIBILITY_GBOARD)
-
-    dependsOn(
-        gboardPatchesSettingsPatch,
-        gboardSpacebarLogoFeatureMarkerPatch,
     )
 }
 
@@ -362,23 +297,6 @@ val gboardEmojiSizePatch = gboardPublicResourcePatch(
 }
 
 @Suppress("unused")
-val gboardCursorTrackpadPatch = gboardPublicResourcePatch(
-    featureId = "enable_cursor_trackpad_mode",
-    name = "Enable cursor trackpad mode",
-    description = "長按空白鍵開啟游標觸控板與鎖定模式\n" +
-        "Long-press the space bar to use cursor trackpad and lock modes.",
-    default = true,
-) {
-    compatibleWith(COMPATIBILITY_GBOARD)
-
-    dependsOn(
-        gboardPatchesSettingsPatch,
-        gboardCursorTrackpadFeatureMarkerPatch,
-        gboardCursorTrackpadFlagValuePatch,
-    )
-}
-
-@Suppress("unused")
 val gboardAccessPointsMenuStylePatch = gboardPublicResourcePatch(
     featureId = "access_points_menu_style",
     name = "Access Points menu style",
@@ -409,22 +327,6 @@ val gboardSplitKeyboardPatch = gboardPublicResourcePatch(
         gboardSplitKeyboardFeatureMarkerPatch,
         gboardSplitKeyboardAccessPointPatch,
         gboardSplitKeyboardModePatch,
-    )
-}
-
-@Suppress("unused")
-val gboardAccessibilityLayoutPatch = gboardPublicResourcePatch(
-    featureId = "enable_accessibility_layout",
-    name = "Enable accessibility layout",
-    description = "啟用無障礙鍵盤配置\nEnable accessibility layout.",
-    default = true,
-) {
-    compatibleWith(COMPATIBILITY_GBOARD)
-
-    dependsOn(
-        gboardPatchesSettingsPatch,
-        gboardAccessibilityLayoutFeatureMarkerPatch,
-        gboardAccessibilityLayoutFlagValuePatch,
     )
 }
 
@@ -531,20 +433,6 @@ val gboardQuickInsertPatch = gboardPublicResourcePatch(
 }
 
 @Suppress("unused")
-val gboardZhuyinQuickTraditionalSimplifiedTogglePatch = gboardPublicResourcePatch(
-    featureId = "zhuyin_quick_traditional_simplified_toggle",
-    name = "Zhuyin Quick Traditional/Simplified Toggle",
-    description = "注音 ㄥ 上滑快速切換繁簡\nSwipe up on Zhuyin ㄥ to quickly toggle Traditional and Simplified Chinese.",
-    default = true
-) {
-    compatibleWith(COMPATIBILITY_GBOARD)
-
-    dependsOn(
-        gboardZhuyinSlideInputPatch,
-    )
-}
-
-@Suppress("unused")
 val gboardCustomSymbolsPatch = gboardPublicResourcePatch(
     featureId = "custom_symbols",
     name = "Custom Symbols",
@@ -556,21 +444,6 @@ val gboardCustomSymbolsPatch = gboardPublicResourcePatch(
     dependsOn(
         gboardAboutPageResourcePatch,
         gboardCustomSymbolsFeatureMarkerPatch,
-    )
-}
-
-@Suppress("unused")
-val gboardCustomTopRowSwipePatch = gboardPublicResourcePatch(
-    featureId = "swipeable_custom_top_row",
-    name = "Swipeable Custom Top Row",
-    description = "滑動鍵盤第一排，在原生列與可自訂文字/JavaScript 列之間切換\nSwipe the keyboard top row to switch between the stock row and a customizable text/JavaScript row.",
-    default = true
-) {
-    compatibleWith(COMPATIBILITY_GBOARD)
-
-    dependsOn(
-        gboardPatchesSettingsPatch,
-        gboardTopRowSwipeFeatureMarkerPatch,
     )
 }
 
@@ -660,41 +533,6 @@ val gboardClipboardContentLimitPatch = gboardPublicResourcePatch(
 }
 
 @Suppress("unused")
-val gboardWebClipboardPatch = gboardPublicResourcePatch(
-    featureId = "web_clipboard",
-    name = "Web Clipboard",
-    description = "新增手機自架的 Web Clipboard，支援瀏覽器同步、配對碼與快速設定開關\nAdd the phone-hosted Web Clipboard with browser sync, pairing, and a Quick Settings Tile.",
-    default = true
-) {
-    compatibleWith(COMPATIBILITY_GBOARD)
-
-    dependsOn(
-        gboardPatchesSettingsPatch,
-        gboardWebClipboardFeatureMarkerPatch,
-        gboardWebClipboardManifestPatch,
-        gboardWebClipboardAssetsPatch,
-        gboardWebClipboardCapturePatch
-    )
-}
-
-@Suppress("unused")
-val gboardLanFtpServerPatch = gboardPublicResourcePatch(
-    featureId = "lan_ftp_server",
-    name = "FTP Server",
-    description = "新增區域網路 FTP 伺服器，支援檔案瀏覽、傳輸與下載續傳\n" +
-        "Add a LAN FTP server with file browsing, transfers, and download resume.",
-    default = true,
-) {
-    compatibleWith(COMPATIBILITY_GBOARD)
-
-    dependsOn(
-        gboardPatchesSettingsPatch,
-        gboardLanFtpFeatureMarkerPatch,
-        gboardLanFtpManifestPatch,
-    )
-}
-
-@Suppress("unused")
 val gboardDeviceIntelligencePatch = gboardPublicResourcePatch(
     featureId = "enable_inline_autofill_suggestions",
     name = "Enable Inline Autofill Suggestions",
@@ -775,22 +613,6 @@ val gboardAiWritingToolsPatch = gboardPublicResourcePatch(
 }
 
 @Suppress("unused")
-val gboardOcrScanTextPatch = gboardPublicResourcePatch(
-    featureId = "enable_ocr_scan_text",
-    name = "Enable OCR / Scan Text",
-    description = "啟用 OCR / 掃描文字功能，支援 拉丁、中文、日文、韓文 與 天城文 辨識後端\n" +
-        "Enable the OCR / Scan Text feature with Latin, Chinese, Japanese, Korean, and Devanagari recognition backends.",
-    default = true,
-) {
-    compatibleWith(COMPATIBILITY_GBOARD)
-
-    dependsOn(
-        gboardPatchesSettingsPatch,
-        gboardOcrFeatureMarkerPatch,
-    )
-}
-
-@Suppress("unused")
 val gboardSettingsHomepagePatch = gboardPublicResourcePatch(
     featureId = "settings_homepage_override",
     name = "Settings Homepage Override",
@@ -807,38 +629,6 @@ val gboardSettingsHomepagePatch = gboardPublicResourcePatch(
 }
 
 @Suppress("unused")
-val gboardLatinGlobeKeyIgnoreIntervalPatch = gboardPublicResourcePatch(
-    featureId = "latin_globe_key_ignore_interval",
-    name = "Latin Globe Key Ignore Interval",
-    description = "新增英文鍵盤地球鍵忽略時間覆寫，可獨立控制輸入後切語言延遲\nAdd an independent English globe key ignore interval override for post-typing language-switch delay.",
-    default = true
-) {
-    compatibleWith(COMPATIBILITY_GBOARD)
-
-    dependsOn(
-        gboardPatchesSettingsPatch,
-        gboardLatinGlobeKeyIgnoreIntervalFeatureMarkerPatch,
-        gboardLatinGlobeKeyIgnoreIntervalBytecodePatch
-    )
-}
-
-@Suppress("unused")
-val gboardZhuyinBottomRowWeightPatch = gboardPublicResourcePatch(
-    featureId = "zhuyin_bottom_row_key_sizes",
-    name = "Zhuyin Bottom Row Key Sizes",
-    description = "調整注音鍵盤底排按鍵大小\nAdjust Zhuyin keyboard bottom-row key sizes.",
-    default = true
-) {
-    compatibleWith(COMPATIBILITY_GBOARD)
-
-    dependsOn(
-        gboardPatchesSettingsPatch,
-        gboardZhuyinBottomRowWeightFeatureMarkerPatch,
-        gboardZhuyinBottomRowWeightSoftKeyPatch
-    )
-}
-
-@Suppress("unused")
 val gboardPackageRenamePatch = gboardPublicResourcePatch(
     featureId = "package_rename",
     name = "Package Rename",
@@ -851,13 +641,13 @@ val gboardPackageRenamePatch = gboardPublicResourcePatch(
 
     val appDisplayName = stringOption(
         key = "app_display_name",
-        default = "GboardWu",
+        default = "GboardSamsung",
         values = linkedMapOf(
+            "GboardSamsung" to "GboardSamsung",
             "Gboard" to "Gboard",
             "Gboard Dev" to "Gboard Dev",
             "Gboard Patches" to "Gboard Patches",
             "Gboard Mod" to "Gboard Mod",
-            "GboardWu" to "GboardWu",
         ),
         title = "App 名稱 / App name",
         description = "",
@@ -891,10 +681,7 @@ val gboardSignatureBypassPatch = gboardPublicResourcePatch(
 
 object GboardPublishedPatchCatalog {
     val morpheRegistrations: Set<Patch<*>> = linkedSetOf(
-        gboardZhuyinSlideInputPatch,
-        gboardEnglishQwertySlideUppercaseTogglePatch,
         gboardLongPressQuickActionsPatch,
-        gboardSpacebarLogoPatch,
         gboardManualIncognitoModePatch,
         gboardFloatingWebSearchPatch,
         gboardEditingAccessPointsPatch,
@@ -904,26 +691,20 @@ object GboardPublishedPatchCatalog {
         gboardAdvancedVoiceTypingPatch,
         gboardBluetoothMicrophonePatch,
         gboardEmojiSizePatch,
-        gboardCursorTrackpadPatch,
         gboardAccessPointsMenuStylePatch,
         gboardSplitKeyboardPatch,
-        gboardAccessibilityLayoutPatch,
         gboardRoundedKeyboardPanelPatch,
         gboardFrostedGlassPatch,
         gboardAccessPointCountPatch,
         gboardCloseProactiveSuggestionsPatch,
         gboardCustomThemePatch,
         gboardQuickInsertPatch,
-        gboardZhuyinQuickTraditionalSimplifiedTogglePatch,
         gboardCustomSymbolsPatch,
-        gboardCustomTopRowSwipePatch,
         gboardBackupRestorePatch,
         gboardDeveloperOptionsPatch,
         gboardSymbolsFooterOrderPatch,
         gboardClipboardEnhancementsPatch,
         gboardClipboardContentLimitPatch,
-        gboardWebClipboardPatch,
-        gboardLanFtpServerPatch,
         gboardDeviceIntelligencePatch,
         gboardGrammarCheckerFlagPatch,
         gboardInlineSuggestionsFlagPatch,
@@ -931,10 +712,7 @@ object GboardPublishedPatchCatalog {
         gboardAiWritingToolsPatch,
         gboardLanguageModelVersionsPatch,
         gboardKeypressHapticsPatch,
-        gboardOcrScanTextPatch,
         gboardSettingsHomepagePatch,
-        gboardLatinGlobeKeyIgnoreIntervalPatch,
-        gboardZhuyinBottomRowWeightPatch,
         gboardPackageRenamePatch,
         gboardSignatureBypassPatch,
     ).filterTo(linkedSetOf()) { patch -> patch.name != null }

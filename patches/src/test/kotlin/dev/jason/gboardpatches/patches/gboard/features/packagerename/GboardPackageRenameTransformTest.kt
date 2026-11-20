@@ -119,12 +119,12 @@ class GboardPackageRenameTransformTest {
         )
         val beforeLocales = locales.map(::serialize)
 
-        applyGboardApplicationDisplayName(manifest, "GboardWu", resources, locales)
+        applyGboardApplicationDisplayName(manifest, "GboardSamsung", resources, locales)
 
         val entry = elements(resources, "string").single {
             it.getAttribute("name") == "gboard_patches_app_display_name"
         }
-        assertEquals("\"GboardWu\"", entry.textContent)
+        assertEquals("\"GboardSamsung\"", entry.textContent)
         assertEquals("false", entry.getAttribute("translatable"))
         assertEquals("false", entry.getAttribute("formatted"))
         assertEquals("Original name", elements(resources, "string").single {
@@ -139,10 +139,10 @@ class GboardPackageRenameTransformTest {
     fun `display name resource is idempotent and can update its owned value`() {
         val manifest = loadManifest()
         val resources = displayNameResources()
-        applyGboardApplicationDisplayName(manifest, "GboardWu", resources)
+        applyGboardApplicationDisplayName(manifest, "GboardSamsung", resources)
         val once = listOf(serialize(manifest), serialize(resources))
 
-        applyGboardApplicationDisplayName(manifest, "GboardWu", resources)
+        applyGboardApplicationDisplayName(manifest, "GboardSamsung", resources)
         assertEquals(once, listOf(serialize(manifest), serialize(resources)))
         applyGboardApplicationDisplayName(manifest, "鍵盤 🚀", resources)
 
@@ -183,7 +183,7 @@ class GboardPackageRenameTransformTest {
     fun `duplicate display-name definitions are rejected before either DOM changes`() {
         val manifest = loadManifest()
         val resources = displayNameResources()
-        applyGboardApplicationDisplayName(manifest, "GboardWu", resources)
+        applyGboardApplicationDisplayName(manifest, "GboardSamsung", resources)
         val entry = elements(resources, "string").single {
             it.getAttribute("name") == "gboard_patches_app_display_name"
         }
@@ -212,7 +212,7 @@ class GboardPackageRenameTransformTest {
         listOf("formatted", "translatable").forEach { attribute ->
             val manifest = loadManifest()
             val resources = displayNameResources()
-            applyGboardApplicationDisplayName(manifest, "GboardWu", resources)
+            applyGboardApplicationDisplayName(manifest, "GboardSamsung", resources)
             elements(resources, "string").single {
                 it.getAttribute("name") == "gboard_patches_app_display_name"
             }.setAttribute(attribute, "true")
@@ -234,7 +234,7 @@ class GboardPackageRenameTransformTest {
         """.trimIndent(), true)
         val beforePublic = serialize(publicIds)
 
-        applyGboardApplicationDisplayName(manifest, "GboardWu", resources, listOf(publicIds))
+        applyGboardApplicationDisplayName(manifest, "GboardSamsung", resources, listOf(publicIds))
 
         assertEquals(beforePublic, serialize(publicIds))
         assertEquals(1, elements(resources, "string").count {
@@ -254,7 +254,7 @@ class GboardPackageRenameTransformTest {
         val documents = listOf(manifest, resources) + others
         val before = documents.map(::serialize)
         assertFails<IllegalStateException> {
-            applyGboardApplicationDisplayName(manifest, "GboardWu", resources, others)
+            applyGboardApplicationDisplayName(manifest, "GboardSamsung", resources, others)
         }
         assertEquals(before, documents.map(::serialize))
     }
@@ -274,8 +274,8 @@ class GboardPackageRenameTransformTest {
         var originalIds = emptyMap<Pair<String, String>, Int>()
         PublicXmlManager(publicFile).use { publicIds ->
             originalIds = publicIds.getDefinedIds().toMap()
-            applyGboardApplicationDisplayName(manifest, "GboardWu", resources, emptyList(), publicIds)
-            applyGboardApplicationDisplayName(manifest, "GboardWu", resources, emptyList(), publicIds)
+            applyGboardApplicationDisplayName(manifest, "GboardSamsung", resources, emptyList(), publicIds)
+            applyGboardApplicationDisplayName(manifest, "GboardSamsung", resources, emptyList(), publicIds)
         }
 
         PublicXmlManager(publicFile).use { persisted ->
@@ -671,14 +671,14 @@ class GboardPackageRenameTransformTest {
         service.setAttributeNS(
             ANDROID_NS,
             "android:name",
-            "dev.jason.gboardpatches.extension.webclipboard.ClipboardSyncService",
+            "dev.jason.gboardpatches.extension.custom.SampleExtensionService",
         )
         application.appendChild(service)
 
         applyGboardPackageRename(manifest, loadSettingsDocuments())
 
         assertEquals(
-            "dev.jason.gboardpatches.extension.webclipboard.ClipboardSyncService",
+            "dev.jason.gboardpatches.extension.custom.SampleExtensionService",
             androidAttribute(service, "name"),
         )
     }

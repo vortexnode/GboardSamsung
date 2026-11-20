@@ -78,21 +78,6 @@ internal enum class GboardFlagFamilyFeature(
         RuntimeCallId.CLIPBOARD_CONTENT_LIMIT_RUNTIME_APPLY_OVERRIDDEN_FLAG_VALUE,
         GboardFlagFamilyArgumentShape.FLAG_NAME_AND_RESULT,
     ),
-    ENABLE_ACCESSIBILITY_LAYOUT(
-        600,
-        RuntimeCallId.ACCESSIBILITY_LAYOUT_RUNTIME_APPLY_OVERRIDDEN_FLAG_VALUE,
-        GboardFlagFamilyArgumentShape.FLAG_NAME_AND_RESULT,
-    ),
-    ENABLE_CURSOR_TRACKPAD_MODE(
-        700,
-        RuntimeCallId.CURSOR_TRACKPAD_RUNTIME_APPLY_OVERRIDDEN_FLAG_VALUE,
-        GboardFlagFamilyArgumentShape.FLAG_NAME_AND_RESULT,
-    ),
-    ENABLE_OCR_SCAN_TEXT(
-        800,
-        RuntimeCallId.OCR_RUNTIME_APPLY_FLAG_VALUE,
-        GboardFlagFamilyArgumentShape.FLAG_NAME_AND_RESULT,
-    ),
     USE_BLUETOOTH_MICROPHONE(
         900,
         RuntimeCallId.BLUETOOTH_MICROPHONE_RUNTIME_APPLY_OVERRIDDEN_FLAG_VALUE,
@@ -588,11 +573,6 @@ private fun emitFlagFamilyRuntimeCall(call: RuntimeCallId, registers: String): S
         RuntimeCallId.ACCESS_POINT_COUNT_RUNTIME_APPLY_FLAG_VALUE,
         registers,
     )
-    RuntimeCallId.ACCESSIBILITY_LAYOUT_RUNTIME_APPLY_OVERRIDDEN_FLAG_VALUE ->
-        RuntimeCallEmitter.invoke(
-            RuntimeCallId.ACCESSIBILITY_LAYOUT_RUNTIME_APPLY_OVERRIDDEN_FLAG_VALUE,
-            registers,
-        )
     RuntimeCallId.ACCESS_POINTS_MENU_RUNTIME_APPLY_OVERRIDDEN_FLAG_VALUE ->
         RuntimeCallEmitter.invoke(
             RuntimeCallId.ACCESS_POINTS_MENU_RUNTIME_APPLY_OVERRIDDEN_FLAG_VALUE,
@@ -622,11 +602,6 @@ private fun emitFlagFamilyRuntimeCall(call: RuntimeCallId, registers: String): S
             RuntimeCallId.CLOSE_PROACTIVE_SUGGESTIONS_RUNTIME_APPLY_FLAG_VALUE,
             registers,
         )
-    RuntimeCallId.CURSOR_TRACKPAD_RUNTIME_APPLY_OVERRIDDEN_FLAG_VALUE ->
-        RuntimeCallEmitter.invoke(
-            RuntimeCallId.CURSOR_TRACKPAD_RUNTIME_APPLY_OVERRIDDEN_FLAG_VALUE,
-            registers,
-        )
     RuntimeCallId.DEVICE_INTELLIGENCE_RUNTIME_APPLY_FLAG_VALUE -> RuntimeCallEmitter.invoke(
         RuntimeCallId.DEVICE_INTELLIGENCE_RUNTIME_APPLY_FLAG_VALUE,
         registers,
@@ -649,10 +624,6 @@ private fun emitFlagFamilyRuntimeCall(call: RuntimeCallId, registers: String): S
     )
     RuntimeCallId.KEY_SHAPE_SELECTION_RUNTIME_APPLY_FLAG_VALUE -> RuntimeCallEmitter.invoke(
         RuntimeCallId.KEY_SHAPE_SELECTION_RUNTIME_APPLY_FLAG_VALUE,
-        registers,
-    )
-    RuntimeCallId.OCR_RUNTIME_APPLY_FLAG_VALUE -> RuntimeCallEmitter.invoke(
-        RuntimeCallId.OCR_RUNTIME_APPLY_FLAG_VALUE,
         registers,
     )
     RuntimeCallId.QUICK_INSERT_RUNTIME_APPLY_FLAG_VALUE -> RuntimeCallEmitter.invoke(
@@ -682,20 +653,17 @@ private val ALL_FLAG_FAMILY_RUNTIME_CALLS: Set<RuntimeCallId> = setOf(
     RuntimeCallId.KEYPRESS_HAPTICS_RUNTIME_APPLY_FLAG_VALUE,
     RuntimeCallId.LANGUAGE_MODELS_RUNTIME_APPLY_FLAG_VALUE,
     RuntimeCallId.ACCESS_POINT_COUNT_RUNTIME_APPLY_FLAG_VALUE,
-    RuntimeCallId.ACCESSIBILITY_LAYOUT_RUNTIME_APPLY_OVERRIDDEN_FLAG_VALUE,
     RuntimeCallId.ACCESS_POINTS_MENU_RUNTIME_APPLY_OVERRIDDEN_FLAG_VALUE,
     RuntimeCallId.ADVANCED_VOICE_RUNTIME_AFTER_FLAG_VALUE,
     RuntimeCallId.AI_WRITING_TOOLS_RUNTIME_APPLY_OVERRIDDEN_FLAG_VALUE,
     RuntimeCallId.BLUETOOTH_MICROPHONE_RUNTIME_APPLY_OVERRIDDEN_FLAG_VALUE,
     RuntimeCallId.CLIPBOARD_CONTENT_LIMIT_RUNTIME_APPLY_OVERRIDDEN_FLAG_VALUE,
     RuntimeCallId.CLOSE_PROACTIVE_SUGGESTIONS_RUNTIME_APPLY_FLAG_VALUE,
-    RuntimeCallId.CURSOR_TRACKPAD_RUNTIME_APPLY_OVERRIDDEN_FLAG_VALUE,
     RuntimeCallId.DEVICE_INTELLIGENCE_RUNTIME_APPLY_FLAG_VALUE,
     RuntimeCallId.EMOJI_SIZE_RUNTIME_APPLY_OVERRIDDEN_FLAG_VALUE,
     RuntimeCallId.FEATURE_FLAGS_RUNTIME_APPLY_OVERRIDDEN_FLAG_VALUE,
     RuntimeCallId.GRAMMAR_CHECKER_RUNTIME_APPLY_FLAG_VALUE,
     RuntimeCallId.INLINE_SUGGESTIONS_RUNTIME_APPLY_FLAG_VALUE,
     RuntimeCallId.KEY_SHAPE_SELECTION_RUNTIME_APPLY_FLAG_VALUE,
-    RuntimeCallId.OCR_RUNTIME_APPLY_FLAG_VALUE,
     RuntimeCallId.QUICK_INSERT_RUNTIME_APPLY_FLAG_VALUE,
 )

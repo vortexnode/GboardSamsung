@@ -1,50 +1,66 @@
 # GboardSamsung
 
-A downstream customization project based on [Gboard Patches](https://github.com/jasonwu1994/Gboard-patches), targeting a Samsung Keyboard-style typing experience while retaining Gboard's own input engine.
+**GboardSamsung** is a downstream Morphe patch project maintained by **Vortex Node**, derived from Jason Wu's [Gboard Patches](https://github.com/jasonwu1994/Gboard-patches) (`GPL-3.0`). It focuses on bringing a Samsung Keyboard-style typing experience (including bidirectional spacebar language switching while preserving tap-to-space and long-press cursor control) to the real Gboard app while retaining Gboard's own typing engine, predictions, dictionaries, voice typing, clipboard, and core capabilities.
 
-> **Important:** This repository contains Morphe patches for the installed Gboard app. It is not a standalone keyboard app and does not contain Google's proprietary Gboard source code.
+> **Important:** This repository contains Morphe patches for a user-provided Gboard APK. It is **not** a standalone keyboard app and does **not** contain Google's proprietary Gboard source code or APK binaries.
 
-## Upstream
+## Upstream attribution & provenance
 
-- **Upstream project:** https://github.com/jasonwu1994/Gboard-patches
-- **Upstream branch:** `main`
-- **Upstream commit inspected for initial project planning:** `463269a0f315ef9cee749e10d155af1aedaa49ad` (2026-11-12)
-- **Patch framework:** Morphe
-- **License:** GPL-3.0; preserve upstream LICENSE, NOTICE, attribution and source-distribution obligations when importing code.
+- **Maintainer (downstream):** Vortex Node (`https://github.com/vortexnode/GboardSamsung`)
+- **Upstream project:** Jason Wu — [jasonwu1994/Gboard-patches](https://github.com/jasonwu1994/Gboard-patches)
+- **Imported upstream baseline:** `463269a0f315ef9cee749e10d155af1aedaa49ad` (`2026-11-12`, recorded in `UPSTREAM_COMMIT.txt`; original upstream README archived in `UPSTREAM_README.md`)
+- **Patch framework:** Morphe (`app.morphe.patches`)
+- **License:** GNU General Public License v3.0 (`LICENSE`, `NOTICE`)
 
-**Repository state:** This is currently a documentation seed, not yet a complete buildable copy of upstream. Import/synchronize the complete upstream source tree before implementation.
+## Supported target
 
-## Project goals
+- **Target Gboard build:** `18.5.4.993608717-release-arm64-v8a` (`18.5.4`)
+- **Primary test device:** Samsung Galaxy S22 5G (`SM-S901U1`), Android 16 / One UI 8
 
-1. Preserve Gboard as the actual keyboard and its native typing, correction, spelling, prediction, dictionaries, voice typing, language support and other built-in capabilities.
-2. Add bidirectional language switching by swiping across the spacebar, following Samsung Keyboard's interaction.
-3. Adapt Gboard's visual presentation toward Samsung Keyboard / One UI:
-   - themes and colors;
-   - key shapes, dimensions and spacing;
-   - typography and fonts where technically supported;
-   - primary and secondary/long-press symbols;
-   - number row, bottom row and toolbar layout.
-4. Keep upstream Gboard Patches features working.
-5. Evaluate integration of the Rambler implementation from https://github.com/vortexnode/GbSu as a separate compatible feature. Do not confuse the user's Gemini-powered Rambler in GbSu with any Gboard-native Rambler feature or similarly named upstream patch.
+## Active patch catalog (34 patches)
 
-## Critical constraints
+GboardSamsung includes **34** public Morphe patches (33 curated upstream features plus the downstream `Samsung Spacebar Gestures` patch):
 
-- Do not replace Gboard with AOSP LatinIME or a new standalone IME.
-- Do not claim this repository contains Google's Gboard source code. It contains patches applied to a user-provided Gboard APK through Morphe.
-- Do not remove or regress Gboard's native language models, correction, spelling, prediction, voice typing, dictionaries, emoji, GIF, stickers, clipboard or other capabilities.
-- Do not break long-press-spacebar cursor trackpad mode while implementing spacebar swipe. Gesture arbitration must be designed and tested.
-- Do not assume fonts or all Samsung-specific visual details are controllable through the current theme importer. Audit the target Gboard version and theme format first.
-- Do not bundle or redistribute Google's proprietary Gboard APK.
-- Preserve upstream attribution, notices and GPL-3.0 obligations.
+- **Downstream Samsung experience (1):**
+  - `Samsung Spacebar Gestures` — swipe left/right on the spacebar to switch languages in a unified cycle while preserving short tap for space and ~300 ms hold + drag for cursor movement (independent of `Swipe Down to Dismiss Keyboard`).
+- **Themes, appearance & layout (12):**
+  - `Custom Theme`, `Frosted Glass`, `Rounded Keyboard Panel`, `Change emoji size`, `Top Toolbar Item Count`, `Access Points menu style`, `Enable split keyboard`, `Key Shape Selection`, `Custom Symbols`, `Emojis, stickers & GIFs Tab Order`, `Settings Homepage Override`, `Close Proactive Suggestions`.
+- **Typing, editing & keyboard tools (10):**
+  - `Long-Press Editing Shortcuts`, `Toolbar Editing Buttons`, `Quick Insert`, `Swipe Down to Dismiss Keyboard`, `Keypress Vibration Intensity Control`, `Floating Web Search`, `Simple Calculator`, `Incognito Mode Toggle`, `Clipboard Enhancements`, `Clipboard Custom Character Limit`.
+- **Language, AI, suggestions & voice (7):**
+  - `AI Writing Tools`, `Advanced Voice Typing`, `Grammar Checker`, `Inline Suggestions`, `Enable Inline Autofill Suggestions`, `Use Bluetooth Microphone`, `Dictionaries & Predictions`.
+- **Packaging, security & utilities (4):**
+  - `Package Rename` (default display name: `GboardSamsung`), `Add Gboard Signature Bypass`, `Backup & Restore`, `Developer options`.
 
-## Device target
+### Upstream features removed in GboardSamsung (12)
 
-Samsung Galaxy S22 5G (SM-S901U1), Android 16 / One UI 8.
+To keep the downstream codebase focused and maintainable, 12 upstream features and their exclusive dependencies/payloads (Apache FTPServer/MINA, QuickJS native runtime, Zhuyin-specific overrides, G Logo image payload, etc.) were removed:
+
+1. `Latin Globe Key Ignore Interval`
+2. `Web Clipboard` (standard Gboard Clipboard, `Custom Clipboard Enhancements`, and `Clipboard Custom Character Limit` are preserved)
+3. `Zhuyin Bottom Row Key Sizes`
+4. `Zhuyin Quick Traditional/Simplified Toggle`
+5. `Zhuyin Slide Input` (`Show custom symbols` is preserved)
+6. `G Logo on Spacebar` (`Samsung Spacebar Gestures` is preserved)
+7. `English QWERTY Up-Flick Uppercase`
+8. `FTP Server`
+9. `Swipeable Custom Top Row`
+10. `Enable OCR / Scan Text`
+11. `Enable accessibility layout`
+12. `Enable cursor trackpad mode` (stock/Samsung spacebar cursor control via `Samsung Spacebar Gestures` is preserved)
 
 ## Build model
 
-This project builds Morphe patch bundles (`.mpp`) and patch metadata, not a standalone Gboard APK. The user applies the bundle to a compatible Gboard APK through Morphe. See upstream build instructions and authentication requirements.
+This project builds Morphe patch bundles (`.mpp`) and patch catalog metadata (`patches-list.json`, `patches-bundle.json`), not a standalone keyboard APK:
 
-## Start here
+- Build patch bundle: `./gradlew :patches:buildAndroid`
+- Regenerate patch metadata: `./gradlew generatePatchesList`
+- Run unit tests: `./gradlew test`
+- Morphe GitHub Packages authentication requires `gpr.user` / `gpr.key` (or `GITHUB_ACTOR` / `GITHUB_TOKEN`). Never commit credentials, tokens, or proprietary Gboard APKs.
 
-Read [docs/PROJECT_SCOPE.md](docs/PROJECT_SCOPE.md) and [docs/UPSTREAM.md](docs/UPSTREAM.md) before changing code.
+## Documentation
+
+- [docs/PROJECT_SCOPE.md](docs/PROJECT_SCOPE.md) — product scope, engineering rules, and acceptance criteria
+- [docs/UPSTREAM.md](docs/UPSTREAM.md) — upstream provenance and synchronization guidelines
+- [docs/REPOSITORY_CLEANUP_REPORT.md](docs/REPOSITORY_CLEANUP_REPORT.md) — downstream cleanup inventory, catalog sync, and verification report
+- [UPSTREAM_README.md](UPSTREAM_README.md) — original upstream Gboard Patches documentation

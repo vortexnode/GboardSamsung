@@ -76,10 +76,10 @@ public final class GboardPatchesSettingsActivitySourceTest {
     }
 
     @Test
-    public void latinGlobeFeatureUsesStableSettingsTextHelper() throws Exception {
+    public void swipeDismissFeatureUsesStableSettingsTextHelper() throws Exception {
         String source = readSource(
-                "src/main/java/dev/jason/gboardpatches/extension/keyboard/"
-                        + "GboardLatinGlobeKeyIgnoreIntervalSettingsFeature.java");
+                "src/main/java/dev/jason/gboardpatches/extension/swipedismiss/"
+                        + "GboardSwipeDismissSettingsFeature.java");
 
         Assert.assertTrue(source.contains("GboardSettingsText.get("));
     }

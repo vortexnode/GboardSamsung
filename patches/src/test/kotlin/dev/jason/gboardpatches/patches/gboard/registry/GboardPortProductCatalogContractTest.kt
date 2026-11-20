@@ -3,7 +3,6 @@ package dev.jason.gboardpatches.patches.gboard.registry
 import app.morphe.patcher.patch.Patch
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
-import dev.jason.gboardpatches.patches.gboard.features.accessibilitylayout.gboardAccessibilityLayoutFlagValuePatch
 import dev.jason.gboardpatches.patches.gboard.features.accesspointcount.gboardAccessPointCountFlagValuePatch
 import dev.jason.gboardpatches.patches.gboard.features.accesspointsmenu.gboardAccessPointsMenuFlagValuePatch
 import dev.jason.gboardpatches.patches.gboard.features.addsymbols.gboardZhuyinCustomSymbolsEntryPatch
@@ -11,23 +10,15 @@ import dev.jason.gboardpatches.patches.gboard.features.advancedvoice.gboardAdvan
 import dev.jason.gboardpatches.patches.gboard.features.bluetoothmicrophone.gboardBluetoothMicrophoneFlagValuePatch
 import dev.jason.gboardpatches.patches.gboard.features.clipboardcontentlimit.gboardClipboardContentLimitFlagValuePatch
 import dev.jason.gboardpatches.patches.gboard.features.closeproactivesuggestions.gboardCloseProactiveSuggestionsFlagValuePatch
-import dev.jason.gboardpatches.patches.gboard.features.cursortrackpad.gboardCursorTrackpadFlagValuePatch
 import dev.jason.gboardpatches.patches.gboard.features.emojisize.gboardEmojiSizeFlagValuePatch
-import dev.jason.gboardpatches.patches.gboard.features.englishqwerty.gboardEnglishQwertySoftKeyPatch
 import dev.jason.gboardpatches.patches.gboard.features.featureflags.gboardDeviceIntelligenceFlagValuePatch
 import dev.jason.gboardpatches.patches.gboard.features.featureflags.gboardGrammarCheckerFlagValuePatch
 import dev.jason.gboardpatches.patches.gboard.features.featureflags.gboardInlineSuggestionsFlagValuePatch
 import dev.jason.gboardpatches.patches.gboard.features.featureflags.gboardKeyShapeSelectionFlagValuePatch
-import dev.jason.gboardpatches.patches.gboard.features.ocr.gboardOcrFlagValuePatch
 import dev.jason.gboardpatches.patches.gboard.features.languagemodels.gboardLanguageModelFlagValuePatch
 import dev.jason.gboardpatches.patches.gboard.features.quickinsert.gboardQuickInsertFlagValuePatch
 import dev.jason.gboardpatches.patches.gboard.features.longpressquickactions.gboardLongPressQuickActionsSoftKeyPatch
-import dev.jason.gboardpatches.patches.gboard.features.spacebarlogo.gboardSpacebarLogoSoftKeyPatch
-import dev.jason.gboardpatches.patches.gboard.features.toprowswipe.gboardTopRowSwipeSoftKeyPatch
 import dev.jason.gboardpatches.patches.gboard.features.writingtools.gboardAiWritingToolsFlagValuePatch
-import dev.jason.gboardpatches.patches.gboard.features.zhuyinbottomrow.gboardZhuyinBottomRowWeightSoftKeyPatch
-import dev.jason.gboardpatches.patches.gboard.features.zhuyinslide.gboardZhuyinSlideSoftKeyPatch
-import dev.jason.gboardpatches.patches.gboard.features.zhuyintraditionalsimplifiedtoggle.gboardZhuyinTraditionalSimplifiedToggleSoftKeyPatch
 import dev.jason.gboardpatches.patches.gboard.shared.GboardFlagFamilyFeature
 import dev.jason.gboardpatches.patches.gboard.shared.GboardSoftKeyFamilyFeature
 import dev.jason.gboardpatches.patches.gboard.shared.generated.GboardTargetAdmission
@@ -137,28 +128,6 @@ class GboardPortProductCatalogContractTest {
     }
 
     @Test
-    fun webClipboardConsumerInventoryExactlyCoversItsPackagedResources() {
-        val repositoryRoot = repositoryRoot()
-        val webClipboard = features().single { feature ->
-            feature["feature_id"].asString == "web_clipboard"
-        }
-        val declaredResources = webClipboard.getAsJsonArray("consumer_files")
-            .map { it.asString }
-            .filter { consumer -> consumer.startsWith("patches/src/main/resources/") }
-        val packagedResources = WEB_CLIPBOARD_RESOURCE_ROOTS.flatMap { resourceRoot ->
-            Files.walk(repositoryRoot.resolve(resourceRoot)).use { paths ->
-                paths.filter(Files::isRegularFile)
-                    .map { path ->
-                        repositoryRoot.relativize(path).toString().replace('\\', '/')
-                    }
-                    .toList()
-            }
-        }.sorted()
-
-        assertEquals(packagedResources, declaredResources)
-    }
-
-    @Test
     fun admittedBindingUnionExactlyMatchesTheAuthoritative1854Profile() {
         val bindingProfile = JsonParser.parseString(
             Files.readString(
@@ -187,7 +156,7 @@ class GboardPortProductCatalogContractTest {
                 }
         }.toSet()
 
-        assertEquals(238, authoritativeKeys.size)
+        assertEquals(218, authoritativeKeys.size)
         assertEquals(authoritativeKeys, requiredKeys)
         assertEquals(
             authoritativeKinds,
@@ -196,21 +165,7 @@ class GboardPortProductCatalogContractTest {
     }
 
     @Test
-    fun zhuyinBottomRowDeclaresOnlyAfterBindResolvedByTheComposer() {
-        val bottomRow = features().single { feature ->
-            feature["feature_id"].asString == "zhuyin_bottom_row_key_sizes"
-        }.getAsJsonArray("contributions").map { it.asJsonObject }
-        assertEquals(1, bottomRow.size)
-        val after = bottomRow.single { it["phase"].asString == "after_stock" }
-        assertEquals(300, after["order"].asInt)
-        assertEquals(listOf("ZHUYIN_BOTTOM_ROW_WEIGHT_RUNTIME_AFTER_SOFT_KEY_BOUND"),
-            after.getAsJsonArray("runtime_calls").map { it.asString })
-        assertEquals(listOf("soft_key_bind", "soft_key_metadata_type"),
-            after.getAsJsonArray("required_bindings").map { it.asString })
-    }
-
-    @Test
-    fun flagFamilyDeclaresEighteenSelectedOnlyComposerCallsInCanonicalOrder() {
+    fun flagFamilyDeclaresFifteenSelectedOnlyComposerCallsInCanonicalOrder() {
         val flagContributions = features().flatMap { feature ->
             feature.getAsJsonArray("contributions")
                 .map { contribution -> contribution.asJsonObject }
@@ -220,18 +175,18 @@ class GboardPortProductCatalogContractTest {
                 .map { contribution -> feature["feature_id"].asString to contribution }
         }.sortedBy { (_, contribution) -> contribution["order"].asInt }
 
-        assertEquals(18, flagContributions.size)
+        assertEquals(15, flagContributions.size)
         assertEquals(
             listOf(
                 5, 10, 20, 30, 40, 100, 200, 300, 400,
-                500, 600, 700, 800, 900, 1000, 1200, 1300, 1400,
+                500, 900, 1000, 1200, 1300, 1400,
             ),
             flagContributions.map { (_, contribution) -> contribution["order"].asInt },
         )
         val runtimeCalls = flagContributions.map { (_, contribution) ->
             contribution.getAsJsonArray("runtime_calls").first().asString
         }
-        assertEquals(18, runtimeCalls.distinct().size)
+        assertEquals(15, runtimeCalls.distinct().size)
         assertFalse("FEATURE_FLAGS_RUNTIME_APPLY_OVERRIDDEN_FLAG_VALUE" in runtimeCalls)
         flagContributions.forEach { (featureId, contribution) ->
             assertEquals(
@@ -246,54 +201,23 @@ class GboardPortProductCatalogContractTest {
     }
 
     @Test
-    fun gestureFamilyAndTogglePopupDeclareSeparateCanonicalContributions() {
+    fun gestureFamilyDeclaresCanonicalLongPressContribution() {
         val byFeatureId = features().associateBy { feature -> feature["feature_id"].asString }
-        val topRowGesture = byFeatureId.getValue("swipeable_custom_top_row")
+        val longPressGesture = byFeatureId.getValue("long_press_editing_shortcuts")
             .getAsJsonArray("contributions")
             .map { it.asJsonObject }
             .single { it["anchor_family_id"].asString == "gesture_dispatch" }
         assertEquals(
-            listOf(
-                "TOP_ROW_SWIPE_RUNTIME_MAYBE_CONSUME_TOP_ROW_SWIPE",
-                "TOP_ROW_SWIPE_RUNTIME_MAYBE_CONSUME_QUICK_JS_TOP_ROW_PRESS",
-            ),
-            topRowGesture.getAsJsonArray("runtime_calls").map { it.asString },
-        )
-
-        val toggleContributions = byFeatureId
-            .getValue("zhuyin_quick_traditional_simplified_toggle")
-            .getAsJsonArray("contributions")
-            .map { it.asJsonObject }
-        val toggleGesture = toggleContributions.single {
-            it["anchor_family_id"].asString == "gesture_dispatch"
-        }
-        assertEquals(
-            listOf("ZHUYIN_TRADITIONAL_SIMPLIFIED_TOGGLE_RUNTIME_MAYBE_TOGGLE"),
-            toggleGesture.getAsJsonArray("runtime_calls").map { it.asString },
+            listOf("LONG_PRESS_QUICK_ACTIONS_RUNTIME_MAYBE_HANDLE_GLOBE_GESTURE"),
+            longPressGesture.getAsJsonArray("runtime_calls").map { it.asString },
         )
         assertEquals(
             setOf(
                 "gesture_dispatch",
-                "gesture_dispatcher_type",
                 "gesture_stock_delegate_field",
                 "gesture_stock_dispatch",
             ),
-            toggleGesture.getAsJsonArray("required_bindings").map { it.asString }.toSet(),
-        )
-
-        val popup = toggleContributions.single {
-            it["contribution_id"].asString ==
-                "zhuyin_quick_traditional_simplified_toggle.popup"
-        }
-        assertEquals("dedicated_bytecode", popup["anchor_family_id"].asString)
-        assertEquals(
-            listOf("zhuyin_toggle_popup_action", "zhuyin_toggle_popup_target", "zhuyin_toggle_preference_factory",
-                "zhuyin_toggle_preference_write", "zhuyin_toggle_reset"),
-            popup.getAsJsonArray("required_bindings").map { it.asString },
-        )
-        assertEquals(
-            listOf("ZHUYIN_TRADITIONAL_SIMPLIFIED_TOGGLE_RUNTIME_PATCH_POPUP_ACTION"),
-            popup.getAsJsonArray("runtime_calls").map { it.asString },
+            longPressGesture.getAsJsonArray("required_bindings").map { it.asString }.toSet(),
         )
     }
 
@@ -305,7 +229,7 @@ class GboardPortProductCatalogContractTest {
                 .filter { it["anchor_family_id"].asString == "pointer_lifecycle" }
         }.associateBy { contribution -> contribution["contribution_id"].asString }
         val pointerBindingsByContribution = pointerContributionsById.mapValues { (_, contribution) ->
-                contribution.getAsJsonArray("required_bindings").map { it.asString }.toSet()
+            contribution.getAsJsonArray("required_bindings").map { it.asString }.toSet()
         }
         val lifecycle = setOf(
             "pointer_owner",
@@ -318,11 +242,7 @@ class GboardPortProductCatalogContractTest {
         )
         assertEquals(
             mapOf(
-                "english_qwerty_up_flick_uppercase.pointer" to lifecycle,
-                "long_press_editing_shortcuts.pointer" to
-                    lifecycle,
-                "swipeable_custom_top_row.pointer" to lifecycle,
-                "zhuyin_slide_input.pointer" to lifecycle,
+                "long_press_editing_shortcuts.pointer" to lifecycle,
             ),
             pointerBindingsByContribution,
         )
@@ -332,23 +252,10 @@ class GboardPortProductCatalogContractTest {
         }
         assertEquals(
             mapOf(
-                "english_qwerty_up_flick_uppercase.pointer" to listOf(
-                    "ENGLISH_UPPERCASE_TOGGLE_RUNTIME_IS_ENABLED",
-                    "ENGLISH_UPPERCASE_TOGGLE_RUNTIME_IS_PATCHED_METADATA",
-                ),
                 "long_press_editing_shortcuts.pointer" to listOf(
                     "LONG_PRESS_QUICK_ACTIONS_RUNTIME_MAYBE_ENSURE_LONG_PRESS_SCHEDULED",
                     "LONG_PRESS_QUICK_ACTIONS_RUNTIME_ON_GLOBE_POINTER_FINISH",
                     "LONG_PRESS_QUICK_ACTIONS_RUNTIME_ON_GLOBE_POINTER_CANCEL",
-                ),
-                "swipeable_custom_top_row.pointer" to listOf(
-                    "TOP_ROW_SWIPE_RUNTIME_MAYBE_ARM_AND_RESOLVE_TOP_ROW_OWNER",
-                    "TOP_ROW_SWIPE_RUNTIME_FINISH_SWIPE_SESSION",
-                    "TOP_ROW_SWIPE_RUNTIME_CLEAR_SWIPE_SESSION",
-                ),
-                "zhuyin_slide_input.pointer" to listOf(
-                    "ZHUYIN_SLIDE_RUNTIME_MAYBE_CAPTURE_AND_SHOULD_SUPPRESS_RETARGET",
-                    "ZHUYIN_SLIDE_RUNTIME_CLEAR_POINTER_STATE",
                 ),
             ),
             pointerRuntimeCallsByContribution,
@@ -419,9 +326,9 @@ class GboardPortProductCatalogContractTest {
         val byFeatureId = features().associateBy { feature -> feature["feature_id"].asString }
         val registrations = GboardPublishedPatchCatalog.morpheRegistrations
 
-        assertEquals(8, SOFT_KEY_FEATURE_CONTRACTS.size)
+        assertEquals(2, SOFT_KEY_FEATURE_CONTRACTS.size)
         assertEquals(
-            11,
+            2,
             features().sumOf { feature ->
                 feature.getAsJsonArray("contributions").count { contribution ->
                     contribution.asJsonObject["anchor_family_id"].asString == "soft_key_bind"
@@ -653,10 +560,6 @@ class GboardPortProductCatalogContractTest {
             "patches/src/main/resources/gboard/gboard-version-bindings.json"
         const val REGISTRY_PATH =
             "patches/src/main/kotlin/dev/jason/gboardpatches/patches/gboard/registry/GboardPatchRegistry.kt"
-        val WEB_CLIPBOARD_RESOURCE_ROOTS = listOf(
-            "patches/src/main/resources/web-clipboard-assets",
-            "patches/src/main/resources/web-clipboard-res",
-        )
         val INVALID_CONSUMER_PATHS = listOf(
             "../patches/src/main/kotlin/Feature.kt",
             "patches/src/main/kotlin/../Feature.kt",
@@ -684,22 +587,15 @@ class GboardPortProductCatalogContractTest {
             "developer_options" to "version-sensitive",
             "editing_access_points" to "version-sensitive",
             "emojis_stickers_gifs_tab_order" to "version-sensitive",
-            "enable_accessibility_layout" to "version-sensitive",
-            "enable_cursor_trackpad_mode" to "version-sensitive",
             "enable_inline_autofill_suggestions" to "version-sensitive",
-            "enable_ocr_scan_text" to "version-sensitive",
             "enable_split_keyboard" to "version-sensitive",
-            "english_qwerty_up_flick_uppercase" to "version-sensitive",
             "floating_web_search" to "version-sensitive",
             "frosted_glass" to "version-sensitive",
-            "g_logo_on_spacebar" to "version-sensitive",
             "grammar_checker" to "version-sensitive",
             "incognito_mode_toggle" to "version-sensitive",
             "inline_suggestions" to "version-sensitive",
             "key_shape_selection" to "version-sensitive",
             "keypress_haptics" to "version-sensitive",
-            "lan_ftp_server" to "version-neutral-extension",
-            "latin_globe_key_ignore_interval" to "version-sensitive",
             "long_press_editing_shortcuts" to "version-sensitive",
             "package_rename" to "generic",
             "quick_insert" to "version-sensitive",
@@ -708,12 +604,7 @@ class GboardPortProductCatalogContractTest {
             "settings_homepage_override" to "version-sensitive",
             "simple_calculator" to "version-sensitive",
             "swipe_down_to_dismiss_keyboard" to "version-sensitive",
-            "swipeable_custom_top_row" to "version-sensitive",
             "use_bluetooth_microphone" to "version-sensitive",
-            "web_clipboard" to "version-sensitive",
-            "zhuyin_bottom_row_key_sizes" to "version-sensitive",
-            "zhuyin_quick_traditional_simplified_toggle" to "version-sensitive",
-            "zhuyin_slide_input" to "version-sensitive",
         )
         val FLAG_FEATURE_CONTRACTS = listOf(
             FlagFeatureContract(
@@ -791,36 +682,12 @@ class GboardPortProductCatalogContractTest {
                     "GboardCloseProactiveSuggestionsFeatureMarkerPatch.kt",
             ),
             FlagFeatureContract(
-                "enable_accessibility_layout",
-                GboardFlagFamilyFeature.ENABLE_ACCESSIBILITY_LAYOUT,
-                gboardAccessibilityLayoutFlagValuePatch,
-                "gboardAccessibilityLayoutFlagValuePatch",
-                FEATURE_ROOT + "accessibilitylayout/GboardAccessibilityLayoutFlagValuePatch.kt",
-                FEATURE_ROOT + "accessibilitylayout/GboardAccessibilityLayoutFeatureMarkerPatch.kt",
-            ),
-            FlagFeatureContract(
-                "enable_cursor_trackpad_mode",
-                GboardFlagFamilyFeature.ENABLE_CURSOR_TRACKPAD_MODE,
-                gboardCursorTrackpadFlagValuePatch,
-                "gboardCursorTrackpadFlagValuePatch",
-                FEATURE_ROOT + "cursortrackpad/GboardCursorTrackpadFlagValuePatch.kt",
-                FEATURE_ROOT + "cursortrackpad/GboardCursorTrackpadFeatureMarkerPatch.kt",
-            ),
-            FlagFeatureContract(
                 "enable_inline_autofill_suggestions",
                 GboardFlagFamilyFeature.DEVICE_INTELLIGENCE,
                 gboardDeviceIntelligenceFlagValuePatch,
                 "gboardDeviceIntelligenceFlagValuePatch",
                 FEATURE_ROOT + "featureflags/GboardFeatureFlagsBytecodePatch.kt",
                 FEATURE_ROOT + "featureflags/GboardDeviceIntelligenceFeatureMarkerPatch.kt",
-            ),
-            FlagFeatureContract(
-                "enable_ocr_scan_text",
-                GboardFlagFamilyFeature.ENABLE_OCR_SCAN_TEXT,
-                gboardOcrFlagValuePatch,
-                "gboardOcrFlagValuePatch",
-                FEATURE_ROOT + "ocr/GboardOcrFlagValuePatch.kt",
-                FEATURE_ROOT + "ocr/GboardOcrFeatureMarkerPatch.kt",
             ),
             FlagFeatureContract(
                 "grammar_checker",
@@ -872,55 +739,12 @@ class GboardPortProductCatalogContractTest {
                 FEATURE_ROOT + "addsymbols/GboardZhuyinCustomSymbolsEntryPatch.kt",
             ),
             SoftKeyFeatureContract(
-                "english_qwerty_up_flick_uppercase",
-                GboardSoftKeyFamilyFeature.ENGLISH_QWERTY,
-                gboardEnglishQwertySoftKeyPatch,
-                "gboardEnglishQwertySoftKeyPatch",
-                FEATURE_ROOT + "englishqwerty/GboardEnglishQwertySoftKeyPatch.kt",
-            ),
-            SoftKeyFeatureContract(
-                "g_logo_on_spacebar",
-                GboardSoftKeyFamilyFeature.SPACEBAR_LOGO,
-                gboardSpacebarLogoSoftKeyPatch,
-                "gboardSpacebarLogoSoftKeyPatch",
-                FEATURE_ROOT + "spacebarlogo/GboardSpacebarLogoSoftKeyPatch.kt",
-            ),
-            SoftKeyFeatureContract(
                 "long_press_editing_shortcuts",
                 GboardSoftKeyFamilyFeature.LONG_PRESS_QUICK_ACTIONS,
                 gboardLongPressQuickActionsSoftKeyPatch,
                 "gboardLongPressQuickActionsSoftKeyPatch",
                 FEATURE_ROOT +
                     "longpressquickactions/GboardLongPressQuickActionsSoftKeyPatch.kt",
-            ),
-            SoftKeyFeatureContract(
-                "swipeable_custom_top_row",
-                GboardSoftKeyFamilyFeature.TOP_ROW_SWIPE,
-                gboardTopRowSwipeSoftKeyPatch,
-                "gboardTopRowSwipeSoftKeyPatch",
-                FEATURE_ROOT + "toprowswipe/GboardTopRowSwipeSoftKeyPatch.kt",
-            ),
-            SoftKeyFeatureContract(
-                "zhuyin_bottom_row_key_sizes",
-                GboardSoftKeyFamilyFeature.ZHUYIN_BOTTOM_ROW,
-                gboardZhuyinBottomRowWeightSoftKeyPatch,
-                "gboardZhuyinBottomRowWeightSoftKeyPatch",
-                FEATURE_ROOT + "zhuyinbottomrow/GboardZhuyinBottomRowWeightSoftKeyPatch.kt",
-            ),
-            SoftKeyFeatureContract(
-                "zhuyin_quick_traditional_simplified_toggle",
-                GboardSoftKeyFamilyFeature.ZHUYIN_TOGGLE,
-                gboardZhuyinTraditionalSimplifiedToggleSoftKeyPatch,
-                "gboardZhuyinTraditionalSimplifiedToggleSoftKeyPatch",
-                FEATURE_ROOT + "zhuyintraditionalsimplifiedtoggle/" +
-                    "GboardZhuyinTraditionalSimplifiedToggleSoftKeyPatch.kt",
-            ),
-            SoftKeyFeatureContract(
-                "zhuyin_slide_input",
-                GboardSoftKeyFamilyFeature.ZHUYIN_SLIDE,
-                gboardZhuyinSlideSoftKeyPatch,
-                "gboardZhuyinSlideSoftKeyPatch",
-                FEATURE_ROOT + "zhuyinslide/GboardZhuyinSlideSoftKeyPatch.kt",
             ),
         )
     }

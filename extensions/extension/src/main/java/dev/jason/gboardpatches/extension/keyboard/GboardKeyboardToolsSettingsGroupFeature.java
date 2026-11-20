@@ -9,17 +9,14 @@ import java.util.List;
 import dev.jason.gboardpatches.extension.R;
 import dev.jason.gboardpatches.extension.editingaccesspoints.GboardEditingAccessPointsSettingsFeature;
 import dev.jason.gboardpatches.extension.calculator.GboardCalculatorSettingsFeature;
-import dev.jason.gboardpatches.extension.cursortrackpad.GboardCursorTrackpadSettingsFeature;
 import dev.jason.gboardpatches.extension.longpressquickactions.GboardLongPressQuickActionsSettingsFeature;
 import dev.jason.gboardpatches.extension.manualincognito.GboardManualIncognitoSettingsFeature;
-import dev.jason.gboardpatches.extension.ocr.GboardOcrSettingsFeature;
 import dev.jason.gboardpatches.extension.quickinsert.GboardQuickInsertSettingsFeature;
 import dev.jason.gboardpatches.extension.settings.GboardFeatureGroup;
 import dev.jason.gboardpatches.extension.settings.GboardPatchesIcons;
 import dev.jason.gboardpatches.extension.settings.GboardPatchesSettingsContract;
 import dev.jason.gboardpatches.extension.settings.GboardSettingsText;
 import dev.jason.gboardpatches.extension.swipedismiss.GboardSwipeDismissSettingsFeature;
-import dev.jason.gboardpatches.extension.toprowswipe.GboardTopRowSwipeSettingsFeature;
 import dev.jason.gboardpatches.extension.websearch.GboardFloatingWebSearchSettingsFeature;
 
 public final class GboardKeyboardToolsSettingsGroupFeature
@@ -40,12 +37,9 @@ public final class GboardKeyboardToolsSettingsGroupFeature
                 GboardSettingsText.get(context,
                         R.string.gboard_patches_group_keyboard_empty_summary),
                 Arrays.asList(
-                        new GboardTopRowSwipeSettingsFeature(context),
                         new GboardManualIncognitoSettingsFeature(context),
                         new GboardLongPressQuickActionsSettingsFeature(context),
                         new GboardEditingAccessPointsSettingsFeature(context),
-                        new GboardCursorTrackpadSettingsFeature(context),
-                        new GboardOcrSettingsFeature(context),
                         new GboardQuickInsertSettingsFeature(context),
                         new GboardFloatingWebSearchSettingsFeature(context),
                         new GboardCalculatorSettingsFeature(context),

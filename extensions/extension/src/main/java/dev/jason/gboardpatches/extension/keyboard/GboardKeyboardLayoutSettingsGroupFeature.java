@@ -6,7 +6,6 @@ import java.util.Arrays;
 import java.util.List;
 
 import dev.jason.gboardpatches.extension.R;
-import dev.jason.gboardpatches.extension.accessibilitylayout.GboardAccessibilityLayoutSettingsFeature;
 import dev.jason.gboardpatches.extension.accesspointcount.GboardAccessPointCountSettingsFeature;
 import dev.jason.gboardpatches.extension.accesspointsmenu.GboardAccessPointsMenuSettingsFeature;
 import dev.jason.gboardpatches.extension.closeproactivesuggestions.GboardCloseProactiveSuggestionsSettingsFeature;
@@ -18,10 +17,8 @@ import dev.jason.gboardpatches.extension.settings.GboardFeatureGroup;
 import dev.jason.gboardpatches.extension.settings.GboardPatchesIcons;
 import dev.jason.gboardpatches.extension.settings.GboardPatchesSettingsContract;
 import dev.jason.gboardpatches.extension.settings.GboardSettingsText;
-import dev.jason.gboardpatches.extension.spacebarlogo.GboardSpacebarLogoSettingsFeature;
 import dev.jason.gboardpatches.extension.symbolfooter.GboardSymbolFooterOrderSettingsFeature;
 import dev.jason.gboardpatches.extension.splitkeyboard.GboardSplitKeyboardSettingsFeature;
-import dev.jason.gboardpatches.extension.zhuyinbottomrow.GboardZhuyinBottomRowWeightSettingsFeature;
 
 public final class GboardKeyboardLayoutSettingsGroupFeature
         implements GboardPatchesSettingsContract.Feature {
@@ -41,16 +38,11 @@ public final class GboardKeyboardLayoutSettingsGroupFeature
                 GboardSettingsText.get(context,
                         R.string.gboard_patches_group_keyboard_empty_summary),
                 Arrays.asList(
-                        new GboardSpacebarLogoSettingsFeature(context),
                         new GboardCloseProactiveSuggestionsSettingsFeature(context),
-                        new GboardLatinGlobeKeyIgnoreIntervalSettingsFeature(context),
-                        new GboardEnglishUppercaseToggleSettingsFeature(context),
-                        new GboardZhuyinBottomRowWeightSettingsFeature(context),
                         new GboardSymbolFooterOrderSettingsFeature(context),
                         new GboardEmojiSizeSettingsFeature(context),
                         new GboardAccessPointsMenuSettingsFeature(context),
                         new GboardSplitKeyboardSettingsFeature(context),
-                        new GboardAccessibilityLayoutSettingsFeature(context),
                         new GboardRoundedKeyboardSettingsFeature(context),
                         new GboardAccessPointCountSettingsFeature(context),
                         new GboardCustomThemeSettingsFeature(context),
