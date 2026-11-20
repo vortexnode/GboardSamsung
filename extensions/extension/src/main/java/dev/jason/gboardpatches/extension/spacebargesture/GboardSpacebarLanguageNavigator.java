@@ -295,8 +295,7 @@ public final class GboardSpacebarLanguageNavigator {
             if (afterEntry == null) {
                 return false;
             }
-            return entriesMatch(handles, afterEntry, targetEntry)
-                    || !entriesMatch(handles, afterEntry, previousEntry);
+            return entriesMatch(handles, afterEntry, targetEntry);
         } catch (Throwable throwable) {
             logWarn("Lpga.l in-process switch failed; falling back to verified subtype switch",
                     throwable);
