@@ -11,19 +11,69 @@ jobs:
   repair-and-publish:
     runs-on: ubuntu-latest
     steps:
-      - name: Move the release tag safely and start the release workflow
+      - name: Build and verify the exact release commit, then publish
         uses: actions/github-script@v7
         with:
           script: |
             const tag = "v4.3.0";
             const expectedOldCommit = "e10ef9021553404029d7e44473c68fb7ba0d6da7";
             const verifiedCommit = "92a80b1637c38f7918c7e1b41d5a372dae408b2d";
+            const artifactName = "GboardSamsung-MPP-4.3.0";
+
+            // Trigger CI for the exact commit that contains the corrected release workflow.
+            await github.rest.actions.createWorkflowDispatch({
+              ...context.repo,
+              workflow_id: "ci.yml",
+              ref: verifiedCommit
+            });
+            core.info(`Started CI for exact release commit ${verifiedCommit}.`);
+
+            // Wait for that exact CI run to finish successfully and retain its MPP artifact.
+            let successfulRun = null;
+            for (let attempt = 0; attempt < 90; attempt++) {
+              const runs = await github.rest.actions.listWorkflowRuns({
+                ...context.repo,
+                workflow_id: "ci.yml",
+                head_sha: verifiedCommit,
+                per_page: 100
+              });
+              successfulRun = runs.data.workflow_runs
+                .filter(run =>
+                  run.head_sha === verifiedCommit &&
+                  run.head_branch === "main" &&
+                  run.event === "workflow_dispatch" &&
+                  run.status === "completed" &&
+                  run.conclusion === "success"
+                )
+                .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))[0] || null;
+
+              if (successfulRun) {
+                const artifacts = await github.rest.actions.listWorkflowRunArtifacts({
+                  ...context.repo,
+                  run_id: successfulRun.id,
+                  per_page: 100
+                });
+                const matches = artifacts.data.artifacts.filter(
+                  artifact => artifact.name === artifactName && !artifact.expired
+                );
+                if (matches.length === 1) {
+                  core.info(`Verified successful CI run ${successfulRun.id} and its retained MPP artifact.`);
+                  break;
+                }
+                successfulRun = null;
+              }
+              await new Promise(resolve => setTimeout(resolve, 20000));
+            }
+
+            if (!successfulRun) {
+              core.setFailed("Safety stop: CI did not produce exactly one successful retained MPP artifact for the verified commit. Tag and release were not changed.");
+              return;
+            }
 
             const ref = await github.rest.git.getRef({
               ...context.repo,
               ref: `tags/${tag}`
             });
-
             let currentCommit = ref.data.object.sha;
             if (ref.data.object.type === "tag") {
               const annotated = await github.rest.git.getTag({
@@ -40,11 +90,11 @@ jobs:
                 sha: verifiedCommit,
                 force: true
               });
-              core.info(`Moved ${tag} from the old commit to verified main commit ${verifiedCommit}.`);
+              core.info(`Moved ${tag} to verified commit ${verifiedCommit}.`);
             } else if (currentCommit === verifiedCommit) {
               core.info(`${tag} already points to the verified commit.`);
             } else {
-              core.setFailed(`Safety stop: ${tag} points to unexpected commit ${currentCommit}; no changes made.`);
+              core.setFailed(`Safety stop: ${tag} points to unexpected commit ${currentCommit}; no tag or release changes made.`);
               return;
             }
 
@@ -53,4 +103,4 @@ jobs:
               workflow_id: "release.yml",
               ref: tag
             });
-            core.info("Dispatched release.yml for v4.3.0.");
+            core.info("Dispatched release.yml after verifying the exact CI artifact.");
