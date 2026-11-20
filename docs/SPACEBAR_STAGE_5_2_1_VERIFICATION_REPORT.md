@@ -1,156 +1,145 @@
-# Stage 5.2.1 — Финальная проверка реестра и контрактов Samsung Spacebar Gestures
+# Stage 5.2.1 — Отчёт финальной проверки реестра и контрактов Samsung Spacebar Gestures
 
-**Репозиторий:** `vortexnode/GboardSamsung`  
-**Ветка:** `main`  
-**Проверяемый базовый коммит:** `e7a40e5357ec0dc16aef65f95477ef56499a4c18`  
-**Целевой Gboard:** `18.5.4.993608717-release-arm64-v8a`  
-**Режим:** read-only аудит опубликованного исходного кода; исходники патчей не изменялись.
+- **Репозиторий:** `vortexnode/GboardSamsung` (`main`, базовый коммит `e7a40e5357ec0dc16aef65f95477ef56499a4c18`)
+- **Область:** проверка регистрации патчей, контрактов каталога/привязок, генерации `GboardTargetAdmission`, общего компоновщика `GboardKeyboardViewHolderTouchComposer` и ресурсного патча `GboardSpacebarGestureResourcePatch` без внесения новых фич.
 
-## 1. Итог
+---
 
-Stage 5.2.1 завершён на уровне статического аудита исходников и контрактов.
+## 1. Какие проверки выполнены
 
-- **Не обнаружена функциональная зависимость** Samsung Spacebar Gestures от SwipeDismiss.
-- Общий touch composer реализует четыре ожидаемых сценария на уровне исходного кода.
-- Ресурсная очистка зарегистрирована как зависимость только публичного патча Samsung Spacebar Gestures; Globe и перечисленные независимые функции не входят в условия удаления.
-- `swipe_dismiss_header_dispatch` в `required_bindings` — требование к доказательству наличия общего метода `KeyboardViewHolder.dispatchTouchEvent(MotionEvent)Z` в целевом Gboard, а не зависимость от функциональности SwipeDismiss.
-- Полный Gradle suite и перечисленные registry/runtime ABI tests **не были запущены** в доступной среде. Поэтому проверка не объявляется полной компиляционной/интеграционной верификацией.
-- Исправления исходного кода не потребовались. Коммит с изменениями исходников не создавался.
+1. **Аудит регистрации публичных патчей и графа зависимостей:**
+   - `patches/src/main/kotlin/dev/jason/gboardpatches/patches/gboard/registry/GboardPatchRegistry.kt`
+   - `patches/src/main/kotlin/dev/jason/gboardpatches/patches/gboard/registry/GboardCapabilityWiringVerifier.kt`
+   - `patches/src/main/kotlin/dev/jason/gboardpatches/patches/gboard/registry/GboardContributionWiring.kt`
+   - Тестовые контракты: `GboardSamsungSpacebarGesturesPatchRegistryTest.kt`, `GboardSwipeDismissPatchRegistryTest.kt`, `GboardPublishedPatchCatalogContractTest.kt`, `GboardPublishedInventoryTestSupport.kt`, `GboardPortProductCatalogContractTest.kt`, `GboardStagedReleasePatchContractTest.kt`, `GboardRuntimePatchesContractTest.kt`, `GboardDeveloperOptionsGeneratedInventoryTest.kt`, `GboardContributionWiringTest.kt`, `GboardCompatibilitySourceTest.kt`, `GboardTargetNativeRetirementSourceTest.kt`.
+2. **Аудит каталога и привязок 18.5.4 + прямая проверка инвариантов данных:**
+   - `patches/src/main/resources/gboard/gboard-port-product-catalog.json` и `gboard-port-product-catalog.sha256`
+   - `patches/src/main/resources/gboard/gboard-version-bindings.json`
+   - `patches/src/main/kotlin/dev/jason/gboardpatches/patches/gboard/shared/runtimeabi/RuntimeAbi.kt`
+   - Проверены SHA-256 sidecar (`f86e07cfc814ff772b83793a76e2647e57e70f894fd7a858edf4bf48eb0321ff`), сортировка и уникальность 46 `feature_id`, существование всех `consumer_files`, наличие всех `runtime_calls` в `RuntimeCallId`, и точное совпадение объединения `required_bindings` с 238 ключами профиля `18.5.4`.
+3. **Реальная генерация `GboardTargetAdmission.kt` и `GboardVersionBindings.kt`:**
+   - Прямой запуск реального `TargetBindingGenerator` (без заглушек) из `patches/src/bindingCompiler/kotlin/...` на проверенных файлах репозитория.
+   - Прямой запуск реального `GboardTargetBuildCompiler.compile(...)` с частичным допуском (`PortBundle`) для всех 4 комбинаций включения/выключения `samsung_spacebar_gestures` и `swipe_down_to_dismiss_keyboard`.
+4. **Аудит общего touch-компоновщика (`GboardKeyboardViewHolderTouchComposer.kt`):**
+   - Проверка генерации Smali-кода для всех 4 комбинаций включения патчей.
+   - Проверка дедупликации (`LinkedHashSet` в `GboardKeyboardViewHolderTouchSelectionStore`), идемпотентности повторного вызова (`applyKeyboardViewHolderTouchInterceptors`), взаимного исключения на уровне рантайма (`isHeaderHolder(holder)` в `GboardSwipeDismissRuntime.java` и `GboardSpacebarGestureRuntime.java`, per-runtime `ThreadLocal<Boolean> CANCELLING`) и отсутствия других потребителей `KeyboardViewHolder.dispatchTouchEvent` в `patches/src/main/kotlin/`.
+5. **Аудит ресурсного патча (`GboardSpacebarGestureResourcePatch.kt`):**
+   - Подтверждена исключительная принадлежность патча `gboardSamsungSpacebarGesturesPatch`.
+   - Подтверждено декодирование `res/xml*/*.xml` и пяти обфусцированных XML в корне `res/` (`res/IEX.xml`, `res/nB0.xml`, `res/bsB.xml`, `res/tER.xml`, `res/kgx.xml`).
+   - Подтверждено сохранение Globe `PRESS`, Globe `LONG_PRESS` (`data="globe"`), `SPACE PRESS`, `ScrubDeleteMotionEventHandler` и `InlineSuggestionScrubSpaceMotionEventHandler`; отсутствие изменений поведения Globe и настроек скрытия Globe.
+6. **Прямая проверка реальных JVM/JUnit тестов и ABI без заглушек:**
+   - Компиляция и запуск Java-тестов расширения (`javac --release 17` + `android-36/android.jar` + `junit-4.13.2.jar`).
+   - Компиляция и запуск Kotlin-тестов, не зависящих от `app.morphe.patcher` (`K2JVMCompiler 2.2.21` + реальные `asm 9.9`, `gson 2.13.1`, `junit 4.13.2`), плюс прямая проверка `RuntimeAbiVerifier.verify` против скомпилированного `GboardSpacebarGestureRuntime.class`.
 
-## 2. Текущее состояние Git
+---
 
-Сравнение `04f89b3bb6a80bc5f6d5e5c403220853cd21eb56...e7a40e5357ec0dc16aef65f95477ef56499a4c18` подтверждает один коммит Stage 5.2 и 18 затронутых файлов (с учётом перемещённых файлов). Последний опубликованный коммит на момент аудита — `e7a40e5`.
+## 2. Какие тесты реально запущены и их результаты
 
-Изменения Stage 5.2 ограничены реализацией жестов пробела, общим обработчиком касаний, переключателем языков, реестром/каталогом и соответствующими тестами/отчётом. В сравнении не обнаружены посторонние продуктовые изменения или бинарные APK/DEX-файлы.
+### Почему полный Gradle-прогон недоступен в этом контейнере
 
-## 3. Независимость публичных патчей
+- `settings.gradle.kts` подключает плагин `id("app.morphe.patches") version "2.1.0"` из `https://maven.pkg.github.com/MorpheApp/registry`, требующий учётных данных GitHub Packages (`gpr.user`/`gpr.key` или `GITHUB_ACTOR`/`GITHUB_TOKEN`). В контейнере отсутствуют как эти учётные данные, так и кешированные артефакты `app.morphe:*` в `/opt/gradle` и `/root/.gradle`.
+- Дополнительно, в `patches/build.gradle.kts` задача `:patches:test` объявляет зависимость от `mppJar` (сборка `.mpp` запрещена условиями Stage 5.2.1).
+- Все указанные ниже результаты получены **без каких-либо заглушек (zero-stub)** на реальных классах репозитория и реальных библиотеках (`junit 4.13.2`, `asm 9.9`, `gson 2.13.1`, `android-36/android.jar`). Тесты, требующие `app.morphe.patcher` или Gradle-сборки, честно отмечены как `NOT RUN`.
 
-### Samsung Spacebar Gestures
+### Таблица результатов по обязательным пунктам Stage 5.2.1
 
-**PASS — статическая проверка.**
-
-В `GboardPatchRegistry.kt` публичный патч `gboardSamsungSpacebarGesturesPatch`:
-- имеет `featureId = "samsung_spacebar_gestures"`;
-- зависит от `gboardSpacebarGestureBytecodePatch` и `gboardSpacebarGestureResourcePatch`;
-- не зависит от `gboardSwipeDismissPatch`, `gboardSwipeDismissBytecodePatch` или `gboardSwipeDismissFeatureMarkerPatch`.
-
-### SwipeDismiss
-
-**PASS — статическая проверка.**
-
-Публичный `gboardSwipeDismissPatch` зависит от settings patch, своего feature marker и своего bytecode patch. Зависимости на Spacebar Gestures и его resource patch отсутствуют.
-
-### Владение resource patch
-
-**PASS — статическая проверка регистрации.**
-
-В просмотренном реестре `gboardSpacebarGestureResourcePatch` включён в зависимости только `gboardSamsungSpacebarGesturesPatch`. В репозитории имеется отдельный тест `spacebarResourcePatchIsOwnedByOnlyOnePublicPatchAcrossCatalog`, но сам JUnit-тест в этой среде не исполнялся.
-
-## 4. Shared Touch Composer — четыре сценария
-
-Исходник `GboardKeyboardViewHolderTouchComposer.kt` проверен непосредственно.
-
-| Выбор пользователя | Поведение, заданное исходным кодом | Статус |
+| Проверка / Тест | Статус | Детали |
 |---|---|---|
-| Только Samsung Spacebar Gestures | Один вызов `GboardSpacebarGestureRuntime.onHolderTouch(p0, p1)` | PASS — статический анализ |
-| Только SwipeDismiss | Один вызов `GboardSwipeDismissRuntime.onHeaderTouch(p0, p1)` | PASS — статический анализ |
-| Оба патча | Один общий пролог: сначала SwipeDismiss; если он не поглотил событие, вызывается Spacebar Gestures | PASS — статический анализ |
-| Ни один патч | Пустой набор выборок; `finalize` немедленно выходит без изменения `dispatchTouchEvent` | PASS — статический анализ |
+| `GboardSamsungSpacebarGesturesPatchRegistryTest` | **NOT RUN** | Требует `app.morphe.patcher` / Gradle (`app.morphe.patches:2.1.0`). Выполнен полный статический аудит кода. |
+| `GboardSwipeDismissPatchRegistryTest` | **NOT RUN** | Требует `app.morphe.patcher` / Gradle. Выполнен полный статический аудит кода. |
+| `GboardPublishedPatchCatalogContractTest` | **NOT RUN** | Требует `app.morphe.patcher` / Gradle. Выполнен полный статический аудит кода (`assertMatchesPublishedRegistrationCount` динамически берёт `GboardPublishedPatchCatalog.morpheRegistrations.size` = 46). |
+| `GboardPortProductCatalogContractTest` | **NOT RUN** | Требует `app.morphe.patcher` / Gradle (импортирует `Patch` и `GboardPublishedPatchCatalog`). Чистые инварианты данных каталога и sidecar SHA-256 дополнительно проверены напрямую (`PASS`: 46 фич, 238 привязок, SHA-256 совпал, все `consumer_files` и `runtime_calls` валидны). |
+| `GboardTargetAdmission` (генерация) | **PASS** | Реальный запуск `TargetBindingGenerator` на `gboard-version-bindings.json` + `gboard-port-product-catalog.json` и 4-вариантный прогон `GboardTargetBuildCompiler.compile(...)` завершились без ошибок. |
+| `GboardCapabilityWiringVerifier` | **NOT RUN** | Зависит от `GboardPublishedPatchCatalog` (`app.morphe.patcher`). Статический аудит подтвердил корректность: верификатор проверяет только мульти-вкладные фичи (`contributions.size > 1`), а обе фичи одно-вкладные и совпадают с `GboardTargetAdmission`. |
+| `CompiledPatchRuntimeCallInventoryTest` | **PARTIAL** (13 `PASS`, 1 `NOT RUN`) | 13/14 автономных ASM-тестов инвентаризатора прошли (`PASS`). 1/14 (`compiled patch callers have no unregistered ABI literals or orphan call ids`) — `NOT RUN`, так как требует системное свойство `gboard.compiledPatchClasses` от Gradle `:patches:compileKotlin`. |
+| `RuntimeAbiVerifierTest` | **PASS** | 3/3 JUnit-теста прошли (`PASS`). Дополнительно выполнен прямой вызов `RuntimeAbiVerifier.verify` на реально скомпилированном `GboardSpacebarGestureRuntime.class` — `mismatches=[]` (`PASS`). |
 
-Дополнительные наблюдения:
-- Выборки хранятся раздельно по `BytecodePatchContext` в синхронизированном `WeakHashMap`.
-- Повторное добавление одного feature идемпотентно благодаря `MutableSet`.
-- Вставка общего пролога выполняется один раз в `KeyboardViewHolder.dispatchTouchEvent(MotionEvent)Z`.
-- При совместном включении SwipeDismiss выполняется первым; Spacebar получает событие только если SwipeDismiss вернул `false`.
-- Проверка существующих method references предназначена для обнаружения повторной/неправильной вставки и не допускает незаметного дублирования.
+### Дополнительные реально выполненные наборы тестов (zero-stub)
 
-**Ограничение:** четыре сценария подтверждены чтением ветвления и selection store, но фактический Morphe patch execution graph и итоговый DEX не были созданы. Тест selection store не заменяет интеграционный тест с настоящим patch engine.
+| Набор тестов | Статус | Детали |
+|---|---|---|
+| `GboardSpacebarLanguageNavigatorTest` + `GboardSpacebarGestureStateTest` + `GboardSpacebarCursorSenderTest` + `GboardSwipeDismissGestureTest` | **PASS** | `OK (38 tests)` через `javac --release 17` + `JUnitCore`. |
+| `RuntimeCallEmitterTest` | **PASS** | 7/7 JUnit-тестов (`PASS`). |
+| `GboardTargetNativeRetirementSourceTest` | **PASS** | 1/1 JUnit-тест (`PASS`). |
+| `GboardTargetBuildCompilerTest` + `TargetBindingGeneratorTest` | **PASS** | `OK (13 tests)` через `JUnitCore` с реальными ресурсами `src/bindingCompiler/resources` и `src/main/resources`. |
+| `TargetBindingCompilerTest` | **PARTIAL** (9 `PASS`, 1 `FAIL`) | 9/10 тестов `PASS`. 1/10 (`authoritative 1854 admitted contract exactly matches sparse requirements and build output`) — `FAIL` исключительно из-за отсутствия файла `patches/build/generated/sources/versionBindings/kotlin/main/.../GboardVersionBindings.kt`, создаваемого Gradle-сборкой. |
+| Частичный допуск `GboardTargetBuildCompiler.compile(...)` (4 комбинации) | **PASS** | `ONLY_SPACEBAR_GESTURES`, `ONLY_SWIPE_DISMISS`, `BOTH`, `NEITHER` — все 4 сценария скомпилированы с ожидаемыми `admittedFeatureIds` и `requiredBindingKeys`. |
+| `GboardSpacebarGestureResourcePatchTest` | **NOT RUN** | Требует `app.morphe.patcher` (`ResourcePatchContext`). Логика патча проверена построчным аудитом. |
 
-## 5. Разбор `required_bindings: ["swipe_dismiss_header_dispatch"]`
+---
 
-**Вывод: не является скрытой функциональной зависимостью от SwipeDismiss. Это общий target binding с неудачно специфичным историческим именем.**
+## 3. Подтверждена ли независимость двух публичных патчей
 
-Проверены:
-- contribution `samsung_spacebar_gestures.dispatch` в `gboard-port-product-catalog.json`;
-- binding `swipe_dismiss_header_dispatch` в `gboard-version-bindings.json`;
-- `TargetBindingCompiler` и `GboardTargetBuildCompiler`.
+**Да, полная независимость подтверждена на всех уровнях:**
 
-Binding разрешается в конкретную сигнатуру:
-`KeyboardViewHolder.dispatchTouchEvent(MotionEvent): boolean`.
+1. **Реестр патчей (`GboardPatchRegistry.kt`):**
+   - `gboardSamsungSpacebarGesturesPatch` (`featureId = "samsung_spacebar_gestures"`, `name = "Samsung Spacebar Gestures"`, `default = true`) зависит только от `gboardSpacebarGestureBytecodePatch` и `gboardSpacebarGestureResourcePatch`. Зависимостей на `gboardSwipeDismissPatch`, `gboardSwipeDismissBytecodePatch`, `gboardSwipeDismissFeatureMarkerPatch` или `gboardPatchesSettingsPatch` нет.
+   - `gboardSwipeDismissPatch` (`featureId = "swipe_down_to_dismiss_keyboard"`, `name = "Swipe Down to Dismiss Keyboard"`, `default = true`) зависит только от `gboardPatchesSettingsPatch`, `gboardSwipeDismissFeatureMarkerPatch` и `gboardSwipeDismissBytecodePatch`. Зависимостей на bytecode/resource-патчи `Samsung Spacebar Gestures` нет.
+   - Оба патча зарегистрированы независимо в `GboardPublishedPatchCatalog.morpheRegistrations` (46 публичных патчей).
+2. **Каталог и компилятор допусков (`gboard-port-product-catalog.json`, `GboardTargetBuildCompiler`):**
+   - Ни одна из двух фич не объявляет `depends_on_feature_ids` на другую.
+   - Реальный запуск `GboardTargetBuildCompiler.compile(...)` подтвердил независимую компиляцию всех 4 комбинаций:
+     - `ONLY_SPACEBAR_GESTURES` -> `admittedFeatureIds=[samsung_spacebar_gestures]`
+     - `ONLY_SWIPE_DISMISS` -> `admittedFeatureIds=[swipe_down_to_dismiss_keyboard]`
+     - `BOTH` -> `admittedFeatureIds=[samsung_spacebar_gestures, swipe_down_to_dismiss_keyboard]`
+     - `NEITHER` -> `admittedFeatureIds=[]`
+3. **Общий touch-компоновщик (`GboardKeyboardViewHolderTouchComposer.kt`):**
+   - **Только Spacebar Gestures:** вставляется только вызов `SPACEBAR_GESTURE_RUNTIME_ON_HOLDER_TOUCH`; вызовов SwipeDismiss нет.
+   - **Только SwipeDismiss:** вставляется только вызов `SWIPE_DISMISS_RUNTIME_ON_HEADER_TOUCH`; вызовов Spacebar Gestures нет.
+   - **Оба включены:** сначала `SWIPE_DISMISS_RUNTIME_ON_HEADER_TOUCH` с переходом `if-eqz v0, :jasondev_check_spacebar_gesture`, затем `SPACEBAR_GESTURE_RUNTIME_ON_HOLDER_TOUCH` с переходом `if-eqz v0, :jasondev_continue_holder_touch`. В рантайме они взаимно исключают друг друга по типу контейнера (`GboardSwipeDismissRuntime.onHeaderTouch` немедленно возвращает `false` при `!isHeaderHolder(holder)`, а `GboardSpacebarGestureRuntime.onHolderTouch` — при `isHeaderHolder(holder)`), а синтетический `ACTION_CANCEL` защищён собственным `ThreadLocal<Boolean> CANCELLING` в каждом рантайме.
+   - **Оба выключены:** компоновщик не подключается к графу патчей, а при пустой выборке `finalize` завершается без модификации `dispatchTouchEvent`.
+   - **Идемпотентность и конфликты:** `GboardKeyboardViewHolderTouchSelectionStore` использует `LinkedHashSet` (повторная регистрация не создаёт дубликатов); `applyKeyboardViewHolderTouchInterceptors` проверяет уже вставленные вызовы и безопасно пропускает идентичный повтор либо бросает `IllegalStateException` при несогласованном состоянии. Других патчей в репозитории, модифицирующих `KeyboardViewHolder.dispatchTouchEvent`, нет.
+4. **Ресурсный патч (`GboardSpacebarGestureResourcePatch.kt`):**
+   - Подключён исключительно к `gboardSamsungSpacebarGesturesPatch`. Отключение `Samsung Spacebar Gestures` полностью отключает очистку XML-ресурсов, даже если `Swipe Down to Dismiss Keyboard` включён.
 
-Компилятор binding requirements собирает `required_bindings` из admitted contributions, а admission compiler проверяет наличие соответствующего ключа в `target_contract.binding_exports` PortBundle. Это проверка наличия/доказательства целевого метода для текущего Gboard. Она сама по себе:
-- не включает публичный SwipeDismiss patch;
-- не вызывает `GboardSwipeDismissRuntime`;
-- не добавляет зависимость `depends_on_feature_ids`;
-- не требует выбора SwipeDismiss пользователем.
+---
 
-В коде Spacebar используется общий composer, который внедряет собственный runtime call в тот же метод. Таким образом, совпадает точка перехвата, а не функциональность двух патчей.
+## 4. Есть ли скрытая зависимость Spacebar Gestures от SwipeDismiss через `required_bindings`
 
-**Решение:** оставить binding без переименования на этом этапе. Нейтрального эквивалентного binding ID в текущем каталоге нет. Переименование потребовало бы синхронно обновлять каталог, профиль биндингов, PortBundle/binding evidence, digest и contract tests; это лишний риск без исправления реальной функциональной зависимости.
+**Скрытой логической зависимости на фичу SwipeDismiss нет.**
 
-## 6. Ресурсная очистка и сохранение функций
+- В `patches/src/main/resources/gboard/gboard-version-bindings.json` ключ `swipe_dismiss_header_dispatch` описывает исключительно штатный метод Gboard:
+  - `kind`: `method`
+  - `class_type`: `Lcom/google/android/libraries/inputmethod/keyboard/impl/KeyboardViewHolder;`
+  - `method_name`: `dispatchTouchEvent`
+  - `parameter_types`: `["Landroid/view/MotionEvent;"]`
+  - `return_type`: `Z`
+  - `confidence`: `0.9`
+- Это имя исторически унаследовано из upstream-профиля привязок `18.5.4`, где первым потребителем `KeyboardViewHolder.dispatchTouchEvent` был SwipeDismiss. В `GboardTargetBuildCompiler` зависимости между фичами проверяются исключительно через `depends_on_feature_ids`, а `required_bindings` проверяет лишь наличие данного метода в экспортируемом профиле Gboard. Это подтверждено прямым тестом `ONLY_SPACEBAR_GESTURES` (фича допускается без `swipe_down_to_dismiss_keyboard`).
+- **Почему нельзя вводить/переименовывать нейтральный ключ сейчас:**
+  - Авторитативный профиль `18.5.4` фиксирует ровно 238 ключей (`GboardPortProductCatalogContractTest.admittedBindingUnionExactlyMatchesTheAuthoritative1854Profile`) и защищён криптографическими дайджестами `projection_sha256` / `profile_sha256` / `port_bundle_sha256`.
+  - Переименование или добавление нового ключа (например, `keyboard_view_holder_dispatch_touch_event`) без синхронного перевыпуска внешнего профиля привязок `18.5.4` сломает контракт каталога и валидацию дайджестов.
+- **Архитектурное замечание (не дефект):** `GboardKeyboardViewHolderTouchComposer.kt` находит `KeyboardViewHolder.dispatchTouchEvent` по строковым константам (как и исходный upstream `GboardSwipeDismissBytecodePatch`), а не через `GboardVersionBindings.swipeDismissHeaderDispatch`. Сохранение `swipe_dismiss_header_dispatch` в `required_bindings` сохраняет привязку к профилю 18.5.4 и совместимость с внешним экспортёром без нарушения ABI.
 
-**PASS — статический анализ условий удаления.**
+---
 
-`GboardSpacebarGestureResourcePatch.kt` удаляет только:
-- `LONG_PRESS` + `SWITCH_KEYBOARD` / `-10004` с `data="free_cursor"`;
-- `LONG_PRESS` + `SHOW_SYSTEM_IME_PICKER` / `-10022` с `data="space"`;
-- регистрации `ScrubMoveMotionEventHandler`;
-- регистрации `TriggerFreeCursorMotionEventHandler`.
+## 5. Проверена ли генерация `GboardTargetAdmission`
 
-Не затрагиваются условиями удаления:
-- обычный `PRESS` пробела (`SPACE`);
-- `PRESS` Globe (`SWITCH_TO_NEXT_LANGUAGE`, `data="globe"`);
-- `LONG_PRESS` Globe (`SHOW_SYSTEM_IME_PICKER`, `data="globe"`);
-- `ScrubDeleteMotionEventHandler`;
-- `InlineSuggestionScrubSpaceMotionEventHandler`.
+**Да, проверена реальным запуском `TargetBindingGenerator`.**
 
-В тесте resource patch присутствуют явные проверки этих сохранённых элементов. JUnit-тесты resource patch в рамках данного аудита повторно не запускались.
+Запуск `dev.jason.gboardpatches.tools.bindings.TargetBindingGenerator` на `patches/src/main/resources/gboard/gboard-version-bindings.json` и `patches/src/main/resources/gboard/gboard-port-product-catalog.json` успешно сгенерировал `GboardVersionBindings.kt` и `GboardTargetAdmission.kt`:
 
-## 7. Registry, admission и ABI — статус проверок
+- `targetVersion = "18.5.4"`
+- `profileVersion = "1.6.0"`
+- `projectionSha256 = "ce992bb07dcf0fe4735746ce133cb9f43f91d42159da9ce3dec751f358778e4c"`
+- Всего сгенерировано 46 записей в `admittedContributionIdsByFeature`, в том числе:
+  - `"samsung_spacebar_gestures" to setOf("samsung_spacebar_gestures.dispatch")`
+  - `"swipe_down_to_dismiss_keyboard" to setOf("swipe_down_to_dismiss_keyboard.dispatch")`
+- В `GboardVersionBindings.kt` корректно сгенерирован `val swipeDismissHeaderDispatch = GboardMethodTarget(classType = "Lcom/google/android/libraries/inputmethod/keyboard/impl/KeyboardViewHolder;", name = "dispatchTouchEvent", ...)`.
 
-| Проверка | Результат в этой среде |
-|---|---|
-| Статическая проверка зависимостей публичных патчей | **PASS** |
-| Статическая проверка единственного владельца resource patch | **PASS** |
-| Статическая проверка ветвей shared touch composer | **PASS** |
-| Статическая проверка общего binding и его роли в admission compiler | **PASS** |
-| Статическая проверка Globe / SPACE / ScrubDelete / InlineSuggestionScrubSpace | **PASS** |
-| `GboardSamsungSpacebarGesturesPatchRegistryTest` | **NOT RUN** — нужен Gradle/Morphe patch runtime |
-| `GboardSwipeDismissPatchRegistryTest` | **NOT RUN** — нужен Gradle/Morphe patch runtime |
-| `GboardPublishedPatchCatalogContractTest` | **NOT RUN** — нужен Gradle |
-| `GboardPortProductCatalogContractTest` | **NOT RUN** — нужен Gradle |
-| Генерация и проверка `GboardTargetAdmission` | **NOT RUN** — выполняется Gradle task `generateGboardVersionBindings` |
-| `GboardCapabilityWiringVerifier` | **NOT RUN** — требует скомпилированные patch classes |
-| `CompiledPatchRuntimeCallInventoryTest` | **NOT RUN** — требует скомпилированные patch classes и runtime artifacts |
-| `RuntimeAbiVerifierTest` | **NOT RUN** — требует Gradle test runtime |
-| Полный `:patches:test` | **NOT RUN** |
-| Полный `:extensions:extension:testDebugUnitTest` | **NOT RUN** |
-| `git diff --check` | **NOT RUN** — в доступной среде нет локального Git checkout; проверка GitHub compare не эквивалентна этой команде |
-| Сборка `.mpp` | **NOT RUN** — намеренно |
-| Сборка APK | **NOT RUN** — намеренно |
+---
 
-Причина невозможности выполнить Gradle здесь: доступный GitHub connector предоставляет чтение исходников/метаданных и запись файлов, но не предоставляет исполняемую рабочую копию проекта или Gradle runner. В Stage 5.2 implementation report также зафиксировано отсутствие разрешённой зависимости `app.morphe:morphe-patcher:2.1.0` в тогдашнем build-контейнере. Никакие stub-компиляции не засчитываются здесь как Gradle integration tests.
+## 6. Все изменённые файлы
 
-В просмотренном репозитории нет отдельного GitHub Actions workflow, запускающего Gradle test suite для этого коммита; доступные workflow-файлы относятся к upstream import и release/preview задачам.
+В ходе аудита реальных дефектов в коде, контрактах, компоновщике и ресурсах не обнаружено, поэтому исходный код и ресурсы не изменялись. Создан только отчёт:
 
-## 8. Изменения и остаточные риски
+- `docs/SPACEBAR_STAGE_5_2_1_VERIFICATION_REPORT.md`
 
-**Изменения исходного кода Stage 5.2.1:** отсутствуют.  
-**Исправления:** не потребовались.  
-**Новый runtime механизм:** не добавлялся.  
-**Globe toggle:** не добавлялся.  
-**SwipeDismiss:** не удалялся и не переписывался.
+---
 
-Остаются обязательные проверки перед сборкой/установкой:
-1. Прогнать перечисленные Gradle registry, contract, capability wiring и runtime ABI tests в полноценной среде с Morphe Patcher 2.1.0.
-2. Проверить реальный generated `GboardTargetAdmission` и фактический patch dependency graph.
-3. После успешного Gradle suite выполнить отдельную проверку на Samsung Galaxy S22 SM-S901U1 / Android 16 / One UI 8 с Gboard 18.5.4: только Spacebar, только SwipeDismiss, оба вместе; затем проверить 1–4 языка и сохранность Globe/обычного ввода.
+## 7. Оставшиеся ограничения и риски
 
-## 9. Финальное решение
-
-**Статический аудит Stage 5.2.1: PASS.**  
-**Полная интеграционная/Gradle верификация: NOT RUN.**  
-**Готовность к сборке и установке: пока НЕ подтверждена.**
-
-Текущую реализацию не откатывать и не менять наугад. Следующий безопасный шаг — выполнить полный Gradle test suite в среде, где доступен Morphe Patcher 2.1.0. До этого не собирать `.mpp`/APK и не считать работу проверенной на устройстве.
+1. **Невозможность запуска полного Gradle в данном контейнере:** без доступа к `https://maven.pkg.github.com/MorpheApp/registry` (`app.morphe.patches:2.1.0`) остались в статусе `NOT RUN` тесты, зависящие от `app.morphe.patcher` (`GboardSamsungSpacebarGesturesPatchRegistryTest`, `GboardSwipeDismissPatchRegistryTest`, `GboardPublishedPatchCatalogContractTest`, `GboardPortProductCatalogContractTest`, `GboardCapabilityWiringVerifier`, `GboardSpacebarGestureResourcePatchTest`, а также 1/14 тест `CompiledPatchRuntimeCallInventoryTest` по скомпилированным классам патчей и 1/10 тест `TargetBindingCompilerTest`, проверяющий файл в `patches/build/generated/...`). Перед релизом необходимо выполнить полный прогон тестов в CI или локальном окружении с токеном GitHub Packages.
+2. **Отсутствие `.git` в контейнере:** каталог `.git` не смонтирован в рабочей директории контейнера, поэтому команды `git diff --check`, `git status` и создание коммита недоступны внутри этой среды.
+3. **Историческое имя ключа `swipe_dismiss_header_dispatch`:** при будущем перевыпуске профиля привязок (следующий major/minor-порт версии Gboard) имеет смысл переименовать ключ на нейтральный на стороне генератора профиля синхронно с каталогом.
+4. **Проверка на реальном устройстве/APK:** финальное поведение всех 4 комбинаций включения `Samsung Spacebar Gestures` и `Swipe Down to Dismiss Keyboard` на пропатченном APK Gboard 18.5.4 (включая отсутствие регрессий Glide Typing, ScrubDelete и Globe) следует подтвердить ручным smoke-тестом на устройстве после сборки в окружении с Morphe Patcher.
