@@ -139,11 +139,11 @@
 - `dev.jason.com.google.android.inputmethod.latin`
 - `extensions/gboard-patches.rve`
 
-### Намеренно сохранённые upstream-ссылки и атрибуция (с обоснованием)
-1. **`GboardCustomThemePreviewRepository.java` + `GboardCustomThemePreviewRepositoryTest.java` + `release-assets/custom-theme-previews/README.md`:** URL архива превью `https://github.com/jasonwu1994/Gboard-patches/releases/download/custom-theme-previews-v1/...` (привязан к SHA-256). Замена на `vortexnode/GboardSamsung` без опубликованного релиза привела бы к 404.
-2. **`GboardFrostedGlassSettingsFeature.java` + `GboardFrostedGlassSettingsFaqTest.java`:** FAQ-ссылки `jasonwu1994/Gboard-patches/issues/68` и `issues/58` ведут на реальные upstream-треды диагностики (в `vortexnode/GboardSamsung` таких номеров issues нет).
-3. **`.github/workflows/import-upstream.yml`:** служебный manual workflow для контролируемой синхронизации с upstream.
-4. **JSON Schema `$id`** в `gboard-port-product-catalog.schema.json`, `gboard-version-bindings.schema.json`, `gboard-port-bundle.schema.json`: стабильные URI-идентификаторы схемы.
+### Намеренно сохранённые upstream-ссылки и атрибуция (состояние этапа очистки; актуализировано в разделе 13)
+1. **`GboardCustomThemePreviewRepository.java` + `GboardCustomThemePreviewRepositoryTest.java` + `release-assets/custom-theme-previews/README.md`:** на этапе очистки временно сохранялся upstream-URL; **в финальном этапе (раздел 13) переключён на `vortexnode/GboardSamsung`**.
+2. **`GboardFrostedGlassSettingsFeature.java` + `GboardFrostedGlassSettingsFaqTest.java`:** опциональные информационные FAQ-ссылки `jasonwu1994/Gboard-patches/issues/68` и `issues/58` на исторические треды диагностики (не требуются для работы приложения, сборки или CI).
+3. **`.github/workflows/import-upstream.yml`:** на этапе очистки сохранялся; **в финальном этапе (раздел 13) удалён**.
+4. **JSON Schema `$id`** в `gboard-port-product-catalog.schema.json`, `gboard-version-bindings.schema.json`, `gboard-port-bundle.schema.json`: пассивные строковые URI-идентификаторы схемы (никогда не запрашиваются по сети).
 5. **Лицензия и история:** `LICENSE`, `NOTICE`, `UPSTREAM_COMMIT.txt`, `UPSTREAM_README.md`, `CHANGELOG.md` полностью сохранены без изменений.
 
 ---
@@ -196,16 +196,87 @@
 1. **Отсутствие `.git` в контейнере:** изменения находятся в рабочем дереве на диске, но не зафиксированы коммитами в ветке `chore/repository-cleanup`.
 2. **Offline-ограничения Gradle/Morphe:** тесты, напрямую импортирующие `app.morphe.patcher.*`, и runtime-прогон 66 Robolectric-тестов (включая `GboardSettingsSearchIndexSnapshotTest`, `GboardPatchesBackupManagerTest`, `GboardFiveFlagSettingsContractTest`) не исполнялись в контейнере (хотя все 66 Robolectric-файлов скомпилированы без ошибок).
 3. **`GboardSettingsSearchIndexData.java`:** вручную очищен и переиндексирован (`0..31`), но в CI рекомендуется дополнительно подтвердить через `:extensions:extension:testDebugUnitTest` (при расхождении снимка поиска можно обновить флагом `-PupdateSettingsSearchIndex=true`).
-4. **Внешний архив превью `Custom Theme`:** пока продолжает загружаться с upstream-релиза `custom-theme-previews-v1` (защищённого SHA-256), пока Vortex Node не опубликует собственное зеркало.
+4. **Внешний архив превью `Custom Theme`:** в финальном этапе (см. раздел 13) переведён на `vortexnode/GboardSamsung`; требуется ручная публикация релиза `custom-theme-previews-v1` после синхронизации ветки `main`.
 
 ---
 
 ## 12. Рекомендуемые следующие шаги в CI / локальном Git
 
-1. Проверить изменения в ветке `chore/repository-cleanup` (`git status`, `git diff --check`) и оформить небольшими логическими коммитами (удаление 12 фич, синхронизация каталогов/bindings/метаданных, обновление тестов, обновление документации и отчёта).
-2. В CI с настроенными `GITHUB_ACTOR` / `GITHUB_TOKEN` (Morphe GitHub Packages) выполнить:
-   - `./gradlew :patches:test`
-   - `./gradlew :extensions:extension:testDebugUnitTest`
-   - `./gradlew :extensions:calculator:testDebugUnitTest`
-   - `./gradlew generatePatchesList` и сверить diff с текущим `patches-list.json`
-3. Убедиться, что все 34 патча, включая `Samsung Spacebar Gestures` (независимо от `Swipe Down to Dismiss Keyboard`), проходят полную верификацию перед любым дальнейшим релизом.
+1. Проверить изменения в локальном Git-репозитории (`git status`, `git diff --check`) и оформить небольшими логическими коммитами.
+2. Настроить секрет `MORPHE_PACKAGES_TOKEN` и прогнать добавленный CI workflow (`.github/workflows/ci.yml`), который автоматически выполняет `:patches:test`, `:extensions:extension:testDebugUnitTest`, `:extensions:calculator:testDebugUnitTest`, проверку `generatePatchesList` + `git diff --exit-code -- patches-list.json` и сборку `:patches:buildAndroid`.
+3. Опубликовать релиз `custom-theme-previews-v1` в `vortexnode/GboardSamsung` (см. раздел 13.5).
+
+---
+
+## 13. Финальный этап: завершение независимости GboardSamsung (после базового коммита очистки `8b6d6ea1ae8c5760aef9a9d565136559436cca4e`)
+
+### 13.1. Выполненные изменения
+
+1. **Устранена последняя runtime-зависимость от `jasonwu1994/Gboard-patches` (Custom Theme Previews):**
+   - `extensions/extension/src/main/java/dev/jason/gboardpatches/extension/customtheme/GboardCustomThemePreviewRepository.java`: `URL` переключён на `https://github.com/vortexnode/GboardSamsung/releases/download/custom-theme-previews-v1/custom-theme-previews-v1.zip`. Без изменений сохранены `VERSION = "v1"`, `SHA256 = "368af5064b2e8ed62800417efd6fa015d12c74a94553002823eade85d8213ee9"`, HTTPS-проверка, лимиты размера, защита распаковки (zip-slip/count/size), валидация манифеста и сам архив `release-assets/custom-theme-previews/v1/custom-theme-previews-v1.zip`.
+   - `extensions/extension/src/test/java/dev/jason/gboardpatches/extension/customtheme/GboardCustomThemePreviewRepositoryTest.java`: обновлена проверка `GboardCustomThemePreviewRepository.URL` на `vortexnode/GboardSamsung`.
+   - `release-assets/custom-theme-previews/README.md`: обновлён `Runtime URL` на `https://github.com/vortexnode/GboardSamsung/releases/download/custom-theme-previews-vN/custom-theme-previews-vN.zip`.
+   - Проверен `.github/workflows/custom-theme-previews-release.yml` и `release-assets/custom-theme-previews/v1/custom-theme-previews-v1-manifest.json`: workflow валидирует `schemaVersion = 1`, `bundleVersion = "v1"`, имя файла `custom-theme-previews-v1.zip`, размер `7957397` байт и SHA-256 `368af5064b2e8ed62800417efd6fa015d12c74a94553002823eade85d8213ee9`, после чего публикует оба файла в GitHub Release текущего репозитория (`vortexnode/GboardSamsung`) по тегу `custom-theme-previews-v1`.
+2. **Удалён механизм автоматического импорта из upstream:**
+   - Удалён файл `.github/workflows/import-upstream.yml`.
+   - Полностью сохранены `UPSTREAM_README.md`, `UPSTREAM_COMMIT.txt`, `NOTICE`, `LICENSE`, `CHANGELOG.md`, `docs/UPSTREAM.md` и атрибуция GPL-3.0 / Jason Wu.
+   - Обновлён `docs/UPSTREAM.md`: upstream зафиксирован исключительно как исторический источник происхождения, а не активный источник импорта/сборки/runtime.
+3. **Завершено Gradle-именование проекта:**
+   - `settings.gradle.kts`: `rootProject.name` изменён с `"gboard-patches"` на `"GboardSamsung"`.
+   - Проверены все вхождения `gboard-patches` по репозиторию: ни один скрипт, workflow, Gradle task или тест не зависит от старого `rootProject.name`. Технические идентификаторы совместимости (`dev.jason.gboardpatches`, `dev.jason.com.google.android.inputmethod.latin`, `extensions/gboard-patches.rve`, `gboard-patches-backup.json`, ID backup-модулей `gboard-patches.*`, тег калькулятора) намеренно сохранены.
+4. **Добавлен полноценный CI workflow (`.github/workflows/ci.yml`):**
+   - Триггеры: `push` в `main`, `pull_request` в `main`, `workflow_dispatch`.
+   - Стек: `ubuntu-latest`, Java 21 (`temurin`, `actions/setup-java@v6`), Gradle cache (`burrunan/gradle-cache-action@v3`), `concurrency` с отменой устаревших запусков.
+   - Использует секрет `MORPHE_PACKAGES_TOKEN` (передаётся в `GITHUB_TOKEN`, без вывода токена в логи; при отсутствии секрета завершается с понятной ошибкой до запуска Gradle).
+   - Выполняет:
+     1. `./gradlew :patches:test :extensions:extension:testDebugUnitTest :extensions:calculator:testDebugUnitTest`
+     2. `./gradlew generatePatchesList` и `git diff --exit-code -- patches-list.json`
+     3. `./gradlew :patches:buildAndroid`
+   - Не публикует релизы автоматически.
+
+### 13.2. Полная инвентаризация оставшихся ссылок на `jasonwu1994` / `Gboard-patches`
+
+Глобальная проверка всех файлов репозитория (за исключением build/cache-директорий) показала **ровно 3 категории** оставшихся упоминаний и **0 обязательных runtime/build/CI-зависимостей**:
+
+| Категория | Файлы | Назначение / почему сохранено |
+|---|---|---|
+| **Историческая атрибуция, лицензия и архивы (GPL-3.0)** | `UPSTREAM_README.md` (7), `CHANGELOG.md` (104), `README.md` (2), `AGENTS.md` (2), `docs/UPSTREAM.md` (1), `docs/PROJECT_SCOPE.md` (3), `docs/TECHNICAL_AUDIT.md` (4), `docs/REPOSITORY_CLEANUP_REPORT.md` | Обязательная атрибуция происхождения от проекта Jason Wu (GPL-3.0), история релизов и архивные отчёты. |
+| **Опциональные информационные FAQ-ссылки в UI** | `extensions/extension/.../frostedglass/GboardFrostedGlassSettingsFeature.java` (строки 22, 24: `issues/68`, `issues/58`) и тест `GboardFrostedGlassSettingsFaqTest.java` (строки 41, 42) | Внешние ссылки в браузер для чтения исторических тредов диагностики Frosted Glass. Не участвуют в сборке, CI или работе патча. |
+| **Пассивные URI-идентификаторы `$id` JSON Schema** | `patches/src/main/resources/gboard/gboard-port-product-catalog.schema.json` (строка 3), `patches/src/main/resources/gboard/gboard-version-bindings.schema.json` (строка 3), `patches/src/bindingCompiler/resources/gboard/gboard-port-bundle.schema.json` (строка 3) | Статические строковые идентификаторы JSON Schema; по сети никогда не запрашиваются. |
+
+### 13.3. Подтверждение полной независимости от `jasonwu1994/Gboard-patches`
+
+- **Обязательные runtime-зависимости от `jasonwu1994/Gboard-patches`:** **отсутствуют (0)**.
+- **Обязательные build/CI-зависимости от `jasonwu1994/Gboard-patches`:** **отсутствуют (0)** (в `.github/workflows/` остались только `ci.yml`, `release.yml`, `custom-theme-previews-release.yml` — ни один из них не обращается к `jasonwu1994`).
+- **Сценарий недоступности `jasonwu1994/Gboard-patches`:** если репозиторий `jasonwu1994/Gboard-patches` будет удалён или станет недоступен, `vortexnode/GboardSamsung` продолжит полностью собираться, проходить CI, выпускать релизы `.mpp` и работать на устройствах (при условии публикации собственного релиза `custom-theme-previews-v1` в `vortexnode/GboardSamsung`, см. 13.5). Единственным деградирующим элементом останутся две необязательные кнопки «FAQ» в настройках Frosted Glass, открывающие внешние обсуждения в браузере.
+
+### 13.4. Таблица верификации финального этапа (`PASS` / `FAIL` / `NOT RUN`)
+
+| Команда / Проверка | Статус | Фактический результат / Причина |
+|---|---|---|
+| Валидация 8 JSON-файлов (вкл. `patches-list.json`, `patches-bundle.json`, `custom-theme-previews-v1-manifest.json`, каталоги и схемы, отсутствие UTF-8 BOM) | **PASS** | `8/8` валидны, 0 BOM |
+| Валидация XML (`extensions/extension/src/main/settings-text/gboard_settings_text.xml`) | **PASS** | `1/1` валиден |
+| Проверка архива `release-assets/custom-theme-previews/v1/custom-theme-previews-v1.zip` (ZIP-целостность, размер, SHA-256) | **PASS** | `sha256 = 368af5064b2e8ed62800417efd6fa015d12c74a94553002823eade85d8213ee9`, `7957397` байт, `484` записи ZIP (`testzip() == None`), 100% совпадение с манифестом и кодом |
+| Проверка каталога, bindings, `patches-list.json`, `patches-bundle.json` | **PASS** | `34` фичи, `218` `binding_contracts`, `218` `bindings`, `34` записи в `patches-list.json`, `gboard-port-product-catalog.sha256 = 509d1e79e4a1d2b38c7eea93a5d7b3dda76fda4f41c85c18a443879cd26416dc`, версия `4.3.0` |
+| Проверка списка workflows (`.github/workflows/`) | **PASS** | `['ci.yml', 'custom-theme-previews-release.yml', 'release.yml']` (`import-upstream.yml` отсутствует) |
+| Offline JVM-компиляция `javac --release 17` изменённых `GboardCustomThemePreviewRepository.java` и `GboardCustomThemePreviewRepositoryTest.java` + исполнение `releaseCoordinatesArePinnedToPublicRepository()` | **PASS** | `rc = 0`; подтверждены `VERSION=v1`, `URL=https://github.com/vortexnode/GboardSamsung/releases/download/custom-theme-previews-v1/custom-theme-previews-v1.zip`, `SHA256=368af5064b2e8ed62800417efd6fa015d12c74a94553002823eade85d8213ee9` |
+| `gradle :patches:test --offline` | **FAIL (заблокировано средой)** | `Plugin [id: 'app.morphe.patches', version: '2.1.0'] was not found` — плагин Morphe отсутствует в offline-кэше контейнера и требует авторизации в `https://maven.pkg.github.com/MorpheApp/registry` |
+| `./gradlew :patches:test`, `:extensions:extension:testDebugUnitTest`, `:extensions:calculator:testDebugUnitTest`, `generatePatchesList`, `:patches:buildAndroid` | **NOT RUN** | Заблокированы тем же отсутствием плагина `app.morphe.patches:2.1.0` и доступа к Morphe GitHub Packages в offline-контейнере; подлежат прогону в GitHub Actions через `.github/workflows/ci.yml` |
+| `git diff --check` | **NOT RUN** | Каталог `.git` отсутствует в контейнере |
+
+### 13.5. Статус GitHub Release `custom-theme-previews-v1` (требуется ручное действие)
+
+- **Текущий статус:** GitHub Release `custom-theme-previews-v1` в репозитории `vortexnode/GboardSamsung` **ещё НЕ опубликован** (в контейнере теги и релизы не создавались). До публикации релиза URL `https://github.com/vortexnode/GboardSamsung/releases/download/custom-theme-previews-v1/custom-theme-previews-v1.zip` будет возвращать `404`.
+- **Как опубликовать после синхронизации изменений в `main`:**
+  ```bash
+  git tag custom-theme-previews-v1
+  git push origin custom-theme-previews-v1
+  ```
+  После отправки тега автоматически запустится `.github/workflows/custom-theme-previews-release.yml`, проверит размер и SHA-256 (`368af5064b2e8ed62800417efd6fa015d12c74a94553002823eade85d8213ee9`) и создаст релиз `Custom Theme Previews v1` с файлами `custom-theme-previews-v1.zip` и `custom-theme-previews-v1-manifest.json` (`make_latest: false`).
+
+### 13.6. Необходимые GitHub Secrets в `vortexnode/GboardSamsung`
+
+| Секрет | Где используется | Назначение и права |
+|---|---|---|
+| `MORPHE_PACKAGES_TOKEN` | `.github/workflows/ci.yml`, `.github/workflows/release.yml` | GitHub Personal Access Token (classic с областью `read:packages` или fine-grained с доступом чтения пакетов), используемый для загрузки `app.morphe.patches:2.1.0` и зависимостей Morphe из `https://maven.pkg.github.com/MorpheApp/registry`. Без этого секрета Gradle-сборка в CI и Release не сможет разрешить плагин Morphe. |
+
