@@ -23,8 +23,8 @@ jobs:
           fi
 
           tag="v4.3.0"
-          expected_old="e10ef9021553404029d7e44473c68fb7ba0d6da7"
-          target="967d127ffeec80953085c86d5cb6b993faae2432"
+          expected_old="967d127ffeec80953085c86d5cb6b993faae2432"
+          target="a7d799873fe17eb2558f12cfaf02b245b1e6d83e"
           ref="$(gh api "repos/${GITHUB_REPOSITORY}/git/ref/tags/${tag}")"
           current="$(jq -r '.object.sha' <<< "${ref}")"
           object_type="$(jq -r '.object.type' <<< "${ref}")"
@@ -55,7 +55,7 @@ jobs:
         with:
           script: |
             const tag = "v4.3.0";
-            const verifiedCommit = "967d127ffeec80953085c86d5cb6b993faae2432";
+            const verifiedCommit = "a7d799873fe17eb2558f12cfaf02b245b1e6d83e";
             const artifactName = "GboardSamsung-MPP-4.3.0";
 
             const ref = await github.rest.git.getRef({
