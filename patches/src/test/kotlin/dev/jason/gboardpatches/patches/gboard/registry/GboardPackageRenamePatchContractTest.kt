@@ -113,7 +113,7 @@ class GboardPackageRenamePatchContractTest {
                 "a custom app name so it can be installed alongside the official Gboard.\n" +
                 "Переименовывает пакет в dev.jason.com.google.android.inputmethod.latin и позволяет задать название приложения для установки рядом с официальным Gboard."
         const val APP_DISPLAY_NAME_OPTION_KEY = "app_display_name"
-        const val APP_DISPLAY_NAME_OPTION_TITLE = "App 名稱 / App name"
+        const val APP_DISPLAY_NAME_OPTION_TITLE = "App name / Название приложения"
         const val APP_DISPLAY_NAME_OPTION_DESCRIPTION = ""
         const val APP_DISPLAY_NAME_DEFAULT = "GboardSamsung"
         val APP_DISPLAY_NAME_PRESETS = linkedMapOf(
