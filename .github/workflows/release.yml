@@ -77,7 +77,6 @@ jobs:
           run_id="$(jq -r --arg sha "${COMMIT_SHA}" '
             [.workflow_runs[]
               | select(.head_sha == $sha)
-              | select(.head_branch == "main")
               | select(.event == "push" or .event == "workflow_dispatch")
               | select(.conclusion == "success")]
             | sort_by(.created_at)
