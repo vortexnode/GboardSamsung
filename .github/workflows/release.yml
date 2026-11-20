@@ -91,8 +91,8 @@ jobs:
             exit 1
           fi
 
-          artifact_count="$(gh api "repos/${GH_REPO}/actions/runs/${run_id}/artifacts" \
-            --jq --arg name "${artifact_name}" '[.artifacts[] | select(.name == $name and .expired == false)] | length')"
+          artifacts="$(gh api "repos/${GH_REPO}/actions/runs/${run_id}/artifacts")"
+          artifact_count="$(jq --arg name "${artifact_name}" '[.artifacts[] | select(.name == $name and .expired == false)] | length' <<< "${artifacts}")"
 
           if [[ "${artifact_count}" != "1" ]]; then
             echo "::error::Expected exactly one unexpired artifact named ${artifact_name} in CI run ${run_id}; found ${artifact_count}."
@@ -123,6 +123,12 @@ jobs:
             echo "::error::Expected exactly one MPP file in the CI artifact; found ${#bundles[@]}."
             exit 1
           fi
+
+          if [[ ! -s release-artifact/SHA256SUMS ]]; then
+            echo "::error::The CI artifact is missing its SHA256SUMS verification file."
+            exit 1
+          fi
+          (cd release-artifact && sha256sum --check SHA256SUMS)
 
           mkdir -p patches/build/libs
           cp "${bundles[0]}" "patches/build/libs/patches-${VERSION}.mpp"
