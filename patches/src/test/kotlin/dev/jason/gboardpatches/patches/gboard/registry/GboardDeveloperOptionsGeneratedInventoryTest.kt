@@ -9,7 +9,7 @@ import org.junit.Test
 
 class GboardDeveloperOptionsGeneratedInventoryTest {
     @Test
-    fun generatedInventoryContainsThirtyFivePublishedPatchesAndNoRetiredRows() {
+    fun generatedInventoryContainsThirtyFourPublishedPatchesAndNoRetiredRows() {
         val inventory = generatedPublishedInventory()
         val patches = inventory.getAsJsonArray("patches")
         val names = patches.map { it.asJsonObject.get("name").asString }
@@ -42,29 +42,40 @@ class GboardDeveloperOptionsGeneratedInventoryTest {
             "Enable Undo/Redo feature",
         )
         val SURVIVING_PATCH_NAMES = listOf(
-            "AI Writing Tools",
-            "Add Gboard Signature Bypass",
+            "Dictionaries & Predictions",
+            "Keypress Vibration Intensity Control",
+            "Long-Press Editing Shortcuts",
+            "Incognito Mode Toggle",
+            "Toolbar Editing Buttons",
+            "Floating Web Search",
+            "Simple Calculator",
+            "Swipe Down to Dismiss Keyboard",
+            "Samsung Spacebar Gestures",
             "Advanced Voice Typing",
-            "Clipboard Enhancements",
-            "Clipboard Custom Character Limit",
+            "Use Bluetooth Microphone",
+            "Change emoji size",
+            "Access Points menu style",
+            "Enable split keyboard",
+            "Rounded Keyboard Panel",
+            "Frosted Glass",
+            "Top Toolbar Item Count",
+            "Close Proactive Suggestions",
+            "Custom Theme",
+            "Quick Insert",
             "Custom Symbols",
             "Developer options",
+            "Backup & Restore",
             "Emojis, stickers & GIFs Tab Order",
+            "Clipboard Enhancements",
+            "Clipboard Custom Character Limit",
             "Enable Inline Autofill Suggestions",
-            "English QWERTY Up-Flick Uppercase",
             "Grammar Checker",
             "Inline Suggestions",
             "Key Shape Selection",
-            "Latin Globe Key Ignore Interval",
-            "Long-Press Editing Shortcuts",
-            "Package Rename",
+            "AI Writing Tools",
             "Settings Homepage Override",
-            "Swipeable Custom Top Row",
-            "Use Bluetooth Microphone",
-            "Web Clipboard",
-            "Zhuyin Bottom Row Key Sizes",
-            "Zhuyin Quick Traditional/Simplified Toggle",
-            "Zhuyin Slide Input",
+            "Package Rename",
+            "Add Gboard Signature Bypass",
         )
     }
 }
