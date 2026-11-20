@@ -67,12 +67,12 @@ class GboardBluetoothMicrophonePatchContractTest {
             StandardCharsets.UTF_8,
         )
 
-        assertTrue(
-            readme.lineSequence().any { line ->
-                line.contains("Language, AI, suggestions & voice") &&
-                    line.contains("`Use Bluetooth Microphone`")
-            },
-        )
+        val voiceFeaturesSection = readme
+            .substringAfter("### Active patch catalog (34 patches)")
+            .substringAfter("Language, AI, suggestions & voice")
+            .substringBefore("\n### ")
+
+        assertTrue(voiceFeaturesSection.contains("`Use Bluetooth Microphone`"))
     }
 
     private fun repositoryRoot(): Path {
