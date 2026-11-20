@@ -36,7 +36,7 @@ public final class GboardAdvancedVoiceSettingsSourceTest {
                 "Voice typing has three modes: Standard, Standard - Advanced features "
                         + "(colorful microphone), and Rambler."));
         Assert.assertTrue(settingsText.contains(
-                "語音輸入分為三種：標準、標準-進階功能（彩色麥克風）以及 Rambler。"));
+                "Доступны три режима голосового ввода: Стандартный, Стандартный — Расширенные функции (цветной микрофон) и Rambler. Для режима «Стандартный — Расширенные функции» требуется компонент диктовки."));
         Assert.assertEquals(2, count(feature,
                 "new GboardPatchesSettingsContract.ToggleRow("));
         Assert.assertEquals(0, count(feature,
@@ -78,9 +78,9 @@ public final class GboardAdvancedVoiceSettingsSourceTest {
         Assert.assertTrue(availability.contains("FEATURE_ADVANCED_VOICE_TYPING"));
         Assert.assertTrue(availability.contains(
                 "dev.jason.gboardpatches.feature.advanced_voice_typing"));
-        Assert.assertTrue(settingsText.contains("Rambler(限線上)"));
+        Assert.assertTrue(settingsText.contains("Rambler (только онлайн)"));
         Assert.assertTrue(settingsText.contains(
-                "切換後須強制停止並重新啟動 Gboard 才會生效"));
+                "После переключения принудительно остановите и перезапустите Gboard для применения."));
         Assert.assertFalse(settingsText.contains("Experimental Rambler"));
 
     }
