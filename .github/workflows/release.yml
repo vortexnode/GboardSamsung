@@ -10,32 +10,14 @@ jobs:
   release:
     name: Release
     permissions:
+      actions: read
       contents: write
-      packages: read
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v7
         with:
           fetch-depth: 0
-
-      - name: Setup Java
-        uses: actions/setup-java@v6
-        with:
-          distribution: 'temurin'
-          java-version: '21'
-
-      - name: Cache Gradle
-        uses: burrunan/gradle-cache-action@v3
-
-      - name: Make Gradle wrapper executable
-        run: chmod +x ./gradlew
-
-      - name: Build
-        env:
-          GITHUB_ACTOR: ${{ github.repository_owner }}
-          GITHUB_TOKEN: ${{ secrets.MORPHE_PACKAGES_TOKEN }}
-        run: ./gradlew :patches:buildAndroid generatePatchesList
 
       - name: Validate synced release metadata
         id: metadata
@@ -76,6 +58,77 @@ jobs:
 
           "version=$actualVersion" >> $env:GITHUB_OUTPUT
 
+      - name: Find successful CI run for this exact commit
+        id: ci
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          COMMIT_SHA: ${{ github.sha }}
+          VERSION: ${{ steps.metadata.outputs.version }}
+        run: |
+          set -euo pipefail
+
+          artifact_name="GboardSamsung-MPP-${VERSION}"
+          runs="$(gh api "repos/${GH_REPO}/actions/workflows/ci.yml/runs" \
+            -f head_sha="${COMMIT_SHA}" \
+            -f status=success \
+            -f per_page=100)"
+
+          run_id="$(jq -r --arg sha "${COMMIT_SHA}" '
+            [.workflow_runs[]
+              | select(.head_sha == $sha)
+              | select(.head_branch == "main")
+              | select(.event == "push" or .event == "workflow_dispatch")
+              | select(.conclusion == "success")]
+            | sort_by(.created_at)
+            | last
+            | .id // empty
+          ' <<< "${runs}")"
+
+          if [[ -z "${run_id}" ]]; then
+            echo "::error::No successful main-branch CI run found for commit ${COMMIT_SHA}."
+            exit 1
+          fi
+
+          artifact_count="$(gh api "repos/${GH_REPO}/actions/runs/${run_id}/artifacts" \
+            --jq --arg name "${artifact_name}" '[.artifacts[] | select(.name == $name and .expired == false)] | length')"
+
+          if [[ "${artifact_count}" != "1" ]]; then
+            echo "::error::Expected exactly one unexpired artifact named ${artifact_name} in CI run ${run_id}; found ${artifact_count}."
+            exit 1
+          fi
+
+          echo "run_id=${run_id}" >> "${GITHUB_OUTPUT}"
+          echo "artifact_name=${artifact_name}" >> "${GITHUB_OUTPUT}"
+          echo "Using successful CI run ${run_id} for ${COMMIT_SHA}."
+
+      - name: Download verified CI build artifact
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CI_RUN_ID: ${{ steps.ci.outputs.run_id }}
+          ARTIFACT_NAME: ${{ steps.ci.outputs.artifact_name }}
+          VERSION: ${{ steps.metadata.outputs.version }}
+        run: |
+          set -euo pipefail
+
+          gh run download "${CI_RUN_ID}" \
+            --repo "${GITHUB_REPOSITORY}" \
+            --name "${ARTIFACT_NAME}" \
+            --dir release-artifact
+
+          mapfile -t bundles < <(find release-artifact -type f -name '*.mpp' -print)
+          if [[ "${#bundles[@]}" -ne 1 ]]; then
+            echo "::error::Expected exactly one MPP file in the CI artifact; found ${#bundles[@]}."
+            exit 1
+          fi
+
+          mkdir -p patches/build/libs
+          cp "${bundles[0]}" "patches/build/libs/patches-${VERSION}.mpp"
+          test -s "patches/build/libs/patches-${VERSION}.mpp"
+          sha256sum "patches/build/libs/patches-${VERSION}.mpp" | tee release-mpp.sha256
+
       - name: Prepare release notes
         shell: pwsh
         run: |
@@ -94,3 +147,5 @@ jobs:
           prerelease: ${{ contains(github.ref_name, '-dev.') }}
           files: |
             patches/build/libs/patches-${{ steps.metadata.outputs.version }}.mpp
+          overwrite_files: false
+          fail_on_unmatched_files: true
