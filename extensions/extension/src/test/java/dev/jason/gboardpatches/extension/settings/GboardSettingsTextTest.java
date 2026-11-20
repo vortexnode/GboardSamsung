@@ -17,7 +17,7 @@ import dev.jason.gboardpatches.extension.R;
 public final class GboardSettingsTextTest {
     @Test
     public void nullContextRemainsSafeForStaticFeatureInitialization() {
-        Assert.assertEquals("Настройки патчей", GboardSettingsText.get(
+        Assert.assertEquals("Patch settings", GboardSettingsText.get(
                 null, R.string.gboard_patches_header_title));
     }
 
