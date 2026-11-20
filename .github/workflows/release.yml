@@ -70,7 +70,7 @@ jobs:
           set -euo pipefail
 
           artifact_name="GboardSamsung-MPP-${VERSION}"
-          runs="$(gh api "repos/${GH_REPO}/actions/workflows/ci.yml/runs" \
+          runs="$(gh api -X GET "repos/${GH_REPO}/actions/workflows/ci.yml/runs" \
             -f head_sha="${COMMIT_SHA}" \
             -f per_page=100)"
 
