@@ -2,6 +2,11 @@ name: Repair v4.3.0 tag and publish
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/repair-v4.3.0.yml
 
 permissions:
   actions: write
