@@ -118,9 +118,9 @@ jobs:
             --name "${ARTIFACT_NAME}" \
             --dir release-artifact
 
-          mapfile -t bundles < <(find release-artifact -type f -name '*.mpp' -print)
-          if [[ "${#bundles[@]}" -ne 1 ]]; then
-            echo "::error::Expected exactly one MPP file in the CI artifact; found ${#bundles[@]}."
+          bundle="release-artifact/patches-${VERSION}.mpp"
+          if [[ ! -s "${bundle}" ]]; then
+            echo "::error::Expected versioned MPP file ${bundle} is missing or empty."
             exit 1
           fi
 
@@ -131,7 +131,7 @@ jobs:
           (cd release-artifact && sha256sum --check SHA256SUMS)
 
           mkdir -p patches/build/libs
-          cp "${bundles[0]}" "patches/build/libs/patches-${VERSION}.mpp"
+          cp "${bundle}" "patches/build/libs/patches-${VERSION}.mpp"
           test -s "patches/build/libs/patches-${VERSION}.mpp"
           sha256sum "patches/build/libs/patches-${VERSION}.mpp" | tee release-mpp.sha256
 
