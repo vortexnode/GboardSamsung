@@ -302,7 +302,7 @@
       "options": [
         {
           "key": "app_display_name",
-          "title": "App 名稱 / App name",
+          "title": "App name / Название приложения",
           "description": "",
           "required": true,
           "type": "kotlin.String",
