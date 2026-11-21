@@ -1,26 +1,39 @@
-# GboardSamsung — Samsung One UI 8 Keyboard Appearance: Финальный технический аудит перед реализацией (Audit v3)
+# GboardSamsung — Samsung One UI 8 Keyboard Appearance: Финальный технический аудит перед реализацией (Audit v3.1)
+
+> **Уточнённая редакция технического аудита v3 (v3.1). Учитывает окончательные решения пользователя по отдельной настройке шевронов переключения языка, адаптивности их отображения и уточнению структуры Access Point Count. Исходный код проекта в рамках данного обновления не изменялся.**
 
 **Проект:** [vortexnode/GboardSamsung](https://github.com/vortexnode/GboardSamsung)  
-**Базовая ветка / состояние репозитория:** `main` (v4.4.3; проверенная пользователем база v4.4.2)  
+**Подтверждённая стабильная версия у пользователя на устройстве:** `v4.4.2` *(собрана, опубликована, автоматически получена Morphe Patchery и проверена пользователем на реальном смартфоне)*  
+**Состояние метаданных репозитория на диске:** `v4.4.4` *(наличие более новых версий/коммитов в репозитории не означает, что пользователь установил их на устройство)*  
 **Целевая версия Gboard:** `18.5.4.993608717-release-arm64-v8a` (профиль привязок `gboard-version-bindings.v1`, `profile_version: 1.6.0`)  
 **Целевое устройство тестирования:** Samsung Galaxy S22 5G (`SM-S901U1`), Android 16 (API 36), One UI 8, без root, установка через Morphe  
-**Статус документа:** Строго исследовательский аудит (реализация, правки кода, патчей, CI, PR, релизы и коммиты **не выполнялись**)  
+**Статус документа:** Строго исследовательский аудит v3.1 (исходный код, ресурсы, Gradle, CI/CD, PR, релизы, MPP, commit и push **не затрагивались**)  
 **Связанные предыдущие отчёты (сохранены без изменений):** `samsung-keyboard-appearance-audit.md` (v1), `samsung-keyboard-appearance-audit-v2.md` / `.pdf` (v2)  
-**Планируемые ссылки публикации после утверждения:**  
-- Markdown: [samsung-keyboard-appearance-audit-v3.md](https://github.com/vortexnode/GboardSamsung/blob/main/docs/reports/samsung-keyboard-appearance-audit-v3.md)  
-- PDF: [samsung-keyboard-appearance-audit-v3.pdf](https://github.com/vortexnode/GboardSamsung/blob/main/docs/reports/samsung-keyboard-appearance-audit-v3.pdf)
+**Целевые файлы публикации:**  
+- Markdown: [docs/reports/samsung-keyboard-appearance-audit-v3.md](https://github.com/vortexnode/GboardSamsung/blob/main/docs/reports/samsung-keyboard-appearance-audit-v3.md)  
+- PDF: [docs/reports/samsung-keyboard-appearance-audit-v3.pdf](https://github.com/vortexnode/GboardSamsung/blob/main/docs/reports/samsung-keyboard-appearance-audit-v3.pdf)
 
 ---
 
-## Иерархия приоритетов аудита
+## Иерархия приоритетов и стандарт доказательности аудита
 
 Все архитектурные решения и оценки рисков в этом отчёте подчинены строгому порядку приоритетов:
 
-1. **Безопасность и стабильность существующей клавиатуры** (ноль крашей, ноль регрессий Direct Boot, ноль сломанных обработчиков ввода).
-2. **Сохранение всех функций оригинального Gboard** (свайп-набор, подсказки, буфер обмена, голосовой ввод Rambler, эмодзи, GIF, Action Keys, режимы Floating/Split/One-handed).
-3. **Совместимость с существующими патчами GboardSamsung и Morphe** (`Custom Theme`, `Frosted Glass`, `Rounded Keyboard Panel`, `Samsung Spacebar Gestures`, `Access Point Count`, `Access Points Menu`, `Editing Access Points`, `Key Shape Selection`, `Package Rename`).
-4. **Корректная работа на целевой версии Gboard `18.5.4`** без опоры на недоказанные допущения от сторонних тем или старых версий.
+1. **Сохранение полной работоспособности Gboard** (ноль крашей, ноль регрессий Direct Boot, ноль потери пользовательских настроек).
+2. **Сохранение оригинальной логики клавиш, жестов и обработки касаний** (тап, свайп-набор, подсказки, буфер обмена, голосовой ввод Rambler, эмодзи, Action Keys, режимы Floating/Split/One-handed, переключение языков).
+3. **Совместимость с существующими функциями и настройками GboardSamsung** (`Custom Theme`, `Frosted Glass`, `Rounded Keyboard Panel`, `Samsung Spacebar Gestures`, `Swipe Down to Dismiss Keyboard`, `Access Point Count`, `Access Points Menu`, `Editing Access Points`, `Key Shape Selection`, `Package Rename`, `Backup & Restore`).
+4. **Отсутствие конфликтов с Morphe и другими расширениями**, а также корректность на целевой версии `Gboard 18.5.4`.
 5. **Визуальное сходство с Samsung Keyboard / One UI 8** — исключительно в рамках безопасных, проверяемых и обратимых механизмов.
+
+### Стандарт разделения фактов и гипотез
+
+В каждом техническом утверждении отчёта строго различаются четыре уровня доказательности:
+- **[Подтверждено исходниками]** — прямо проверено по файлам репозитория `vortexnode/GboardSamsung`.
+- **[Сторонние темы / CSS]** — встречается в сторонних ZIP-темах сообщества (`PackRepoBeta` `4a8187db`), но **не доказано** для `Gboard 18.5.4`.
+- **[Архитектурное предположение]** — инженерный вывод или кандидат реализации, не проверенный в рантайме `18.5.4`.
+- **[Требует проверки на устройстве]** — невозможно доказать статически без эксперимента на Galaxy S22 5G (`Gboard 18.5.4`).
+
+> **Важное методологическое правило:** наличие `try/catch`, проверок `null`, `WeakHashMap` или `isUserUnlocked()` **само по себе не доказывает безопасность архитектуры**. Для каждого механизма дополнительно оцениваются последствия частичного выполнения, повторного входа, переиспользования View, смены системной конфигурации, перезагрузки и восстановления состояния.
 
 ---
 
@@ -28,27 +41,37 @@
 
 ### Краткий вывод
 
-Приблизить внешний вид **GboardSamsung** на `Gboard 18.5.4` (Samsung Galaxy S22 5G, Android 16 / One UI 8, без root) к **Samsung Keyboard One UI 8** при сохранении оригинального движка Gboard, иконок Google, всех обработчиков ввода и всех существующих патчей **технически осуществимо**, но **только поэтапно и с жёстким разделением на подтверждённые и экспериментальные слои**.
+Приблизить внешний вид **GboardSamsung** на `Gboard 18.5.4` (Samsung Galaxy S22 5G, Android 16 / One UI 8, без root) к **Samsung Keyboard / One UI 8** при сохранении оригинального движка Gboard, иконок Google, обработчиков касаний, жестов и стабильности подтверждённой базы `v4.4.2` **технически возможно**, но **только небольшими независимыми этапами**, начиная с чистых CSS ZIP-тем через штатный импорт `Custom Theme` без каких-либо изменений runtime.
 
-Главные корректировки, внесённые в **Audit v3** по итогам проверки исходного кода репозитория и реального скриншота текущей сборки GboardSamsung (`Screenshot_20261121_205256_ChatGPT.jpg`):
+### Ключевые уточнения редакции v3.1 (по сравнению с v3)
 
-1. **Реальная конфигурация верхнего тулбара пользователя отличается от эталона Samsung One UI 8:** в GboardSamsung **нет кнопки `•••`**. В реальном скриншоте пользователя отображаются **9 элементов**: слева кнопка меню Access Points (сетка 4 квадрата), затем 7 настраиваемых инструментов (`Translate`, `Writing Tools`, `Clipboard`, `Select All`, `Paste`, `Text Editing`, `Globe` — всего 8 слотов слева/в центре при настройке `Access Point Count = 8`), а **справа — кнопка голосового ввода Rambler (микрофон с искрой)**, которая **уже имеет собственную нативную круглую подложку** в Gboard `18.5.4`.
-2. **Кнопка голосового ввода Rambler архитектурно отделена от обычных Access Points:** в коде GboardSamsung (`GboardRamblerStockPolicy`, `GboardRamblerOfficialSelectorPatch`, `GboardRamblerResetHeader`) Rambler управляется отдельным набором флагов (`enable_agentic_dictation`, `enable_rambler_al_toolbar`, `ad_activation_type = 2L`) и собственным жизненным циклом голосового заголовка (`Lflb;`, `Lfkl;`, `Lfkm;`, `Lflz;`, `Lkaf;`). Её View/Drawable/CSS-селектор **не подтверждены** в исходном коде репозитория и **не могут** считаться идентичными обычным Access Points.
-3. **Критическая находка по Direct Boot и хранилищу ZIP (`GboardCustomThemeInstaller.java`):** на данный момент установщик записывает ZIP-архивы тем в **`context.getFilesDir()` (CE-хранилище)**, тогда как предпочтения `additional_keyboard_theme` и `enable_key_border` пишутся в **`context.createDeviceProtectedStorageContext().getSharedPreferences(...)` (DE-хранилище)**. Без прямой проверки загрузчика префикса `"files:"` в Gboard `18.5.4` **запрещено вслепую переносить ZIP-темы в DE-хранилище**, иначе Gboard может перестать находить тему даже после разблокировки.
-4. **Шевроны на пробеле (`‹ Русский ›`) — обязательное требование — реализуемы без модификации текста и без перехвата касаний:** оптимальный кандидат — пассивный `Drawable` в `ViewOverlay` поверх `SoftKeyView`, привязанный через уже существующую в `18.5.4` точку `SoftKeyView.s(SoftKeyDef, long)Z` (`soft_key_bind`) и проверку `KeyEvent.KEYCODE_SPACE (62)` через `GboardSpacebarKeyHitTester`, с привязкой координат к внутреннему keycap-слою `.space_bar` и обязательной очисткой при переиспользовании `SoftKeyView`. Требуется проверка внутренней иерархии `SoftKeyView` на устройстве.
-5. **Круглые подложки под обычными Access Points при 3–8 элементах — зона повышенного риска:** на экране шириной ~360 dp (Galaxy S22) при `8` элементах + меню + Rambler на один слот приходится всего ~38–40 dp. Массовое добавление круглых подложек через недоказанные CSS-селекторы или runtime-хуки без проверки иерархии `keyboard_header` может дать визуальное слипание, двойную обводку кнопки Rambler или конфликт с `AccessPointDragPopupView` (`GboardAccessPointsMenuRuntime`). Этот элемент вынесен в отдельный условный Этап 5.
+1. **Шевроны переключения языка на пробеле (`‹ Русский ›`) вынесены в полностью самостоятельную функцию (Уточнение №1):**
+   - Шевроны **НЕ являются частью** Samsung Keyboard Appearance и **не включаются автоматически** при выборе Samsung-темы.
+   - Окончательное название настройки: **«Шевроны переключения языка на пробеле»** (EN: *Spacebar language switch chevrons*), выключена по умолчанию.
+   - **[Подтверждено исходниками]** В проекте уже существует отдельный экран настроек `GboardLanguageSettingsFeature` (**«Язык»** → секция **«Переключение языка»**), содержащий независимые переключатели `Переключение языка свайпом по пробелу` и `Скрыть клавишу переключения языка`. Новая настройка логично размещается **третьим независимым переключателем внутри этой существующей секции**, без создания нового раздела и без дублирования.
+   - **[Архитектурное предположение / Требует проверки на устройстве]** `ViewOverlay` поверх `SoftKeyView` остаётся наиболее безопасным пассивным кандидатом (0 вмешательства в `MotionEvent`, hit-testing и геометрию), но **не считается готовым доказанным решением**: выполнен полный 11-пунктный анализ рисков (`SoftKeyView` lifecycle, recycling, «призраки» на других клавишах, bounds при ресайзе, очистка при скрытии/пересоздании IME, Floating/Split/One-handed, адаптация цвета к Custom Theme и Dynamic Color). Если на устройстве выявятся артефакты или нестабильность — функцию следует отложить, а не переходить к опасным обходам.
+2. **Устранена неоднозначность вокруг `Access Point Count` (Уточнение №2):**
+   - **[Подтверждено исходниками]** Прослежена полная цепочка: `GboardAccessPointCountSettingsFeature` (`.setRestartRequired`) → `GboardAccessPointCountSettings` (`3..8`, по умолчанию `6`) → `GboardAccessPointCountPolicy` → `GboardAccessPointCountRuntime` → `GboardFlagFamilyComposer` (переопределяет **ровно два** `Long`-флага: `config_max_access_points` и `config_default_access_points_num_on_bar`).
+   - **[Подтверждено исходниками]** Пользовательские Access Points (`Manual Incognito`, `Floating Web Search`, `Editing Access Points`) регистрируются через `GboardAccessPointContributionsRuntime` в тот же каталог (`Lmvg;->m`, `Lmwv;`, `Lmwg;`, `Lwpa;`, `mtr`/`mtm`), что и системные AP. Кнопка **Rambler** (`GboardRamblerStockPolicy`, `GboardRamblerResetHeader`) полностью отделена по флагам и жизненному циклу и **не проходит** через `Access Point Count` или `GboardAccessPointContributionsRuntime`.
+   - **[Исправление противоречия v3]** На реальном скриншоте пользователя (`Screenshot_20261121_205256_ChatGPT.jpg`) видны **8 элементов перед отдельной кнопкой Rambler** (левая иконка меню/сетки `⊞` + 7 инструментов), а 9-м элементом справа стоит Rambler с нативной круглой подложкой. В v3 было преждевременно указано, будто подтверждено, что `Access Point Count = 8` включает кнопку меню `⊞`. В v3.1 прямо зафиксировано: **по исходникам репозитория невозможно однозначно доказать**, включает ли число `config_max_access_points` / `config_default_access_points_num_on_bar` кнопку меню `⊞` или считает только обычные Access Points (так как логика компоновки слотов находится в закрытом коде Gboard `18.5.4`). Подготовлен безопасный эксперимент на устройстве (**V9**) для значений `3`, `6` и `8`.
+3. **Критическое уточнение по автоматическому переключению Light/Dark (`additional_keyboard_theme`):**
+   - **[Подтверждено исходниками]** Существующая галерея `GboardCustomThemeGalleryView.handleCommittedInstall()` после записи `additional_keyboard_theme` и `enable_key_border` в DE `SharedPreferences` **вызывает принудительный холодный перезапуск процесса Gboard** (`requestTargetRestart()` → `coldRestartGboard()` → `System.exit(0)`). В то же время штатный импорт в `ThemeListingFragment` (`GboardCustomThemeOfficialImportRuntime`) передаёт имя файла через `Lkhl;->i(Intent)V`.
+   - Следовательно, **в репозитории нет никаких доказательств**, что Gboard `18.5.4` подхватывает смену `additional_keyboard_theme` «на лету» без перезапуска процесса или хотя бы при следующем `onStartInputView`. Вызывать `System.exit(0)` из активной IME-сессии недопустимо; реальное поведение `18.5.4` обязательно проверяется в эксперименте **V7**.
+4. **Круглые подложки Access Points — строго необязательный эксперимент последнего приоритета:**
+   - Вынесены в самый конец плана (Шаг 7). Без безопасного способа (предпочтительно CSS) детерминированно отличать типы элементов (обычные AP vs кнопка меню `⊞` vs Rambler vs полоса подсказок) без привязки к индексам и позициям — **от круглых подложек следует отказаться**.
 
-### Сводная карта зрелости подсистем
+### Сводная карта зрелости подсистем (редакция v3.1)
 
-| Подсистема | Базовый механизм | Готовность до теста на S22 | Уровень риска |
+| Подсистема | Базовый механизм | Доказательность до теста на S22 | Уровень риска |
 | --- | --- | --- | --- |
-| Оформление фона и клавиш (Light/Dark) | ZIP/CSS-темы (`metadata.json` + CSS) через `GboardCustomThemeInstaller` | Архитектура валидации/установки подтверждена; рендер CSS в `18.5.4` не проверен | Средний |
-| Форма функциональных клавиш (`?123`, `Enter`) | CSS + проверка взаимодействия с `more_pill_keys` (Material 3) | Не подтверждено, переопределяет ли CSS pill-геометрию `18.5.4` | Средний |
-| Шевроны пробела (`‹ Русский ›`) | Пассивный `Drawable` в `ViewOverlay` из хука `SoftKeyView.s(...)` | Точка хука и `KEYCODE_SPACE` подтверждены; внутренние bounds `.space_bar` не проверены | Средний |
-| Фон и цвета иконок верхнего тулбара | CSS (`.keyboard-header-area`, `.icon.access-point-item` и др.) | Тег `.keyboard-header-area` подтверждён в `Frosted Glass`; CSS-селекторы иконок не проверены в `18.5.4` | Средний |
-| Круглые подложки 3–8 Access Points | Только после инспекции `18.5.4` header hierarchy и защиты Rambler | Иерархия слотов и адаптивный диаметр при 8+1 элементах не подтверждены | Высокий |
-| Кнопка голосового ввода Rambler | **Не трогать / исключить из модификации** до отдельного исследования | Внутренний View/Drawable в `18.5.4` APK не подтверждён; кнопка уже имеет нативный круг | Высокий |
-| Авто-переключение Light/Dark + Backup/Restore | Runtime-наблюдатель в `Lphr;` + DE/CE snapshot настроек | Точки `Lphr;` подтверждены; мгновенная перезагрузка темы без переоткрытия IME не проверена | Средний |
+| Оформление фона и клавиш (Samsung Light / Dark) | ZIP/CSS-темы (`metadata.json` + CSS) через штатный `Custom Theme` | Механизм установки/валидации подтверждён; рендер CSS-свойств в `18.5.4` не проверен | Средний |
+| Форма клавиш (6–8 dp) и `Key Shape Selection` | CSS + сохранение нетронутого патча `more_pill_keys` | Флаг `more_pill_keys` подтверждён; приоритет CSS над pill-геометрией `18.5.4` не проверен | Средний |
+| Вторичные символы | Оригинальная карта Gboard; только безопасная CSS-стилизация | Исходная логика не затрагивается; читаемость `.label.secondary` требует проверки | Низкий / Средний |
+| Шевроны пробела (`‹ Русский ›`) — **отдельная настройка** | Кандидат: пассивный `Drawable` в `ViewOverlay` из `SoftKeyView.s(...)` (или отложение) | Точка хука и `KEYCODE_SPACE` подтверждены; `ViewOverlay` bounds/recycling/color в `18.5.4` не доказаны | Средний / Высокий |
+| Фон и цвета иконок верхнего тулбара | CSS (`.keyboard-header-area` + проверенные селекторы) | Тег `.keyboard-header-area` подтверждён; CSS-селекторы иконок и кандидатов не проверены | Средний |
+| Авто-переключение Light/Dark + Backup/Restore | `Configuration.UI_MODE_NIGHT_MASK` в `Lphr;` + DE/CE snapshot + ownership | Точки `Lphr;` подтверждены; перечитывание `additional_keyboard_theme` без `System.exit(0)` не доказано | Средний / Высокий |
+| Круглые подложки 3–8 Access Points (необязательно) | Только если есть безопасный механизм различения типов без индексов | Иерархия слотов `18.5.4`, формула `Access Point Count` и плотность 8+1 не подтверждены | Высокий |
+| Кнопка голосового ввода Rambler | **Не модифицировать / явно исключить** | Архитектурно отделена, уже имеет нативный круг; внутренний View/CSS в `18.5.4` неизвестен | Высокий |
 
 **Итоговый вердикт раздела 1:** **Можно реализовывать после проверки на устройстве**
 
@@ -56,103 +79,112 @@
 
 ## 2. Что подтверждено исходным кодом
 
-Все факты ниже получены прямым чтением исходного кода репозитория `vortexnode/GboardSamsung` (модули `patches/` и `extensions/extension/`), без предположений.
+Все факты ниже получены прямым чтением исходного кода репозитория `vortexnode/GboardSamsung` (`patches/` и `extensions/extension/`), без предположений.
 
-### 2.1. Установка, валидация и активация ZIP-тем
+### 2.1. Установка, валидация, активация и перезапуск при смене ZIP-тем
 
 - **`extensions/extension/src/main/java/dev/jason/gboardpatches/extension/customtheme/GboardCustomThemeInstaller.java`**:
-  - Строки 38, 118, 126: временный файл `.gboard_patches_theme_<uuid>.part`, дедупликация (`user_theme_*`) и финальный `atomicCommit` работают в каталоге **`context.getFilesDir()`**.
-  - Строки 43, 76–109: проверка ZIP-безопасности (`GboardThemeImportContract`: лимит числа записей, защита от path traversal, лимит коэффициента сжатия `100x`, лимит распакованного размера, обязательное наличие корневого `metadata.json`).
+  - Строки 38, 118, 126: временный staging-файл `.gboard_patches_theme_<uuid>.part`, поиск дубликатов (`user_theme_*` по размеру и SHA-256) и финальный `atomicCommit` выполняются в **`context.getFilesDir()` (CE-хранилище)**.
+  - Строки 43, 76–109: проверка ZIP-безопасности по `GboardThemeImportContract` (лимит числа записей, запрет path traversal, коэффициент сжатия `<= 100x`, лимиты распакованного размера, обязательное наличие корневого `metadata.json`).
   - Строки 44, 111–113: валидация архива нативным методом Gboard через `GboardCustomThemeTargetContract.validateThemeArchive(context, staging)`.
-  - Строки 63–74: активация темы выполняется записью в **DE-хранилище**:
+  - Строки 63–74: активация темы выполняется синхронным `.commit()` в **DE-хранилище**:
     - `Context storage = context.createDeviceProtectedStorageContext();`
     - `SharedPreferences preferences = storage.getSharedPreferences(context.getPackageName() + "_preferences", Context.MODE_PRIVATE);`
     - `putString("additional_keyboard_theme", "files:" + committed.getName())`
     - `putBoolean("enable_key_border", keyBorder)`
-    - `.commit()` (синхронная запись).
-- **`extensions/extension/src/main/java/dev/jason/gboardpatches/extension/customtheme/GboardCustomThemeTargetContract.java`**:
-  - Строки 69–80: вызывает статический метод `boolean` из `GboardCustomThemeVersionBindings.VALIDATOR_CLASS / VALIDATOR_METHOD` (для `18.5.4` это `Lrnw;->h(Ljava/io/File;)Z`).
-- **`extensions/extension/src/main/java/dev/jason/gboardpatches/extension/customtheme/GboardCustomThemeOfficialImportRuntime.java`**:
-  - Строки 15, 21–92: перехватывает нажатие «+» в `ThemeListingFragment`, позволяет выбрать фото или ZIP, передаёт имя файла через `intent_extra_key_new_theme_file_name` в `Lkhl;->i(Intent)V`.
+- **`extensions/extension/src/main/java/dev/jason/gboardpatches/extension/customtheme/GboardCustomThemeGalleryView.java` (строки 132–133, 471–496)** и **`GboardPatchesSettingsActivity.java` (строки 1313–1320, 2441–2478)**:
+  - После успешного вызова `GboardCustomThemeInstaller.install(...)` галерея **принудительно запрашивает холодный перезапуск процесса Gboard**: `GboardPatchesSettingsContract.requestTargetRestart(host)` → `requestGboardRestart()` → `GboardRestartCrashRecoveryGuard.prepare(...)` → `coldRestartGboard(...)` → `Intent.makeRestartActivityTask(...)` + `System.exit(0)`.
+  - Это подтверждает, что существующая галерея `Custom Theme` **не полагается** на автоматическое «живое» перечитывание `additional_keyboard_theme` без перезапуска процесса!
+- **`extensions/extension/src/main/java/dev/jason/gboardpatches/extension/customtheme/GboardCustomThemeOfficialImportRuntime.java` (строки 15, 21–92)**:
+  - Перехватывает нажатие «+» в штатном `ThemeListingFragment`, позволяет выбрать фото или ZIP, а после импорта вызывает `GboardCustomThemeTargetContract.deliverImportedTheme(peer, intent)` → `Lkhl;->i(Intent)V` с `intent_extra_key_new_theme_file_name`. Это путь штатного экрана тем Gboard, а не фоновый IME-сервис.
+- **`extensions/extension/src/main/java/dev/jason/gboardpatches/extension/customtheme/GboardCustomThemeTargetContract.java` (строки 69–80)**:
+  - Вызывает статический валидатор `Lrnw;->h(Ljava/io/File;)Z` (профиль `18.5.4`).
 
-### 2.2. Хранение настроек патчей и защита от Direct Boot
+### 2.2. Структура настроек GboardSamsung и хранилище Direct Boot
 
 - **`extensions/extension/src/main/java/dev/jason/gboardpatches/extension/settings/GboardPatchesSettings.java`**:
-  - Строки 11, 21–28: все настройки GboardSamsung хранятся в файле `gboard_patches_settings` в **CE-хранилище** (`lookupContext.getSharedPreferences("gboard_patches_settings", MODE_PRIVATE)`).
-  - Строки 55–89: `preferencesOrNull(context)` и `readRuntimeSetting(...)` **всегда** проверяют `isUserUnlocked(context)` (`UserManager.isUserUnlocked()`), возвращая `null` / `fallback` до разблокировки устройства (fail-closed).
-- **`extensions/extension/src/main/java/dev/jason/gboardpatches/extension/flagsettings/GboardFlagRuntimeContext.java`**:
-  - Строки 16–43: получает `Application Context` через `ActivityThread.currentApplication()` / `AppGlobals.getInitialApplication()` и делегирует проверку разблокировки в `GboardPatchesSettings`.
+  - Строки 11, 21–28: все настройки патчей хранятся в `gboard_patches_settings` в **CE-хранилище**.
+  - Строки 55–89: `preferencesOrNull(context)` и `readRuntimeSetting(...)` проверяют `isUserUnlocked(context)` (`UserManager.isUserUnlocked()`), возвращая `null` / `fallback` до разблокировки.
+- **`extensions/extension/src/main/java/dev/jason/gboardpatches/extension/settings/GboardPatchesSettingsFeatureRegistry.java` (строки 34–43)**:
+  - Главный экран настроек `Patches` содержит 7 верхнеуровневых пунктов в строгом порядке:
+    1. `GboardAiVoiceSettingsGroupFeature` («ИИ и голосовой ввод»)
+    2. **`GboardLanguageSettingsFeature` («Язык»)** — отдельный верхнеуровневый экран!
+    3. `GboardLanguageModelSettingsFeature` («Словари и подсказки»)
+    4. `GboardKeyboardToolsSettingsGroupFeature` («Инструменты и сочетания»)
+    5. `GboardKeyboardLayoutSettingsGroupFeature` («Клавиши, макет и символы» — внутри: `Dismiss Suggestions`, `Symbol Footer`, `Emoji Size`, `Access Points Menu`, `Split Keyboard`, `Rounded Keyboard`, `Top Toolbar Item Count`, `Custom Theme`, `Frosted Glass`)
+    6. `GboardClipboardSettingsFeature` («Буфер обмена»)
+    7. `GboardMoreSettingsGroupFeature` («Дополнительно»)
+- **`extensions/extension/src/main/java/dev/jason/gboardpatches/extension/spacebargesture/GboardLanguageSettingsFeature.java` (строки 15–126)** и **`GboardSpacebarGestureSettings.java` (строки 14–103)**:
+  - Экран **«Язык»** (`gboard_patches_language_settings_title`) имеет ровно одну секцию **«Переключение языка»** (`gboard_patches_language_settings_section`) с двумя независимыми переключателями:
+    1. `Переключение языка свайпом по пробелу` (`pref_spacebar_language_swipe_enabled`, по умолчанию `true`);
+    2. `Скрыть клавишу переключения языка` (`pref_hide_language_switch_key`, по умолчанию `false`, при изменении немедленно вызывает `GboardSpacebarGlobeKeyRuntime.onHidePreferenceChanged(hidden)`).
+  - Обе настройки кэшируются с `CACHE_TTL_MS = 1000L` и читаются через `GboardPatchesSettings.readRuntimeSetting(...)`.
+  - Поисковый индекс настроек хранится в генерируемом `GboardSettingsSearchIndexData.java` (строки 19, 90–92).
 
-### 2.3. View-теги Gboard, Frosted Glass и Rounded Keyboard Panel
+### 2.3. View-теги Gboard, Frosted Glass, Rounded Keyboard и Key Shape Selection
 
 - **`extensions/extension/src/main/java/dev/jason/gboardpatches/extension/frostedglass/GboardFrostedGlassRuntime.java`**:
-  - Строки 47–49, 1140–1155, 1259–1265: подтверждены живые `View.getTag()` строковые теги Gboard `18.5.4`:
-    - Поверхности: `.keyboard-base-area`, `.keyboard-base-area.keyboard-outline`, `.keyboard-header-area` (через `contains`), `.keyboard-body-area` (через `contains`), `.candidates-area` (через `startsWith`).
+  - Строки 47–49, 1140–1155, 1259–1265: подтверждены живые строковые `View.getTag()` в `Gboard 18.5.4`:
+    - Поверхности: `.keyboard-base-area`, `.keyboard-base-area.keyboard-outline`, `.keyboard-header-area`, `.keyboard-body-area`, `.candidates-area`.
     - Клавиши: `.keytop`, `.keytop.*`, `.space_bar`, `.space_bar.*`.
-    - Action Key: `.background-icon.for-action-key` и `.background-icon.for-action-key.*` — причём в строке 1071 прямо задокументировано: *«The action-key fill can be an image separate from its foreground icon»* (`ImageView.getDrawable()` отдельно от `view.getBackground()`!).
-    - Исключения: `.for-candidate-key` (пропускается, чтобы не ломать прозрачное неактивное состояние кандидатов).
-  - Строки 64, 79–180: жизненный цикл IME перехвачен через `Lphr;` (`onConfigureWindow`, `onWindowShown`, `onWindowHidden`), навигационная полоса на API 36 (`STOCK_STRIP_SDK = 36`) рисуется самим Gboard в `InputView` (ворота `ewx.ak` и `Lrra;->f(Window, Lrqz;)`).
+    - Action Key: `.background-icon.for-action-key` и `.background-icon.for-action-key.*` (в строке 1071 прямо отмечено, что заливка Action Key может быть отдельным `ImageView.getDrawable()`, а не `view.getBackground()`).
+    - Исключения: `.for-candidate-key`.
+  - Строки 64, 79–180: жизненный цикл IME перехвачен через `Lphr;` (`onConfigureWindow`, `onWindowShown`, `onWindowHidden`); нижняя полоса навигации на Android 16 (`STOCK_STRIP_SDK = 36`) окрашивается Gboard внутри `InputView` через `Lrra;->f(Window, Lrqz;)`.
 - **`extensions/extension/src/main/java/dev/jason/gboardpatches/extension/roundedkeyboard/GboardRoundedKeyboardRuntime.java`**:
-  - Строки 8–11, 28–49: переопределяет радиусы скругления **только** для двух панельных селекторов: `.keyboard-base-area.keyboard-outline` и `.keyboard-body-area.keyboard-outline-bottom.clip-to-outline-for-old-android`. На радиусы отдельных клавиш этот runtime не влияет.
+  - Переопределяет радиусы **только** для `.keyboard-base-area.keyboard-outline` и `.keyboard-body-area.keyboard-outline-bottom.clip-to-outline-for-old-android` через `Lrnb;->b(String, List)`. На радиусы отдельных клавиш не влияет.
+- **`extensions/extension/src/main/java/dev/jason/gboardpatches/extension/featureflags/GboardFeatureFlagsRuntime.java` (строки 20–21, 65–71)** и **`GboardFlagFamilyComposer.kt` (строки 51–55)**:
+  - Патч **`Key Shape Selection`** работает исключительно через композитор флагов (`compositionOrder = 40`): когда Gboard запрашивает boolean-флаг `"more_pill_keys"` и сток возвращает `Boolean.FALSE`, runtime возвращает `Boolean.TRUE` (если маркер фичи `FEATURE_KEY_SHAPE_SELECTION` включён). Это открывает в штатных настройках Gboard («Тема» → детали темы) выбор формы клавиш. Патч не имеет собственного runtime-перехвата отрисовки View.
 
 ### 2.4. Пробел, SoftKeyView и жесты пробела
 
+- **`patches/src/main/kotlin/dev/jason/gboardpatches/patches/gboard/shared/GboardSoftKeyFamilyComposer.kt` (строки 21–52, 204–234, 259–290)**:
+  - Компонует хуки вокруг `SoftKeyView.s(SoftKeyDef, long)Z` (`soft_key_bind`, confidence `0.99`, проверенная форма `18.5.4`: `registerCount == 8`, `returnInstructionIndices().size == 2`, `tryBlocks.isNotEmpty()`, `SoftKeyView.setSoftKeyDef` trace marker, запись `f:J`, чтение `e:SoftKeyDef`).
+  - `after_stock` вставляет вызовы **перед каждым нормальным `return`** метода `SoftKeyView.s(...)`. Сейчас там один участник — `SAMSUNG_SPACEBAR_GESTURES` (`afterOrder = 900`, `GboardSpacebarGlobeKeyRuntime.afterSoftKeyBind(View)`).
 - **`extensions/extension/src/main/java/dev/jason/gboardpatches/extension/spacebargesture/GboardSpacebarGlobeKeyRuntime.java`**:
-  - Строки 16, 34–106: работает через композитор хуков `SoftKeyView.s(SoftKeyDef, long)Z` (`after_stock`, `afterOrder = 900`), отслеживает переиспользованные `SoftKeyView` через `WeakHashMap<View, Integer>` и гарантированно восстанавливает состояние, когда слот переназначается другой клавише.
-- **`extensions/extension/src/main/java/dev/jason/gboardpatches/extension/spacebargesture/GboardSpacebarKeyHitTester.java`**:
-  - Строки 21–28, 48–75, 148–187: надёжно определяет клавишу пробела без привязки к layout-ID по метаданным: `SoftKeyView.e` (`SoftKeyDef`) → `SoftKeyDef.g(qae.PRESS)` (`ActionDef`) → `ActionDef.f[0]` (`qbc`) → `qbc.c == KeyEvent.KEYCODE_SPACE (62)`.
+  - Использует `WeakHashMap<View, Integer>` (`TRACKED_GLOBE_VIEWS`) и при каждом `afterSoftKeyBind` проверяет, не переназначен ли слот другой клавише, чтобы восстановить исходную видимость переиспользованного `SoftKeyView`.
+- **`extensions/extension/src/main/java/dev/jason/gboardpatches/extension/spacebargesture/GboardSpacebarKeyHitTester.java` (строки 48–75, 148–187)**:
+  - Читает primary `PRESS` keycode напрямую из `SoftKeyView.e` (`SoftKeyDef`) → `SoftKeyDef.g(qae.PRESS)` (`ActionDef`) → `ActionDef.f[0]` (`qbc`) → `qbc.c == KeyEvent.KEYCODE_SPACE (62)`. Не опирается на layout ID.
 
-### 2.5. Верхний тулбар (Access Points), их количество и меню
+### 2.5. Верхний тулбар: Access Point Count, Contributions, Menu и Rambler
 
-- **`extensions/extension/src/main/java/dev/jason/gboardpatches/extension/accesspointcount/GboardAccessPointCountSettings.java` и `GboardAccessPointCountPolicy.java`**:
-  - Диапазон настраиваемого количества элементов: **`MIN_COUNT = 3`**, **`MAX_COUNT = 8`**, **`DEFAULT_COUNT = 6`**.
-  - Переопределяются два Long-флага Gboard: `config_max_access_points` и `config_default_access_points_num_on_bar`.
-- **`extensions/extension/src/main/java/dev/jason/gboardpatches/extension/accesspoint/GboardAccessPointContributionsRuntime.java`**:
-  - Хукает `Lmvg;->m(...)` (каталог порядка `Lwpa;`) и `Lmwv;-><init>(Context, Lmyc;)V` (контроллер Access Points), синхронизируя `mwv.g` (`Lmwg;`) и `mwg.c` (`Lwpa;`) для `Manual Incognito`, `Floating Web Search` и `Editing Access Points`.
-- **`extensions/extension/src/main/java/dev/jason/gboardpatches/extension/accesspointsmenu/GboardAccessPointsMenuRuntime.java` и `GboardAccessPointsMenuPatch.kt`**:
-  - Управляет флагом `enable_access_points_menu_redesign`, переключает body/layout (`LEGACY_BODY = 0x7f0b070c` / `MODERN_BODY = 0x7f0b070d`, `LEGACY_LAYOUT = 0x7f0e062e` / `MODERN_KEYBOARD_LAYOUT = 0x7f0e01aa`) и модифицирует `AccessPointDragPopupView` (`prepareDrag`, `dragMode`, `dragScale`).
-- **`extensions/extension/src/main/java/dev/jason/gboardpatches/extension/featureflags/GboardFeatureFlagsRuntime.java`**:
-  - Строки 20–21: `FLAG_KEY_SHAPE_SELECTION = "more_pill_keys"` (включает выбор формы клавиш в Gboard).
+- **`GboardAccessPointCountSettings.java` / `GboardAccessPointCountPolicy.java` / `GboardAccessPointCountRuntime.java` / `GboardAccessPointCountSettingsFeature.java` / `GboardAccessPointCountFlagValuePatch.kt` / `GboardFlagFamilyComposer.kt` (строки 96–100)**:
+  - Подтверждённая цепочка: пользователь задаёт `PREF_KEY_ENABLED` (по умолчанию `false`) и `PREF_KEY_COUNT` (`3..8`, по умолчанию `6`), обе настройки помечены `.setRestartRequired(...)`. В рантайме `GboardFlagFamilyComposer` (`order = 1300`) на выходе `Loki;->g()Object` вызывает `GboardAccessPointCountRuntime.applyFlagValue(flagName, stockResult)`, который при `enabled == true` и `stockResult instanceof Long` заменяет значения **ровно двух флагов** — `config_max_access_points` и `config_default_access_points_num_on_bar` — на `Long.valueOf(settings.count)`. Никаких других хуков в макете тулбара этот патч не ставит.
+- **`GboardAccessPointContributionsRuntime.java` / `GboardAccessPointContributionsPatch.kt` / `GboardEditingAccessPointsContribution.java`**:
+  - Хукает `Lmvg;->m(...)` (каталог токенов порядка `Lwpa;`, `Set<String>`) и `Lmwv;-><init>(Context, Lmyc;)V` (контроллер AP, синхронизация `mwv.g` (`Lmwg;`) → `mwg.c` (`Lwpa;`)).
+  - Регистрирует пользовательские AP (`Manual Incognito`, `Floating Web Search`, `Editing Access Points`: `Select All`, `Copy`, `Cut`, `Paste`) через `mtr.c()` → `mtm` → `mwv.g(descriptor, false)` как обычные перетаскиваемые Access Points.
+- **`GboardAccessPointsMenuRuntime.java` / `GboardAccessPointsMenuPatch.kt`**:
+  - Управляет флагом `enable_access_points_menu_redesign`, выбором body/layout (`0x7f0b070c` / `0x7f0b070d`, `0x7f0e062e` / `0x7f0e01aa`) и `AccessPointDragPopupView` (`prepareDrag`, `completeDrag`, `rollbackDrag`, `dragMode`, `dragScale`). Не читает `config_max_access_points`.
+- **`GboardRamblerStockPolicy.java` / `GboardRamblerOfficialSelectorPatch.kt` / `GboardRamblerResetHeader.kt`**:
+  - Отдельные флаги (`enable_agentic_dictation`, `enable_rambler_al_toolbar`, `enable_rambler_toolbar_at_cursor_position`, `filter_rambler_contributed_input_view_session`, `show_rambler_dict_settings`, `ad_activation_type = 2L`) и 5 жёстких SHA-256 отпечатков голосового заголовка (`Lflb;`, `Lfkl;`, `Lfkm;`, `Les;`, `Lflz;`, `Lkaf;`).
 
-### 2.6. Голосовой ввод Rambler
-
-- **`extensions/extension/src/main/java/dev/jason/gboardpatches/extension/rambler/GboardRamblerStockPolicy.java`**:
-  - Строки 10–48: принудительно выставляет флаги `show_rambler_dict_settings`, `filter_rambler_contributed_input_view_session`, `enable_rambler_toolbar_at_cursor_position`, `enable_rambler_al_toolbar`, `ad_activation_type = 2L`, а `enable_agentic_dictation` — условно через `GboardRamblerOfficialSelectionRuntime.shouldEnableAgenticDictation()`.
-- **`patches/src/main/kotlin/dev/jason/gboardpatches/patches/gboard/features/rambler/GboardRamblerOfficialSelectorPatch.kt` и `GboardRamblerResetHeader.kt`**:
-  - Патчит `VoiceSettingsFragment`, `Lnca;->a(Context)Z`, `Lfhv;->hU()V`, `Lflb;->i(Z)V` (с жёсткой проверкой SHA-256 структурных отпечатков `Lflb;`, `Lfkl;`, `Lfkm;`, `Les;` на `18.5.4`) и `Lflz;->J()V` (замена `Lkaf;->e(...)` на `Lkaf;->h(CharSequence)V`, чтобы сброс не захватывал голосовой заголовок повторно).
-
-**Итоговый вердикт раздела 2:** **Можно реализовывать безопасно**
+**Итоговый вердикт раздела 2:** **Можно реализовывать безопасно** *(имеется в виду опора на перечисленные подтверждённые факты исходного кода).*
 
 ---
 
 ## 3. Что подтверждено реальными ZIP/CSS темами
 
-В ходе анализа сторонних ZIP-тем Gboard (из закреплённой ревизии каталога `PackRepoBeta` `4a8187db`: `3D_Black.zip`, `3D_Ios.zip`, `google_blue_dark_port.zip`) подтверждён фактический формат пользовательских ZIP/CSS-тем, применяемых сообществом для Gboard.
+В ходе анализа сторонних ZIP-тем Gboard (закреплённая ревизия каталога `PackRepoBeta` `4a8187db`: `3D_Black.zip`, `3D_Ios.zip`, `google_blue_dark_port.zip`) изучен фактический формат пользовательских ZIP/CSS-тем, используемый сообществом.
 
-> **Критическое ограничение доказательности:** наличие селектора или CSS-свойства в стороннем ZIP-архиве **подтверждает лишь синтаксис формата тем Gboard в прошлых/общих версиях**, но **НЕ доказывает**, что конкретное свойство корректно применяется и визуально рендерится в `Gboard 18.5.4` с Material 3 / Dynamic Color на Android 16.
+> **Критическое ограничение доказательности:** присутствие свойства или селектора в стороннем ZIP-архиве **подтверждает лишь синтаксис формата тем Gboard в прошлых/общих сборках**, но **НЕ доказывает** его поддержку, приоритет над Material 3 (`more_pill_keys`) или корректный рендеринг в `Gboard 18.5.4` на Android 16 / One UI 8.
 
-### 3.1. Структура архива ZIP-темы (сторонние эталоны)
+### 3.1. Структура архива ZIP-темы (сторонние эталоны `PackRepoBeta` `4a8187db`)
 
-- `metadata.json` в корне архива:
-  - `format_version: 3`
-  - `id`, `name`
+- Корневой `metadata.json`:
+  - `format_version: 3`, `id`, `name`
   - `is_light_theme: true | false`
-  - `prefer_key_border: true | false`
-  - `lock_key_border: true | false`
-  - `style_sheets`: массив базовых CSS-файлов (например, `["style_sheet_base.css"]`)
+  - `prefer_key_border: true | false`, `lock_key_border: true | false`
+  - `style_sheets`: список базовых CSS-файлов (например, `["style_sheet_base.css"]`)
   - `flavors`: условные оверлеи, например `{ "type": "BORDER", "style_sheets": ["style_sheet_border.css"] }`
 - CSS-файлы с переменными (`@def color_... #RRGGBB;`) и правилами для селекторов.
 
 ### 3.2. Строгая четырёхкатегорийная классификация CSS-свойств и селекторов
 
-В соответствии с требованиями аудита все CSS-свойства и селекторы разделены на **4 непересекающиеся категории**:
-
 | Категория | Свойства / селекторы | Источник / основание классификации |
 | --- | --- | --- |
-| **1. Реально подтверждены в Gboard `18.5.4`** | View-теги поверхностей и клавиш: `.keyboard-base-area`, `.keyboard-base-area.keyboard-outline`, `.keyboard-header-area`, `.keyboard-body-area`, `.candidates-area`, `.keytop`, `.space_bar`, `.background-icon.for-action-key`, `.for-candidate-key`; панельные радиусы через `Lrnb;->b(String, List)` для `.keyboard-base-area.keyboard-outline` и `.keyboard-body-area.keyboard-outline-bottom.clip-to-outline-for-old-android`; валидатор архивов `Lrnw;->h(File)Z`. | Прямой исходный код `GboardFrostedGlassRuntime.java`, `GboardRoundedKeyboardRuntime.java`, `gboard-version-bindings.json` (`18.5.4`). |
-| **2. Найдены только в сторонних темах** | Селекторы: `.keytop.dark`, `.keytop.for-action-key`, `.icon.for-action-key`, `.label`, `.label.secondary`, `.icon.access-point-item`, `.background-icon.access-points-menu`, `.background.access-point-panel-item`, `.keytop:pressed`, `.space_bar:pressed`. Свойства: `background_shape`, `background_corner_radius`, `elevation`, `shadow_color`, `edge_width`, `edge_color`, `padding_ratio_left/right/top/bottom`, `alpha`, `color`, `background_color`, `visibility`, `text_size`. | Сторонние архивы `3D_Black.zip`, `3D_Ios.zip`, `google_blue_dark_port.zip` (`PackRepoBeta` `4a8187db`). Не проверялись на `18.5.4`. |
-| **3. Существование подтверждено, но фактическое отображение не проверено** | Применение пользовательских ZIP-тем через `additional_keyboard_theme = "files:<name>"` и `enable_key_border`, а также стилизация существующих в `18.5.4` тегов `.keyboard-base-area`, `.keyboard-header-area`, `.keyboard-body-area`, `.keytop`, `.space_bar`, `.background-icon.for-action-key` через собственный Samsung CSS-архив. | Механизм установки (`GboardCustomThemeInstaller`) и теги подтверждены в `18.5.4`, но ни один Samsung CSS-архив ещё не запускался на `18.5.4`. |
-| **4. Требуют эксперимента на устройстве** | (а) Переопределяет ли CSS `background_shape: rectangle` + `background_corner_radius` круглую/pill-форму `?123` и `Enter` при активном Material 3 / `more_pill_keys`; (б) рендерится ли `elevation` / `shadow_color` в `18.5.4` без артефактов; (в) работают ли `.icon.access-point-item`, `.background-icon.access-points-menu` и фоновые подложки тулбара в `18.5.4`; (г) затрагивает ли CSS-селектор иконок тулбара кнопку Rambler; (д) реагирует ли Gboard `18.5.4` на смену `additional_keyboard_theme` мгновенно без переоткрытия клавиатуры; (е) взаимодействие `lock_key_border: true` с пользовательской настройкой «Контуры клавиш». | Невозможно установить статически без прогона тестового ZIP на Samsung Galaxy S22 5G с `Gboard 18.5.4`. |
+| **1. Подтверждено исходниками для Gboard `18.5.4`** | View-теги поверхностей и клавиш: `.keyboard-base-area`, `.keyboard-base-area.keyboard-outline`, `.keyboard-header-area`, `.keyboard-body-area`, `.candidates-area`, `.keytop`, `.space_bar`, `.background-icon.for-action-key`, `.for-candidate-key`; панельные радиусы `Lrnb;->b(String, List)` для `.keyboard-base-area.keyboard-outline` и `.keyboard-body-area.keyboard-outline-bottom.clip-to-outline-for-old-android`; валидатор архивов `Lrnw;->h(File)Z`. | Прямой исходный код `GboardFrostedGlassRuntime.java`, `GboardRoundedKeyboardRuntime.java`, `gboard-version-bindings.json` (`18.5.4`). |
+| **2. Найдено только в сторонних темах (`PackRepoBeta` `4a8187db`)** | Селекторы: `.keytop.dark`, `.keytop.for-action-key`, `.icon.for-action-key`, `.label`, `.label.secondary`, `.icon.access-point-item`, `.background-icon.access-points-menu`, `.background.access-point-panel-item`, `.keytop:pressed`, `.space_bar:pressed`. Свойства: `background_shape`, `background_corner_radius`, `elevation`, `shadow_color`, `edge_width`, `edge_color`, `padding_ratio_left/right/top/bottom`, `alpha`, `color`, `background_color`, `visibility`, `text_size`. | Сторонние архивы `3D_Black.zip`, `3D_Ios.zip`, `google_blue_dark_port.zip`. **Совместимость с `Gboard 18.5.4` НЕ доказана.** |
+| **3. Механизм подтверждён, но фактический рендер не проверен** | Применение пользовательских ZIP-тем через `additional_keyboard_theme = "files:<name>"` и `enable_key_border`, а также стилизация живых тегов `18.5.4` (`.keyboard-base-area`, `.keyboard-header-area`, `.keyboard-body-area`, `.keytop`, `.space_bar`, `.background-icon.for-action-key`) собственным Samsung CSS-архивом. | Установка/валидация (`GboardCustomThemeInstaller`) и View-теги подтверждены в `18.5.4`, но Samsung ZIP ещё не запускались на устройстве. |
+| **4. Требуют эксперимента на реальном устройстве (`18.5.4`)** | (а) Переопределяют ли `background_shape` и `background_corner_radius` pill-форму `?123` / `Enter` при активном/отключённом `Key Shape Selection` (`more_pill_keys`); (б) рендерятся ли `elevation`, `shadow_color`, `edge_color`, `padding_ratio_*` в `18.5.4` без артефактов; (в) различает ли CSS обычные Access Points, кнопку меню `⊞`, кнопку Rambler и подсказки; (г) перечитывает ли Gboard `18.5.4` ключ `additional_keyboard_theme` без `System.exit(0)`; (д) поведение `lock_key_border` и `enable_key_border` совместно с `Frosted Glass`. | Невозможно доказать без запуска тестовых ZIP на Galaxy S22 5G с `Gboard 18.5.4`. |
 
 **Итоговый вердикт раздела 3:** **Можно реализовывать после проверки на устройстве**
 
@@ -160,24 +192,23 @@
 
 ## 4. Что подтверждено непосредственно для Gboard 18.5.4
 
-Все приведённые ниже факты подтверждены напрямую для `Gboard 18.5.4` (`gboard-version-bindings.json` с `"target_version": "18.5.4"`, `docs/GBOARD_18.5.4_BYTECODE_REFERENCE_EXTRACT.md`, структурные SHA-256 проверки в `patches/` и реальный скриншот пользователя `Screenshot_20261121_205256_ChatGPT.jpg`):
+Все перечисленные факты подтверждены для `Gboard 18.5.4` (`gboard-version-bindings.json` с `"target_version": "18.5.4"`, структурные SHA-256 проверки в `patches/` и реальный скриншот пользователя `Screenshot_20261121_205256_ChatGPT.jpg`):
 
-1. **Контракт валидации тем `18.5.4`:** `Lrnw;->h(Ljava/io/File;)Z` (`custom_theme_validator`) валидирует ZIP-архивы перед импортом. `ThemeListingFragment` (`Lkhl;`, `Lkhr;`, `Lsrk;`) обрабатывает выбор и импорт ZIP.
-2. **Контракт жизненного цикла IME `18.5.4`:** класс `Lphr;` предоставляет точные методы `onConfigureWindow(Window, Z, Z)`, `onWindowShown()`, `onWindowHidden()`, `onStartInput(EditorInfo, Z)`, `onStartInputView(EditorInfo, Z)`, `onFinishInput()`, `onFinishInputView(Z)`, `onDestroy()`, а также поле `Lphr;->i:InputView`.
-3. **Контракт привязки клавиш `18.5.4`:** `SoftKeyView.s(SoftKeyDef, long)Z` (`soft_key_bind`, confidence `0.99`), поля `SoftKeyView.e` (`SoftKeyDef`), `SoftKeyDef.g(Lqae;)`, `ActionDef.f`, `Lqbc;->c:I`. Это подтверждённый и уже стабильно работающий в продакшне (`v4.4.2`) путь определения пробела (`KEYCODE_SPACE = 62`).
-4. **Контракт навигационной полосы на Android 16 (API 36):** `Lrra;->f(Window, Lrqz;)` (`STOCK_STRIP_SDK = 36`), где `Lrqz;` содержит `a: color`, `b: divider`, `c: OptionalInt body`, `d: OptionalInt header`, `e: boolean light`. На Galaxy S22 5G (Android 16) нижняя полоса под клавиатурой окрашивается самим Gboard внутри `InputView`, а не только через `Window.setNavigationBarColor`.
-5. **Контракт верхнего тулбара `18.5.4`:**
-   - Контроллер Access Points: `Lmwv;` (`<init>(Context, Lmyc;)`, `k(Lmsx;)V`, `F()V`, `g(Lmtr;, Z)V`), порядок элементов: `Lmvg;->m(...)` и `Lmwg;->c:Lwpa;`.
-   - Количество элементов на панели: `config_max_access_points` и `config_default_access_points_num_on_bar` (3–8) через `Loki;->g()Object` (`flag_bool_getter`, confidence `0.99`).
-   - Переключение стиля меню Access Points: `enable_access_points_menu_redesign`, ID ресурсов `0x7f0b070c` / `0x7f0b070d`, `0x7f0e062e` / `0x7f0e01aa`, `AccessPointDragPopupView`.
-6. **Контракт Rambler `18.5.4`:** жёсткие структурные отпечатки `Lflb;->i(Z)V`, `Lfkl;->d()V`, `Lfkm;->c(Lfkm;)V`, `Les;`, плюс `Lflz;->J()V` → `Lkaf;->h(CharSequence)V` и `Lnca;->a(Context)Z`.
-7. **Визуальный факт на реальном скриншоте `GboardSamsung` (`18.5.4` на Galaxy S22):**
-   - В верхнем тулбаре **нет `•••`**: слева кнопка меню 4-квадрата (`⊞`), далее 7 иконок инструментов, справа кнопка **Rambler (микрофон с искрой)** в **готовой тёмно-серой круглой подложке**.
-   - Клавиши `?123` и `Enter` сейчас имеют **круглую/pill-форму** (Material 3 / `more_pill_keys`), а функциональные клавиши (`Shift`, `Backspace`, `,`, `.`) окрашены в синевато-серый тон Material You.
-   - Пробел сейчас отображает центрированную надпись `Русский` без шевронов.
-   - Верхние углы панели клавиатуры скруглены (`Rounded Keyboard Panel` / Material 3).
-8. **Что НЕ подтверждено для `18.5.4` в репозитории:**
-   - В репозитории **отсутствует** проприетарный APK `Gboard 18.5.4`, его `res/raw/style_sheet_*.css` и `res/layout/*header*.xml`. Следовательно, **ни один конкретный CSS-селектор иконок тулбара, ни внутренняя структура View-дерева `SoftKeyView` пробела, ни View-структура кнопки Rambler не могут считаться подтверждёнными до проверки на устройстве или инспекции локальной копии APK**.
+1. **Валидация и импорт тем `18.5.4`:** `Lrnw;->h(Ljava/io/File;)Z` (`custom_theme_validator`) валидирует ZIP-архивы; `ThemeListingFragment` (`Lkhl;`, `Lkhr;`, `Lsrk;`) обрабатывает выбор и импорт ZIP через `Lkhl;->i(Intent)V`. При этом галерея `GboardCustomThemeGalleryView` после записи `additional_keyboard_theme` делает холодный перезапуск (`System.exit(0)`).
+2. **Жизненный цикл IME `18.5.4`:** класс `Lphr;` с точными методами `onConfigureWindow(Window, Z, Z)`, `onWindowShown()`, `onWindowHidden()`, `onStartInput(EditorInfo, Z)`, `onStartInputView(EditorInfo, Z)`, `onFinishInput()`, `onFinishInputView(Z)`, `onDestroy()` и полем `Lphr;->i:InputView`.
+3. **Привязка клавиш `18.5.4`:** `SoftKeyView.s(SoftKeyDef, long)Z` (`soft_key_bind`, confidence `0.99`), поля `SoftKeyView.e`, `SoftKeyDef.g(Lqae;)`, `ActionDef.f`, `Lqbc;->c:I`. Используется в подтверждённой базе `v4.4.2` для определения пробела (`KEYCODE_SPACE = 62`).
+4. **Навигационная полоса Android 16 (API 36):** `Lrra;->f(Window, Lrqz;)` (`STOCK_STRIP_SDK = 36`), где `Lrqz;` несёт `a: color`, `b: divider`, `c: OptionalInt body`, `d: OptionalInt header`, `e: boolean light`.
+5. **Верхний тулбар `18.5.4`:** контроллер AP `Lmwv;`, порядок `Lmvg;->m(...)` и `Lmwg;->c:Lwpa;`, флаги `config_max_access_points` / `config_default_access_points_num_on_bar` (`3..8`) через `Loki;->g()Object`, стиль меню `enable_access_points_menu_redesign` и `AccessPointDragPopupView`.
+6. **Rambler `18.5.4`:** жёсткие SHA-256 отпечатки `Lflb;->i(Z)V`, `Lfkl;->d()V`, `Lfkm;->c(Lfkm;)V`, `Les;`, плюс `Lflz;->J()V` → `Lkaf;->h(CharSequence)V` и `Lnca;->a(Context)Z`.
+7. **Визуальные факты с реального скриншота пользователя (`GboardSamsung`, Galaxy S22):**
+   - В верхнем тулбаре **нет `•••`**: слева кнопка меню 4-квадрата (`⊞`), далее 7 иконок инструментов (`Translate`, `Writing Tools`, `Clipboard`, `Select All`, `Paste`, `Text Editing`, `Globe` — всего **8 элементов перед Rambler** без круглых подложек), справа — отдельная кнопка **Rambler** (`[Микрофон ✦]`) **с уже готовой нативной тёмной круглой подложкой**.
+   - Клавиши `?123` и `Enter` сейчас имеют круглую/pill-форму (`more_pill_keys` / Material 3), функциональные клавиши имеют синевато-серый оттенок Material You, вторичные символы включены, пробел показывает центрированное `Русский` без шевронов.
+8. **Что НЕ подтверждено для `18.5.4` по репозиторию (проприетарный APK отсутствует):**
+   - Точный список поддерживаемых CSS-свойств (`background_shape`, `background_corner_radius`, `elevation`, `shadow_color`, `edge_color`, `padding_ratio_*`) и селекторов тулбара/Action Key/вторичных символов;
+   - Внутреннее View-дерево `SoftKeyView` пробела (тег `.space_bar`, тип `TextView` метки языка, отступы, момент обновления цвета при Dynamic Color);
+   - Точная формула, как Gboard `18.5.4` трактует `config_max_access_points` и `config_default_access_points_num_on_bar` (входит ли кнопка меню `⊞` в это число);
+   - Внутренний View/CSS-контракт кнопки Rambler и её отличие от обычных AP на уровне View-иерархии;
+   - Момент перечитывания `additional_keyboard_theme` и путь разрешения префикса `"files:"` (CE vs DE) в загрузчике тем `18.5.4`.
 
 **Итоговый вердикт раздела 4:** **Можно реализовывать после проверки на устройстве**
 
@@ -185,160 +216,254 @@
 
 ## 5. Что требует проверки на устройстве
 
-Ниже приведён закрытый список проверяемых гипотез, которые **невозможно** доказать только по коду репозитория и которые необходимо проверить на Samsung Galaxy S22 5G (`SM-S901U1`, Android 16 / One UI 8, `Gboard 18.5.4`, без root) до перехода к соответствующим этапам реализации:
+Закрытый реестр гипотез, которые **невозможно** доказать по исходникам репозитория и которые должны быть проверены на Samsung Galaxy S22 5G (`SM-S901U1`, Android 16 / One UI 8, `Gboard 18.5.4`, без root):
 
-| # | Что проверить на Galaxy S22 5G | Этап проверки | Критерий успеха | Действие при провале |
+| # | Что проверить на Galaxy S22 5G | Когда проверять | Критерий успеха | Действие при провале |
 | --- | --- | --- | --- | --- |
-| **V1** | Проходит ли минимальный Samsung Light/Dark ZIP валидацию `Lrnw;->h(File)Z` и применяются ли `.keyboard-base-area`, `.keyboard-header-area`, `.keytop`, `.keytop.dark`, `.space_bar`, `.label`, `.label.secondary` в `18.5.4`. | Этап 2 | Фоны, буквенные, функциональные клавиши и подписи соответствуют палитре в Light и Dark без крашей. | Корректировка имён селекторов/структуры `metadata.json` по фактическому поведению `18.5.4`. |
-| **V2** | Переопределяют ли CSS `background_shape: rectangle` и `background_corner_radius` pill-форму клавиш `?123` и `Enter` при включённом и выключенном `Key Shape Selection` (`more_pill_keys`). | Этап 2 | Предсказуемая форма скруглённых прямоугольников или чётко задокументированная зависимость от `more_pill_keys`. | Не добавлять хрупкий bytecode-хук формы клавиш; задокументировать рекомендацию по `Key Shape Selection`. |
-| **V3** | Как отображаются все состояния Action Key (`Enter`, `Search`, `Send`, `Done`, `Next`, `Go`): заливка (`.background-icon.for-action-key` / `.keytop.for-action-key`) и иконка (`.icon.for-action-key`). | Этап 2 | Высокий контраст во всех 6 типах Action Key в Light и Dark, нет «белого на белом» или двойной заливки. | Подобрать контрастный вариант (синяя иконка на функциональной клавише, как на эталоне Samsung One UI 8, или синяя заливка + белая иконка — выбрать тот, что стабильно работает во всех 6 вариантах). |
-| **V4** | Какова фактическая иерархия дочерних View внутри `SoftKeyView` пробела (где находится `.space_bar`, где `TextView` метки языка, какие у них `left/right/top/bottom` и `padding`). | Этап 3 | Точно известны внутренние границы видимого keycap пробела и `TextView` языка во всех режимах. | Не рисовать шевроны по внешним краям `SoftKeyView`; привязать к внутреннему `.space_bar` либо использовать выверенный отступ; если границы нестабильны в Split/Floating — отключать шевроны в этих режимах. |
-| **V5** | Работают ли CSS-селекторы тулбара (`.keyboard-header-area`, `.icon.access-point-item`, `.background-icon.access-points-menu`) и **затрагивают ли они кнопку Rambler** или полосу подсказок (`.candidates-area`). | Этап 4 | Фон тулбара и цвета иконок корректны, полоса подсказок читаема, кнопка Rambler не искажена. | Сузить CSS только до `.keyboard-header-area` и проверенных безопасных селекторов; не трогать Rambler. |
-| **V6** | Какова точная View-иерархия верхнего тулбара в `18.5.4` при 3, 6 и 8 Access Points + кнопка меню слева + Rambler справа: какие `View.getTag()`, ID, классы и размеры (dp) имеет каждый слот. | Этап 5 (пред-гейт) | Подтверждён 100% детерминированный идентификатор типа слота (AP vs Menu vs Rambler vs Suggestions) без опоры на индекс. | **Отказаться от Этапа 5** (круглых подложек Access Points), оставив чистый и безопасный тулбар Этапа 4. |
-| **V7** | Перезагружает ли Gboard `18.5.4` тему сразу при записи `additional_keyboard_theme` в DE `SharedPreferences` в `onStartInputView`/`onConfigurationChanged`, или требуется повторное открытие клавиатуры / переинициализация. | Этап 6 | Переключение системного Light/Dark на Galaxy S22 (шторка / расписание) применяет нужную тему без крашей и мерцания. | Зафиксировать фактическое поведение (например, обновление при следующем `onStartInputView` без форсированного перезапуска процесса). |
-| **V8** | Поведение Direct Boot: после перезагрузки Galaxy S22 **до первого ввода PIN** (когда CE `getFilesDir()` заблокировано, а DE `additional_keyboard_theme` указывает на `"files:..."`) — падает ли Gboard `18.5.4` или корректно откатывается на стоковую тему? И читает ли `18.5.4` префикс `"files:"` исключительно из CE `getFilesDir()`? | Этап 2 и Этап 6 | Ноль крашей на экране ввода PIN после перезагрузки; после разблокировки Samsung-тема активна. | Сохранить хранение ZIP строго в том же каталоге, что и `GboardCustomThemeInstaller` (`context.getFilesDir()`), не переносить в DE без доказательства. |
+| **V1** | Валидация Samsung Light/Dark ZIP через `Lrnw;->h(File)Z` и фактический рендер CSS (`.keyboard-base-area`, `.keytop`, `.keytop.dark`, `.space_bar`, `.label`, `.label.secondary`, `background_corner_radius`, `elevation`, `shadow_color`, `edge_color`, `padding_ratio_*`). | Шаги 2–3 | Палитра, контраст, границы, тени, popup-клавиши и вторичные символы корректны в Light и Dark без крашей. | Убрать неподдерживаемые свойства; скорректировать селекторы под фактический парсер `18.5.4`. |
+| **V2** | Взаимодействие CSS (`background_shape`, `background_corner_radius`) с существующим патчем `Key Shape Selection` (`more_pill_keys` вкл/выкл) на клавишах `?123` и `Enter`. | Шаг 3 | Понятная и предсказуемая форма клавиш (прямоугольная с 6–8 dp или чётко описанное поведение `Key Shape Selection`). | Не удалять и не ломать `Key Shape Selection`; не внедрять bytecode-хаки формы клавиш. |
+| **V3** | Все 6 типов Action Key (`Enter`, `Search`, `Send`, `Done`, `Next`, `Go`): заливка (`.background-icon.for-action-key` / `.keytop.for-action-key`) и иконка (`.icon.for-action-key`) в Light и Dark. | Шаг 3 | Высокий контраст во всех 6 вариантах, отсутствие «белого на белом» или двойной заливки. | Отказаться от синего акцента, если селекторы ненадёжны, либо выбрать подтверждённый контрастный вариант. |
+| **V4** | Внутренняя иерархия `SoftKeyView` пробела в `18.5.4`: наличие `.space_bar`, точные `bounds`/`padding`, класс `TextView` метки языка, поведение `getCurrentTextColor()` на Light/Dark/Samsung/Custom Theme/Dynamic Color, поведение `ViewOverlay` при recycling (`QWERTY`↔`?123`↔`Emoji`), Floating, Split, One-handed, повороте и масштабе. | Шаг 4 (пред-гейт) | 0 «призраков» на других клавишах, 0 наложений на текст, корректные bounds и цвет во всех проверенных режимах. | Упростить (уменьшение/скрытие) или **отложить реализацию шевронов** до нахождения безопасного механизма. |
+| **V5** | CSS-селекторы верхнего тулбара (`.keyboard-header-area`, `.icon.access-point-item`, `.background-icon.access-points-menu`, `.candidates-area`) и влияние на кнопку **Rambler** и полосу подсказок. | Шаг 5 | Фон тулбара, иконки и подсказки контрастны; кнопка Rambler и её диктовка не искажены. | Сузить CSS только до `.keyboard-header-area` и подтверждённых безопасных правил. |
+| **V6** | Точная View/CSS-структура слотов верхнего тулбара при 3, 6 и 8 AP + `⊞` + Rambler: возможно ли детерминированно отличить типы элементов (обычные AP vs меню vs Rambler vs подсказки) без привязки к индексам. | Шаг 7 (пред-гейт) | 100% детерминированный идентификатор типа слота + отсутствие слипания при `Count = 8` и в One-handed. | **Отказаться от круглых подложек AP** (штатный безопасный исход). |
+| **V7** | Реакция Gboard `18.5.4` на изменение `additional_keyboard_theme` в DE `SharedPreferences` **без** `System.exit(0)`: есть ли штатный `OnSharedPreferenceChangeListener`, обновляется ли тема при открытой клавиатуре, при следующем `onStartInputView`, или только после перезапуска процесса. | Шаг 6 (пред-гейт) | Известен точный момент перечитывания ключа; ноль крашей и мерцания при смене системной темы Android. | Если требуется рестарт процесса — **не применять `System.exit(0)` в IME**, пересмотреть или отложить авто-переключение. |
+| **V8** | Direct Boot и путь чтения `"files:"`: после перезагрузки Galaxy S22 **до первого ввода PIN** (CE `getFilesDir()` заблокировано, DE `additional_keyboard_theme` = `"files:..."`) — падает ли `18.5.4` или мягко откатывается к стоку? Читает ли `18.5.4` префикс `"files:"` исключительно из CE `filesDir`? | Шаги 3 и 6 | Ноль сбоев до ввода PIN; после разблокировки тема активна; пользовательские настройки не теряются. | Не переносить ZIP в DE без доказательства; не переключать тему до доступности CE и всех настроек. |
+| **V9** | **Эксперимент Access Point Count (`3`, `6`, `8`):** установить `Top Toolbar Item Count` = `3`, затем `6`, затем `8` (с перезапуском Gboard каждый раз), а также проверить добавление/удаление пользовательского AP (`Copy`) и скрытие голосового ввода в поле пароля. | Перед Шагами 5 и 7 | Однозначно установлена формула видимых слотов: входит ли кнопка меню `⊞` в число `3..8`, как ведёт себя Rambler и сколько обычных AP помещается на баре. | Не проектировать адаптацию тулбара на допущениях; использовать измеренную формулу. |
 
 **Итоговый вердикт раздела 5:** **Требуется дополнительное исследование**
 
 ---
 
-## 6. Архитектура оформления клавиш
+## 6. Архитектура оформления клавиш, геометрии и вторичных символов
 
-### 6.1. Оценка базовой палитры и геометрии относительно Samsung One UI 8
+### 6.1. Согласованная цель и жёсткие границы
 
-Отправная палитра (проверена по эталонным скриншотам Samsung Keyboard One UI 8 Light/Dark и подлежит тонкой доводке на реальном AMOLED-экране Galaxy S22 в Этапе 2):
+Цель — визуально приблизить основную клавиатуру Gboard к Samsung Keyboard / One UI 8, **полностью сохранив**:
+- оригинальный движок Gboard (`SoftKeyboardView`, `KeyboardView` **не переписываются**);
+- исходную сетку клавиш, порядок клавиш, карту символов и назначения клавиш;
+- обработчики касаний, жесты (`Samsung Spacebar Gestures`, `Swipe Down to Dismiss`, свайп-набор, удержание пробела для курсора) и логику переключения языков.
 
-| Элемент | Samsung One UI 8 Light (база) | Samsung One UI 8 Dark (база) | Примечание по контрасту и реализации |
+Запрещено менять внутреннюю геометрию клавиатурного движка, переносить клавиши между рядами или перестраивать карту клавиш.
+
+### 6.2. Две отдельные темы: Samsung One UI 8 Light и Samsung One UI 8 Dark
+
+Базовая палитра (отправная точка для Шага 1, подлежащая визуальной проверке на AMOLED-экране Galaxy S22 на Шаге 3):
+
+| Элемент | Samsung One UI 8 Light | Samsung One UI 8 Dark | Примечание и уровень доказательности |
 | --- | --- | --- | --- |
-| Фон клавиатуры (`.keyboard-base-area`, `.keyboard-body-area`) | `#EAEAEF` | `#08080A` | В Dark почти чистый чёрный (AMOLED-совместимый, не #000000 с резкой границей, а глубокий `#08080A`). |
-| Фон тулбара (`.keyboard-header-area`) | `#F3F3F7` или `#EAEAEF` | `#121214` или `#08080A` | На эталоне Samsung тулбар в Light чуть светлее тела (`~#F5F5F7`), в Dark чуть приподнят (`~#121214`). |
-| Буквенные и цифровые клавиши (`.keytop`) | `#FFFFFF` | `#38383B` | В Light мягкая нижняя тень (`elevation`/`shadow_color` проверить в V1); в Dark плоские высококонтрастные клавиши. |
-| Пробел (`.space_bar`) | `#FFFFFF` | `#38383B` | Цвет совпадает с буквенными клавишами, как на эталоне Samsung. |
-| Функциональные клавиши (`Shift`, `Backspace`, `?123`, `,`, `.`) | `#C8CACF` | `#1C1C1F` | В Dark функциональные клавиши **темнее** буквенных (ключевое отличие Samsung от стокового Gboard!). |
-| Основной текст и иконки клавиш | `#1C1C1E` | `#FFFFFF` | Контраст WCAG AAA (`> 14:1` в Light и `> 11:1` в Dark). |
-| Вторичные символы (`.label.secondary`) | `#6B6E75` (или alpha ~0.62) | `#B0B3B8` (или alpha ~0.68) | На скриншоте пользователя вторичные символы включены — важно сохранить их чёткую читаемость. |
-| Синий акцент Action Key (`Enter`/`Search`/`Send`/`Done`/`Next`) | `#2A6BF2` | `#4D8BFF` | **Важное наблюдение по эталону Samsung One UI 8:** на эталонных скриншотах Samsung сама клавиша поиска/ввода имеет фон функциональной клавиши (`#C8CACF` / `#1C1C1F`), а **иконка лупы/стрелки окрашена в синий акцент** (`#2A6BF2` / `#4D8BFF`). В Gboard `.background-icon.for-action-key` может рисовать отдельную заливку — в Этапе 2 нужно проверить оба варианта (цветная иконка на функциональной клавише vs синяя заливка с белой иконкой) на всех 6 Action Keys. |
-| Состояние нажатия (`:pressed`) | `#DCDCE2` (буквы), `#B4B7BE` (функц.) | `#525256` (буквы), `#2E2E33` (функц.) | Обязательна мгновенная визуальная обратная связь при тапе. |
+| Фон клавиатуры (`.keyboard-base-area`, `.keyboard-body-area`) | `#EAEAEF` (светло-серый) | `#08080A` (почти чёрный) | Теги **[Подтверждено исходниками]**; фактический рендер из Samsung ZIP — **[Требует проверки на устройстве]**. |
+| Фон тулбара (`.keyboard-header-area`) | `#F3F3F7` / `#EAEAEF` | `#121214` / `#08080A` | Тег **[Подтверждено исходниками]**; проверка контраста с подсказками и Rambler — на Шаге 5 (V5). |
+| Буквенные/цифровые клавиши и пробел (`.keytop`, `.space_bar`) | `#FFFFFF` (белые) | `#38383B` (графитовые) | Теги **[Подтверждено исходниками]**; умеренная тень в Light — **[Требует проверки на устройстве]**. |
+| Функциональные клавиши (`Shift`, `Backspace`, `?123`, `,`, `.`) | `#C8CACF` (нейтрально-серые) | `#1C1C1F` (темнее буквенных) | Селектор `.keytop.dark` — **[Сторонние темы / CSS]** (`PackRepoBeta` `4a8187db`), требует проверки V1. |
+| Основной текст и иконки клавиш | `#1C1C1E` (тёмный, WCAG AAA) | `#FFFFFF` (светлый, WCAG AAA) | Селектор `.label` — **[Сторонние темы / CSS]**, требует проверки V1. |
+| Вторичные символы (`.label.secondary`) | `#6B6E75` (или alpha `~0.62`) | `#B0B3B8` (или alpha `~0.68`) | Селектор `.label.secondary` — **[Сторонние темы / CSS]**, требует проверки V1. |
+| Синий акцент `Enter` / `Search` / `Send` | `#2A6BF2` *(условно)* | `#4D8BFF` *(условно)* | **Допустим ТОЛЬКО при подтверждённых безопасных селекторах (V3).** В `18.5.4` `.background-icon.for-action-key` может быть отдельным `ImageView.getDrawable()` (**[Подтверждено исходниками]**). Назначение клавиш не меняется. |
+| Состояние нажатия (`:pressed`) | `#DCDCE2` / `#B4B7BE` | `#525256` / `#2E2E33` | Псевдокласс `:pressed` — **[Сторонние темы / CSS]**, требует проверки V1. |
 
-### 6.2. Принцип: ZIP/CSS-тема как первичный и единственный слой для клавиш
+### 6.3. Геометрия клавиш (6–8 dp), тени и взаимодействие с `Key Shape Selection`
 
-- **Почему НЕ bytecode/runtime-перекраска каждой клавиши:** перехват отрисовки всех ~45 `SoftKeyView` в рантайме создаёт риск лагов при быстром наборе, конфликта с `Frosted Glass` (`applyKeyOpacity`) и поломки popup-подсказок. Нативный движок тем Gboard (`metadata.json` + CSS) — штатный механизм самого приложения, валидируемый `Lrnw;->h(File)Z`.
-- **Граница ответственности `Key Shape Selection` (`more_pill_keys`):** на скриншоте пользователя `?123` и `Enter` сейчас круглые (pill). В Этапе 2 необходимо проверить, возвращает ли CSS `background_shape: rectangle` + `background_corner_radius: 7dp` прямоугольную форму при `more_pill_keys = true/false`. **Запрещено** ломать или удалять патч `Key Shape Selection` ради внешнего вида.
-- **Граница ответственности `Rounded Keyboard Panel`:** в `18.5.4` радиусы самой панели (`Lrnb;->b`) регулируются отдельным патчем `GboardRoundedKeyboardRuntime`. Тема Samsung не должна конфликтовать с ним: пользователь сохраняет полный контроль над скруглением панели.
+- **Целевая визуальная форма:** прямоугольные клавиши со скруглением ~`6–8 dp`, аккуратными границами, мягкими тенями (в Light) и чётким разделением без изменения сетки движка.
+- **Честный статус CSS-свойств геометрии:** свойства `background_shape`, `background_corner_radius`, `elevation`, `shadow_color`, `edge_width`, `edge_color`, `padding_ratio_left/right/top/bottom` взяты из сторонних тем (`PackRepoBeta` `4a8187db`: `3D_Black.zip`, `3D_Ios.zip`, `google_blue_dark_port.zip`). **Их фактическая поддержка и визуальное поведение в `Gboard 18.5.4` на Android 16 НЕ подтверждены** и проверяются в **V1 / V2**.
+- **Проверка существующего патча `Key Shape Selection` (`more_pill_keys`) — [Подтверждено исходниками]:**
+  - В `GboardFeatureFlagsRuntime.java` (`FLAG_KEY_SHAPE_SELECTION = "more_pill_keys"`, `GboardFlagFamilyComposer.kt` order `40`) патч включает флаг `more_pill_keys = true`, который открывает выбор формы клавиш в деталях темы Gboard.
+  - На скриншоте пользователя `?123` и `Enter` сейчас круглые/pill.
+  - **Жёсткое правило:** патч `Key Shape Selection` **не отключать, не удалять и не менять его назначение**. В эксперименте **V2** (Шаг 3) проверяется, имеет ли CSS `background_shape: rectangle` + `background_corner_radius` приоритет над `more_pill_keys` при обоих положениях настройки пользователя. Если `more_pill_keys` имеет приоритет — это документируется пользователю, а не обходится опасным патчингом рендера.
+- **Взаимодействие с `Rounded Keyboard Panel`:** `GboardRoundedKeyboardRuntime` управляет только углами самой панели (`Lrnb;->b`), не вмешиваясь в отдельные клавиши. Конфликт маловероятен, но проверяется на Шаге 3.
 
-### 6.3. Спецификация потенциального изменения (Этап 1: встроенные ZIP/CSS-темы Samsung Light & Dark)
+### 6.4. Вторичные символы
 
-1. **Точное место в исходном коде:**
-   - Ресурсы ассетов расширения: новый каталог в `extensions/extension/src/main/assets/` (или `patches/src/main/resources/` с копированием в расширение через сборку `.rve`, аналогично `settings-previews` / `custom-theme-assets`).
-   - Установка и валидация через существующий `extensions/extension/src/main/java/dev/jason/gboardpatches/extension/customtheme/GboardCustomThemeInstaller.java` (с отдельным детерминированным именованием, не затирающим пользовательские `user_theme_*.zip` — см. разделы 12–13).
-2. **Точный механизм реализации:** два компактных, прошедших `GboardThemeImportContract` и `Lrnw;->h(File)Z` архива (`samsung_oneui8_light.zip` и `samsung_oneui8_dark.zip`) с `format_version: 3`, `is_light_theme`, `prefer_key_border: true` и чистыми CSS-стилями без сторонних растровых картинок (только цвета, радиусы, тени, границы).
-3. **Какие файлы потребуется изменить (после утверждения аудита):**
-   - Новые ресурсы: `samsung_oneui8_light.zip`, `samsung_oneui8_dark.zip` (или исходники CSS + детерминированная упаковка на этапе сборки Gradle).
-   - Новый пакет расширения `extensions/extension/src/main/java/dev/jason/gboardpatches/extension/samsungappearance/` (установщик/активатор поверх `GboardCustomThemeInstaller`).
-   - Регистрация в `GboardPatchesSettingsActivity.java` и строках `gboard_settings_text.xml` (RU + EN).
-4. **Какие существующие компоненты будут затронуты:** `GboardCustomThemeInstaller`, `GboardCustomThemeTargetContract`, `GboardPatchesSettings`, настройки темы Gboard (`additional_keyboard_theme`, `enable_key_border`).
-5. **Какие функции потенциально могут пострадать:** активная пользовательская тема (`Custom Theme`), отображение Action Keys, читаемость вторичных символов и всплывающих подсказок клавиш, совместимость с `Frosted Glass` и `Key Shape Selection`.
-6. **Уровень риска:** **Средний** (механизм установки ZIP доказан в `18.5.4`, но фактический рендер всех CSS-свойств в `18.5.4` Material 3 не проверен на устройстве).
-7. **Как проверить результат:** установить оба ZIP на Galaxy S22 5G (`18.5.4`), проверить RU/EN/Цифры/Символы/Эмодзи/Буфер/Action Keys/Long-press popup/Swipe-след/Light+Dark/Frosted Glass.
-8. **Как откатить изменение:** переключить тему в штатных настройках Gboard («Тема») или выключить режим Samsung Appearance (восстановление сохранённых `additional_keyboard_theme` и `enable_key_border` + удаление наших ZIP-файлов).
+- **Неприкосновенно:** оригинальная карта вторичных символов Gboard, назначение символов, поведение долгого нажатия (long-press) и обработка popup-клавиш. **Запрещено** переносить проприетарную карту Samsung или воспроизводить её внутреннюю логику.
+- **Разрешено исследовать (только CSS, Шаги 1–3):** цвет, контрастность, размер текста (`.label.secondary`) и штатное позиционирование — исключительно если соответствующие CSS-свойства штатно поддерживаются `Gboard 18.5.4` и не ухудшают читаемость на 11-колоночной русской раскладке (`ЙЦУКЕН`) и 10-колоночной английской (`QWERTY`).
+
+### 6.5. Спецификация потенциального изменения (Шаги 1–3: CSS ZIP-темы Light & Dark)
+
+1. **Точное место:** на Шагах 1–3 — только автономные ZIP-файлы (`samsung_oneui8_light.zip`, `samsung_oneui8_dark.zip`) для проверки через **существующий** механизм `Custom Theme` (без единой правки Java/Kotlin/runtime!). Позже (Шаг 6, при утверждении) — встроенные ассеты расширения.
+2. **Механизм:** чистые архивы `format_version: 3`, соответствующие `GboardThemeImportContract` и `Lrnw;->h(File)Z`, без растровых изображений.
+3. **Файлы:** на Шагах 1–3 исходный код и патчи не изменяются вообще.
+4. **Затрагиваемые компоненты:** штатный валидатор `Lrnw;->h(File)Z`, `GboardCustomThemeInstaller` / `ThemeListingFragment`, отображение клавиш, Action Keys, popup, `Frosted Glass`, `Key Shape Selection`.
+5. **Потенциально уязвимые функции:** читаемость Action Keys, вторичных символов, long-press popup, буфера обмена, эмодзи, следа свайп-набора.
+6. **Уровень риска:** **Средний** (полностью обратимо на устройстве за 2 секунды переключением темы).
+7. **Проверка:** импорт обоих ZIP через `Custom Theme` на Galaxy S22 (`18.5.4`) и прогон V1, V2, V3, V8.
+8. **Откат:** выбор любой другой темы в настройках Gboard → «Тема».
 
 **Итоговый вердикт раздела 6:** **Можно реализовывать после проверки на устройстве**
 
 ---
 
-## 7. Архитектура шевронов на пробеле (`‹ Русский ›`)
+## 7. Самостоятельная настройка: Шевроны переключения языка на пробеле (`‹ Русский ›`)
 
-Отображение аккуратных боковых шевронов на клавише пробела (`‹ Русский ›` / `‹ English (US) ›`) — **обязательное визуальное требование** пользователя, напрямую связанное с функцией `Samsung Spacebar Gestures` (переключение языка свайпом влево/вправо по пробелу).
+> **Окончательное решение пользователя (Уточнение №1):** шевроны на пробеле **НЕ являются частью Samsung Keyboard Appearance**. Это полностью **самостоятельная необязательная функция** с отдельным переключателем, выключенным по умолчанию.
 
-### 7.1. Почему НЕЛЬЗЯ использовать CSS или мутацию текста `TextView`
+### 7.1. Название, размещение и полная независимость настройки
 
-1. **CSS-тема не может безопасно добавить шевроны:** в CSS-темах Gboard нет подтверждённого в `18.5.4` свойства для симметричной вставки векторных боковых стрелок с динамическим скрытием при узком пробеле, а фоновое изображение `.9.png` на `.space_bar` будет искажаться при изменении ширины (портрет/ландшафт/Split/Floating), конфликтовать с `Frosted Glass` (`applyKeyOpacity`) и плохо адаптироваться к разным радиусам скругления.
-2. **Мутация текста `TextView.setText("‹ " + text + " ›")` — антипаттерн (НЕДОПУСТИМО):**
-   - Gboard периодически перепривязывает текст языка и может перезаписать или задублировать символы (`‹ ‹ Русский › ›`);
-   - искажается `contentDescription` для TalkBack;
-   - текстовые символы `‹ ›` (U+2039/U+203A) привязаны к ширине строки текста, а не к левому/правому краю клавиши пробела (на эталоне Samsung One UI 8 шевроны стоят **у краёв клавиши пробела**, а не вплотную к слову `Русский`);
-   - меняется расчёт переноса/обрезки длинных названий языков (`Русский • English`).
+- **Название настройки (RU):** **«Шевроны переключения языка на пробеле»**  
+  *(EN: `Spacebar language switch chevrons`)*
+- **Состояние по умолчанию:** **Выключено (`false`)**.
+  - Когда **выключено**: Gboard отображает полностью оригинальный пробел без шевронов; ни один элемент и механизм не изменяются.
+  - Когда **включено**: по обеим сторонам названия активного языка на пробеле отображаются пассивные визуальные шевроны (пример: `‹ Русский ›`); само название языка остаётся оригинальным; шевроны служат лишь визуальной подсказкой о возможности переключения языка.
+- **Оптимальное размещение в реальной структуре проекта [Подтверждено исходниками]:**
+  - В `GboardPatchesSettingsFeatureRegistry.java` (строка 37) уже существует верхнеуровневый экран **`GboardLanguageSettingsFeature`** (**«Язык»** / `Language`), а внутри него (`GboardLanguageSettingsFeature.java`, строки 111–125) — одна секция **«Переключение языка»** (`gboard_patches_language_settings_section`), где уже расположены два независимых `ToggleRow`:
+    1. *Переключение языка свайпом по пробелу* (`pref_spacebar_language_swipe_enabled`);
+    2. *Скрыть клавишу переключения языка* (`pref_hide_language_switch_key`).
+  - **Рекомендуемое место:** добавить **третий независимый `ToggleRow`** («Шевроны переключения языка на пробеле», ключ `pref_spacebar_language_chevrons_enabled` в `gboard_patches_settings`) **прямо внутри этой существующей секции «Переключение языка»**.
+  - Это **не создаёт** новый большой раздел настроек, **не дублирует** существующие настройки и логически объединяет все настройки поведения/отображения языкового переключения в одном месте.
+  - *Важная техническая деталь из исходников:* сейчас `GboardLanguageSettingsFeature.isAvailable(Context)` (строки 70–73) проверяет только маркер `FEATURE_SAMSUNG_SPACEBAR_GESTURES`. При будущей реализации необходимо гарантировать, что: (а) выключение тоггла «Переключение языка свайпом по пробелу» **не скрывает и не блокирует** тоггл шевронов; (б) при выделении шевронов в отдельный Morphe-патч `isAvailable` проверяет наличие любого из маркеров (`FEATURE_SAMSUNG_SPACEBAR_GESTURES || FEATURE_SPACEBAR_CHEVRONS`) и показывает только те строки, чьи патчи установлены; (в) обновляется `GboardSettingsSearchIndexData.java`.
+- **Полная независимость от других функций (обязательное требование):**
+  - Шевроны работают независимо от: **Samsung Keyboard Appearance**, **Samsung Spacebar Gestures**, **Swipe Down to Dismiss Keyboard**, включения/отключения **клавиши глобуса**, **выбранной темы клавиатуры** и любых других механизмов смены языка.
+  - **Запрещено** объединять переключатель шевронов с переключателем Samsung Appearance.
+  - **Запрещено** автоматически включать шевроны при выборе Samsung-темы.
 
-### 7.2. Рекомендуемый механизм: пассивный `Drawable` в `ViewOverlay` поверх `SoftKeyView`
+### 7.2. Адаптивность отображения (цвет и размер)
 
-Наиболее чистая, изолированная и безопасная архитектура в рамках уже существующей инфраструктуры `GboardSamsung`:
+#### Адаптация цвета — честная граница доказательности
 
-- **Точка входа (уже подтверждена в `18.5.4`):** композитор хуков `SoftKeyView.s(SoftKeyDef, long)Z` (`soft_key_bind`, confidence `0.99`), где уже зарегистрирован `GboardSpacebarGlobeKeyRuntime.afterSoftKeyBind(View)` (`afterOrder = 900`). Наш новый обработчик `GboardSpacebarChevronRuntime.afterSoftKeyBind(View)` подключается в тот же `after_stock` композитор (например, `afterOrder = 950`) — **ни одного нового хрупкого bytecode-хука в DEX Gboard не требуется**.
-- **Точная идентификация пробела:** переиспользуется проверенный `GboardSpacebarKeyHitTester.extractPressKeycode(softKeyView) == KeyEvent.KEYCODE_SPACE` (62). Никакой привязки к нестабильным ID раскладок!
-- **Отрисовка через `ViewOverlay` (`softKeyView.getOverlay()`):**
-  - В `ViewOverlay` добавляется лёгкий собственный `SpacebarChevronDrawable` (наследник `Drawable`), рисующий два симметричных векторных `Path` (`<` слева и `>` справа) с закруглёнными концами (`Paint.Cap.ROUND`, `Paint.Join.ROUND`, толщина штриха `~1.6dp`, высота `~8–9dp`).
-  - **`ViewOverlay` полностью пассивен для ввода:** он **не участвует** в `dispatchTouchEvent`, `onTouchEvent`, `MotionEvent` hit-testing, `AccessibilityNodeInfo` и layout-перерасчётах (`requestLayout` не вызывается!). Тем самым **гарантируется 100% сохранение**:
-    - тапа по пробелу;
-    - `Samsung Spacebar Gestures` (свайп влево/вправо);
-    - удержания пробела для управления курсором (`FreeCursorMotionEventHandler`, `TriggerFreeCursorMotionEventHandler`);
-    - свайп-набора (`ScrubMotionEventHandler`).
-- **Жёсткие защитные условия (Fail-Closed & Recycling Safety):**
-  1. **Переиспользование `SoftKeyView`:** при каждом вызове `afterSoftKeyBind(view)` если `extractPressKeycode(view) != KEYCODE_SPACE` ИЛИ режим шевронов выключен — `Drawable` **немедленно удаляется** из `view.getOverlay()` и из `WeakHashMap<View, ChevronAttachment>`, а `OnLayoutChangeListener` отписывается.
-  2. **Привязка к реальным границам видимого keycap (`.space_bar`):** `SoftKeyView` имеет внешние отступы вокруг клавиши. Внутри `SoftKeyView` нужно найти дочерний View с тегом `.space_bar` (если существует — **проверить в V4 на устройстве!**), иначе взять внутренние границы `SoftKeyView` с учётом его `paddingLeft/Right/Top/Bottom`, и установить `drawable.setBounds(...)` по фактическим координатам через `View.OnLayoutChangeListener`.
-  3. **Автоматическое скрытие при узком пробеле и коллизии с текстом:**
-     - Если ширина keycap пробела `< 120dp` (например, половинки пробела в **Split Keyboard**, компактный **Floating** или **One-handed** режим, либо узкий пробел при множестве дополнительных клавиш в нижней строке) — шевроны **не рисуются** (`alpha = 0` / skip draw).
-     - Если найден дочерний `TextView` с меткой языка, вычисляется фактическая ширина текста (`Paint.measureText`), и если расстояние от края текста до внутренней границы шеврона `< 8dp` — шевроны **автоматически скрываются** во избежание наложения на длинное название языка.
-  4. **Адаптация цвета под Light/Dark и тему:** цвет шевронов берётся из текущего цвета текста `TextView` метки пробела (`textView.getCurrentTextColor()` с коэффициентом прозрачности ~0.78–0.85, как на Samsung One UI 8), с фоллбеком на `#1C1C1E` (Light) / `#FFFFFF` (Dark). Благодаря этому шевроны автоматически остаются контрастными даже при `Frosted Glass` или нестандартной теме!
-  5. **Поведение при одном языке и RTL:** в RTL-локали (арабский, иврит) визуальная симметрия (`<` слева, `>` справа) сохраняется без зеркалирования. Если активен только один язык ввода (или отключены жесты свайпа по пробелу) — рекомендуется скрывать шевроны (или привязать к настройке «Шевроны на пробеле» с автоматическим скрытием при 1 языке, если число активных субтипов можно безопасно прочитать из `InputMethodManager` без привилегий).
+| Тема / режим | Предполагаемый способ подбора цвета | Статус доказательности |
+| --- | --- | --- |
+| Светлые темы / Samsung One UI 8 Light | Чтение текущего цвета текста `TextView` метки языка на пробеле (`textView.getCurrentTextColor()` с лёгким приглушением alpha ~0.78–0.85), фоллбек на тёмный контрастный тон (`#1C1C1E`). | **[Архитектурное предположение / Требует проверки V4]** — необходимо убедиться, что в `18.5.4` метка языка является `TextView` (или наследником) и имеет актуальный `currentTextColor` в момент рендера. |
+| Тёмные темы / Samsung One UI 8 Dark | Аналогично — чтение `textView.getCurrentTextColor()`, фоллбек на светлый тон (`#FFFFFF`). | **[Архитектурное предположение / Требует проверки V4]**. |
+| **Dynamic Color** (Material You) | Теоретически `TextView` метки языка уже окрашен движком Gboard в токен `onSurface` / `onSurfaceVariant` палитры Dynamic Color, поэтому чтение `getCurrentTextColor()` может подхватывать нужный оттенок без доступа к закрытым темам Gboard. | **[Требует проверки V4]** — в исходниках **не доказано**, обновляется ли цвет `TextView` до или после `SoftKeyView.s(...)` при смене обоев/системной темы. Поддержка Dynamic Color не гарантируется до проверки на устройстве. |
+| **Пользовательские темы (Custom Theme)** | В стандартных CSS-темах `getCurrentTextColor()` может дать читаемый цвет. Однако в темах с фоновой фотографией, градиентом, нестандартным `ColorStateList` или скрытой меткой языка цвет может оказаться малоконтрастным или не читаться. | **Адаптация ко всем пользовательским темам НЕ гарантирована** (в исходниках репозитория нет механизма чтения фактического цвета/яркости пикселей подложки произвольной ZIP-темы). |
 
-### 7.3. Спецификация потенциального изменения (Этап 3: шевроны пробела)
+#### Адаптация размера и геометрии
 
-1. **Точное место в исходном коде:**
-   - Существующий композитор `SoftKeyView.s(SoftKeyDef, long)Z` (`patches/src/main/kotlin/dev/jason/gboardpatches/patches/gboard/shared/` — `SoftKey` family patch / `RuntimeCallId`).
-   - Новый класс `extensions/extension/src/main/java/dev/jason/gboardpatches/extension/samsungappearance/GboardSpacebarChevronRuntime.java`.
-   - Повторное использование `GboardSpacebarKeyHitTester.extractPressKeycode(View)` (сделать package-private → `public` helper).
-2. **Точный механизм реализации:** `after_stock` хук после `SoftKeyView.s(...)` → проверка `KEYCODE_SPACE` и `isUserUnlocked` → прикрепление пассивного `SpacebarChevronDrawable` в `softKeyView.getOverlay()` с `OnLayoutChangeListener`, привязкой к внутренним границам `.space_bar` и защитой от наложения на `TextView`.
-3. **Какие файлы потребуется изменить:**
-   - `GboardSpacebarKeyHitTester.java` (открыть `public static int extractPressKeycode(View)`).
-   - Новый `GboardSpacebarChevronRuntime.java` + unit/Robolectric-тесты.
-   - Регистрация нового `RuntimeCallId` в `RuntimeAbiCatalog` и подключение к `SoftKey` family composer.
-   - Настройка в `GboardPatchesSettingsActivity.java` и `gboard_settings_text.xml`.
-4. **Какие существующие компоненты будут затронуты:** композитор `SoftKeyView.s(...)`, `GboardSpacebarGlobeKeyRuntime` (разные `afterOrder`, не конфликтуют), `GboardSpacebarKeyHitTester`.
-5. **Какие функции потенциально могут пострадать:** визуальное отображение пробела при переключении раскладок (`QWERTY` ↔ `?123` ↔ `Emoji` ↔ `Split` ↔ `Floating` ↔ `One-handed`), смена ориентации, читаемость длинных названий языков, анимация/обновление пробела при свайпе языка. Обработка касаний не затрагивается.
-6. **Уровень риска:** **Средний** (точка хука и `KEYCODE_SPACE` подтверждены в `18.5.4`, но внутренняя иерархия `SoftKeyView` пробела и поведение `ViewOverlay` при пересоздании/перемасштабировании `SoftKeyView` на `18.5.4` требуют проверки на устройстве).
-7. **Как проверить результат:** на Galaxy S22 проверить: RU/EN, 123/символы, свайп пробела влево/вправо, удержание пробела (курсор), быстрый тап пробела, поворот экрана, Split, Floating, One-handed, `Frosted Glass`, включение/выключение тоггла в настройках (мгновенное удаление оверлея без перезапуска).
-8. **Как откатить изменение:** выключить тоггл «Шевроны на пробеле» (все `Drawable` немедленно снимаются из `ViewOverlay` и `WeakHashMap` очищается) или откатить коммит добавления `GboardSpacebarChevronRuntime`.
+Шевроны **ни при каких условиях не должны**: перекрывать название языка, выходить за пределы видимого keycap пробела, пересекаться с соседними клавишами, создавать визуальные артефакты или изменять ширину пробела / перестраивать сетку клавиатуры.
 
-**Итоговый вердикт раздела 7:** **Можно реализовывать после проверки на устройстве**
+- Учитываемые факторы: фактическая ширина видимого keycap пробела (`.space_bar` или внутренние границы `SoftKeyView`), общие размеры клавиатуры, системное масштабирование экрана/шрифта (Display Size / Font Size), фактическая ширина отрендеренного названия языка (`TextView` / `Paint.measureText`), разные раскладки (RU 11-кол., EN 10-кол., `?123`, символы, телефон).
+- **Поведение при нехватке ширины (graceful degradation):**
+  1. При достаточной ширине (ориентировочно `keycapWidth >= 140 dp` и зазор между краем текста языка и шевроном `>= 8 dp`) — стандартный размер шеврона (`~8–9 dp` по высоте).
+  2. При средней ширине (например, `115–140 dp` или длинное название языка) — допустимо пропорциональное уменьшение размера шеврона (`~6–7 dp`) при сохранении минимального зазора от текста (`>= 6 dp`).
+  3. При недостаточной ширине (`< 115 dp`, зазор `< 6 dp`, отсутствие видимой метки языка или невозможность достоверно измерить `TextView`/keycap) — **полное безопасное скрытие шевронов** без изменения размеров клавиши.
+
+### 7.3. Абсолютный запрет на вмешательство в касания и полный 11-пунктный анализ `ViewOverlay`
+
+#### Абсолютный запрет
+Шевроны — исключительно пассивная визуальная подсказка. **Категорически запрещено:** добавлять собственные `OnTouchListener`, перехватывать `MotionEvent`, изменять существующие touch handlers, менять обработку свайпов, обычного нажатия пробела, удержания пробела для курсора, алгоритмы переключения языков или любые существующие жесты. По тем же причинам **отвергнута** мутация `TextView.setText("‹ " + text + " ›")` (риск дублирования `‹ ‹ ... › ›`, искажение TalkBack, неверное позиционирование вплотную к тексту вместо краёв клавиши).
+
+#### Глубокий 11-пунктный анализ кандидата `ViewOverlay` поверх `SoftKeyView`
+
+Точка подключения, уже подтверждённая в `18.5.4`, — композитор `SoftKeyView.s(SoftKeyDef, long)Z` (`GboardSoftKeyFamilyComposer.kt`, `after_stock`, например `afterOrder = 950`, не пересекается с `GboardSpacebarGlobeKeyRuntime` на `afterOrder = 900`), с фильтрацией `GboardSpacebarKeyHitTester.extractPressKeycode(view) == KeyEvent.KEYCODE_SPACE (62)`.
+
+Однако сам механизм `ViewOverlay` **НЕ доказан как полностью безопасный на `Gboard 18.5.4`** без проверки всех 11 аспектов ниже:
+
+| # | Аспект анализа `ViewOverlay` | Инженерный анализ и выявленный риск | Требуемая защита / статус доказательности |
+| --- | --- | --- | --- |
+| **1** | **Жизненный цикл `SoftKeyView`** | Хук `SoftKeyView.s(...)` вызывается только при привязке `SoftKeyDef`, но **не** при `onDetachedFromWindow()` или смене темы. Без `OnAttachStateChangeListener` объект `Drawable` остаётся привязанным к `ViewOverlay` на всё время жизни View. | Прикреплять `OnAttachStateChangeListener` для очистки на `onViewDetachedFromWindow`; **[Требует проверки V4]**. |
+| **2** | **Повторное использование и recycling `View`** | **[Подтверждено исходниками]** Gboard активно переиспользует `SoftKeyView` между раскладками (см. `GboardSpacebarGlobeKeyRuntime.java`). При смене `QWERTY` → `?123` / `Emoji` тот же экземпляр `SoftKeyView` может стать другой клавишей. | Мгновенно удалять `Drawable` и слушатели в `afterSoftKeyBind`, если `extractPressKeycode != KEYCODE_SPACE` или настройка выключена. |
+| **3** | **Получение и обновление координат пробела** | В момент возврата из `SoftKeyView.s(...)` View ещё может не пройти `measure/layout` (`width == 0`), а видимый keycap `.space_bar` является внутренним дочерним View с собственными отступами. Внутренняя структура `SoftKeyView` в `18.5.4` **не подтверждена в репозитории**. | Обновлять `Drawable.setBounds(...)` через `OnLayoutChangeListener` на **внутреннем** `.space_bar` (или fail-closed, если `.space_bar` не найден); **[Требует проверки V4]**. |
+| **4** | **Корректность bounds при изменении размеров клавиатуры** | Смена высоты клавиатуры в настройках Gboard, включение ряда цифр, изменение DPI/шрифта меняют размеры `SoftKeyView` и `.space_bar` без обязательного повторного вызова `SoftKeyView.s(...)`. | Пересчёт bounds и проверка коллизии с `TextView` на каждом `onLayoutChange` (и на `Drawable.draw` при смене размера), без вызова `requestLayout()`. |
+| **5** | **Очистка Overlay при скрытии клавиатуры** | При скрытии клавиатуры (`onWindowHidden`) `SoftKeyView` может оставаться в кэше `InputView`. При следующем показе после смены темы старый цвет шевронов может мелькнуть на 1 кадр. | Сбрасывать/перечитывать цвет при `onWindowShown` или непосредственно перед отрисовкой в `Drawable.draw(Canvas)` из актуального `TextView.getCurrentTextColor()`. |
+| **6** | **Поведение при пересоздании IME** | При пересоздании `InputMethodService` старые View уничтожаются. Сильные ссылки в статических коллекциях вызвали бы утечку памяти и `Context`. | Только `WeakHashMap<View, ChevronAttachment>` и `WeakReference<View>` внутри `Drawable` и слушателей; явная отписка на detach. |
+| **7** | **Риск появления шевронов на другой клавише после recycling («призраки»)** | **КРИТИЧЕСКИЙ РИСК:** если в `Gboard 18.5.4` существует путь очистки/перепривязки `SoftKeyView`, который **не** проходит через `SoftKeyView.s(SoftKeyDef, long)Z` (например, прямой reset пула или вторичный метод bind), `Drawable` останется в `ViewOverlay` не-пробельной клавиши! | Двойной барьер: очистка в `afterSoftKeyBind` **плюс** проверка в `Drawable.draw(Canvas)` (актуальный `extractPressKeycode(host) == KEYCODE_SPACE` и наличие видимой метки языка; при несовпадении — немедленный self-detach и пропуск рисования). **[Требует проверки V4]**. |
+| **8** | **Floating Keyboard** | Уменьшенная ширина, произвольный ресайз пользователем, возможное масштабирование `scaleX`/`scaleY`. Если `ViewOverlay` не масштабируется синхронно с внутренним keycap или ширина мала — возможны смещения/обрезка. | Проверять фактическую ширину keycap в dp и масштаб; при узком окне уменьшать или полностью скрывать шевроны. **[Требует проверки V4]**. |
+| **9** | **Split Keyboard** | В разделённой клавиатуре пробел делится на **две узкие половинки**, обе могут иметь `KEYCODE_SPACE (62)`. Риск: шевроны появятся на обеих узких половинках и налезут на текст. | Порог минимальной ширины + проверка наличия видимого текста языка; при узких половинках авто-скрытие. **[Требует проверки V4]**. |
+| **10** | **One-handed Keyboard** | Ширина клавиатуры сжимается на ~15–20%. С длинным названием языка (`English (US)`, `Русский`) свободное место по бокам резко сокращается. | Обязательный динамический замер ширины текста (`Paint.measureText` + bounds `TextView`) с уменьшением или скрытием при зазоре `< 6 dp`. **[Требует проверки V4]**. |
+| **11** | **Изменение ориентации и масштаба** | Портрет ↔ Ландшафт, системное увеличение шрифта (Font Scale `1.3x+`) и масштаба экрана (Display Size). При большом шрифте текст расширяется при неизменной ширине пробела. | Все размеры шевронов — в `dp` (не `sp`), пересчёт bounds и проверка коллизии с текстом на каждый `onLayoutChange`; скрытие при нехватке зазора. **[Требует проверки V4]**. |
+
+#### Честный вывод по механизму шевронов и альтернативы
+
+- **Статус `ViewOverlay`:** перспективный пассивный кандидат, **НЕ готовое доказанное решение**. Без проверки **V4** на реальном Galaxy S22 (`18.5.4`) нельзя гарантировать отсутствие «призраков» при recycling, точное совпадение bounds с `.space_bar` и стабильную адаптацию цвета на Dynamic Color и всех Custom Theme.
+- **Рассмотренные альтернативы:**
+  - *Альтернатива 1 (обёртка/LayerDrawable поверх `background` у `.space_bar`):* **выше риск**, так как напрямую конфликтует с `GboardFrostedGlassRuntime.applyKeyOpacity` (меняет альфу `Drawable`) и перезаписывается движком тем при перерисовке состояния `:pressed`. **Не рекомендуется.**
+  - *Альтернатива 2 (изменение `TextView.setText` / `Spannable` / `compoundDrawables`):* **запрещена**, так как искажает TalkBack, конфликтует с перепривязкой текста Gboard и не привязывает шевроны к краям клавиши.
+  - *Альтернатива 3 (отложить реализацию):* если эксперимент **V4** выявит артефакты recycling, некорректные bounds в Floating/Split/One-handed или ненадёжный подбор цвета — **рекомендуется отложить реализацию шевронов**, сохранив чистый оригинальный пробел.
+
+### 7.4. Спецификация потенциального изменения (Шаг 4: самостоятельная настройка шевронов)
+
+1. **Точное место в исходном коде:** `GboardLanguageSettingsFeature.java` (3-й независимый `ToggleRow` в секции `Переключение языка`), `GboardSpacebarGestureSettings.java` (или новый `GboardSpacebarChevronSettings.java`), существующий композитор `GboardSoftKeyFamilyComposer.kt` (`after_stock`, `afterOrder = 950`), новый `GboardSpacebarChevronRuntime.java`, `GboardSpacebarKeyHitTester.java` (открыть `extractPressKeycode`), `gboard_settings_text.xml` (RU/EN), `GboardSettingsSearchIndexData.java`.
+2. **Точный механизм:** независимый тоггл (по умолчанию `false`) → пассивный `Drawable` в `ViewOverlay` после `SoftKeyView.s(...)` (только при `KEYCODE_SPACE == 62`, `isUserUnlocked == true` и подтверждении V4), с двойным барьером recycling, привязкой к `.space_bar` и адаптивным уменьшением/скрытием.
+3. **Изменяемые файлы (после прохождения V4 и одобрения):** перечислены в п. 1 + unit/Robolectric-тесты. Никаких изменений в `Samsung Appearance`, `GboardSpacebarGestureRuntime` (обработка жестов) и `Swipe Down to Dismiss`.
+4. **Затрагиваемые существующие компоненты:** `GboardSoftKeyFamilyComposer` (совместно с `GboardSpacebarGlobeKeyRuntime` на разных `afterOrder`), `GboardLanguageSettingsFeature`.
+5. **Потенциально уязвимые функции:** визуальный вид пробела и соседних переиспользуемых клавиш при смене раскладок/режимов; контраст в нестандартных Custom Theme. Обработка касаний и жестов не затрагивается.
+6. **Уровень риска:** **Средний / Высокий** до прохождения эксперимента **V4** на устройстве.
+7. **Как проверить результат:** прогнать все 11 пунктов анализа на Galaxy S22 (включая RU/EN, `?123`, длинные названия языков, Floating, Split, One-handed, смену масштаба/ориентации, Light/Dark/Dynamic Color/Custom Theme/Frosted Glass, включение/выключение без перезапуска, полную проверку жестов пробела и глобуса).
+8. **Как откатить:** выключить тоггл «Шевроны переключения языка на пробеле» (мгновенная очистка `ViewOverlay`) или откатить изолированный коммит Шага 4.
+
+**Итоговый вердикт раздела 7:** **Требуется дополнительное исследование** *(механизм `ViewOverlay` нельзя считать доказанным до проверки V4 на реальном `Gboard 18.5.4`; при выявлении рисков — отложить).*
 
 ---
 
-## 8. Подробный анализ верхнего тулбара
+## 8. Подробный анализ верхнего тулбара и точная трассировка `Access Point Count` (Уточнение №2)
 
-### 8.1. Фактическая анатомия верхнего тулбара в GboardSamsung `18.5.4`
+### 8.1. Фактическая цепочка реализации `Access Point Count` в репозитории [Подтверждено исходниками]
 
-По данным исходного кода (`GboardAccessPointCountPolicy`, `GboardAccessPointsMenuRuntime`, `GboardAccessPointContributionsRuntime`, `GboardFrostedGlassRuntime`) и реального скриншота пользователя (`Screenshot_20261121_205256_ChatGPT.jpg`), верхняя полоса (`.keyboard-header-area`) в актуальной конфигурации пользователя состоит из **трёх функционально разных зон**:
+Прямой аудит всех файлов подсистем `accesspointcount/`, `accesspoint/`, `accesspointsmenu/` и `rambler/` установил точную цепочку от пользовательской настройки до байткода Gboard:
 
-1. **Левый фиксированный слот — кнопка меню Access Points (`⊞`, сетка 4 квадрата):**
-   - **Кнопки `•••` справа в GboardSamsung НЕТ.** Её аналог в Gboard `18.5.4` — иконка сетки из 4 квадратов на самом левом краю, открывающая панель инструментов (`Lmwv;->F()`, `AccessPointKeyboard`), чей макет зависит от флага `enable_access_points_menu_redesign` (`GboardAccessPointsMenuRuntime`: `LEGACY_BODY = 0x7f0b070c` vs `MODERN_BODY = 0x7f0b070d`).
-2. **Средняя настраиваемая зона — обычные Access Points (от 3 до 8 элементов):**
-   - Количество задаётся патчем `Access Point Count` (`config_max_access_points`, `config_default_access_points_num_on_bar`, `MIN = 3`, `MAX = 8`, `DEFAULT = 6`).
-   - В реальном скриншоте пользователя отображаются 7 инструментов (в сумме с левой кнопкой меню — 8 элементов без подложек): Переводчик, Инструменты письма, Буфер обмена, Выделить всё (`Editing Access Points`), Вставить (`Editing Access Points`), Редактирование текста, Глобус.
-   - При редактировании порядка (long-press + drag) задействуется `AccessPointDragPopupView` (`Lmxb;->y`, `GboardAccessPointsMenuRuntime.prepareDrag/completeDrag/rollbackDrag`).
-   - Во время ввода текста эта же верхняя зона (`.keyboard-header-area` / `.candidates-area`) динамически переключается на **полосу подсказок / автоисправления / inline-подсказок / буфера обмена / проактивных подсказок**!
-3. **Правый фиксированный слот — кнопка голосового ввода Rambler (`🎤✦`):**
-   - На скриншоте пользователя **уже имеет встроенную круглую подложку** тёмно-серого цвета и отдельную логику захвата/освобождения заголовка (подробно разобрано в Разделе 9).
+1. **Экран настроек (`GboardAccessPointCountSettingsFeature.java`):**
+   - Отображается в группе `Клавиши, макет и символы` → «Количество значков на верхней панели».
+   - Содержит переключатель `Enable` (`PREF_KEY_ENABLED`, по умолчанию `false`) и выбор числа `Count` (`PREF_KEY_COUNT`, по умолчанию `6`, валидация `MIN_COUNT = 3`, `MAX_COUNT = 8`).
+   - **Обе настройки помечены `.setRestartRequired(...)`** (строки 133–143): подсказка прямо требует перезапуска Gboard, чтобы изменение вступило в силу.
+2. **Хранилище (`GboardAccessPointCountSettings.java`):**
+   - Читает/пишет `pref_access_point_count_enabled` и `pref_access_point_count_value` в CE `gboard_patches_settings`.
+3. **Политика и рантайм (`GboardAccessPointCountPolicy.java`, `GboardAccessPointCountRuntime.java`):**
+   - Реагирует **ТОЛЬКО** на два имени флагов и **ТОЛЬКО** когда стоковый результат — `Long`:
+     - `config_max_access_points`
+     - `config_default_access_points_num_on_bar`
+   - При `enabled == true` и валидном `count ∈ [3..8]` подменяет возвращаемое значение обоих флагов на `Long.valueOf(settings.count)`.
+4. **Точка внедрения (`GboardAccessPointCountFlagValuePatch.kt` → `GboardFlagFamilyComposer.kt`, строки 96–100):**
+   - Встраивается в общий композитор флагов (`compositionOrder = 1300`) на выходе `Loki;->g()Object`. **Никаких других хуков в макете, адаптере или View-иерархии тулбара патч `Access Point Count` не имеет.**
+5. **Пользовательские Access Points (`GboardAccessPointContributionsRuntime.java`, `GboardAccessPointContributionsPatch.kt`, `GboardEditingAccessPointsContribution.java`):**
+   - Хукает `Lmvg;->m(...)` (расширяет неизменяемый `Set<String>` токенов порядка `Lwpa;`) и `Lmwv;-><init>(Context, Lmyc;)V` (синхронизирует `mwv.g` (`Lmwg;`) → `mwg.c` (`Lwpa;`) и вызывает `mwv.g(mtr descriptor, false)` для регистрации `Manual Incognito`, `Floating Web Search`, `Select All`, `Copy`, `Cut`, `Paste`).
+   - Тем самым пользовательские AP становятся **полноправными обычными перетаскиваемыми Access Points** в том же контроллере `Lmwv;`, что и системные AP Gboard.
+6. **Меню Access Points (`GboardAccessPointsMenuRuntime.java`):**
+   - Управляет только флагом `enable_access_points_menu_redesign`, выбором макета меню (`0x7f0b070c`/`0x7f0b070d`, `0x7f0e062e`/`0x7f0e01aa`) и `AccessPointDragPopupView`. С флагами `config_max_access_points` / `config_default_access_points_num_on_bar` никак не связан.
+7. **Rambler (`GboardRamblerStockPolicy.java`, `GboardRamblerResetHeader.kt`):**
+   - Управляется отдельными флагами (`enable_agentic_dictation`, `enable_rambler_al_toolbar`, `ad_activation_type = 2L` и др.) и отдельным жизненным циклом заголовка (`Lflb;`/`Lkaf;`). **Не регистрируется** через `GboardAccessPointContributionsRuntime` и **не управляется** `Access Point Count`.
 
-### 8.2. Что безопасно менять в тулбаре, а что — зона риска
+### 8.2. Ответы на 9 ключевых вопросов о `Access Point Count`
 
-| Аспект оформления тулбара | Механизм | Безопасность / подтверждённость |
+| # | Вопрос | Честный ответ на основе исходников репозитория | Статус |
+| --- | --- | --- | --- |
+| **1** | Что именно регулирует `Access Point Count`? | Переопределяет два `Long`-флага Gboard: `config_max_access_points` и `config_default_access_points_num_on_bar` в диапазоне `3..8`. Внутренние потребители этих двух флагов находятся в закрытом коде Gboard `18.5.4`. | Частично подтверждено (выход патча — да; логика Gboard — нет) |
+| **2** | Входит ли кнопка меню/сетки (`⊞`) в это число? | **Нельзя однозначно доказать по исходникам репозитория.** В коде патчей нет разбора класса компоновщика бара `18.5.4`. *(Уточнение: утверждение в v3 о том, что 8 = 1 меню + 7 инструментов при `Count = 8`, признаётся неподтверждённой гипотезой!)* | **[Требует проверки V9]** |
+| **3** | Считаются ли только обычные Access Points? | Не доказано, считает ли `config_max_access_points` только обычные слоты AP (тогда на скриншоте пользователя либо `Count = 7`, либо пользователь закрепил 7 из 8 возможных AP) или включает слот меню `⊞` (`1 + 7 = 8`). | **[Требует проверки V9]** |
+| **4** | Является ли кнопка меню (`⊞`) отдельным элементом? | Визуально и функционально кнопка `⊞` фиксирована слева и открывает панель `AccessPointKeyboard` (`Lmwv;->F()`), но занимает ли она один из `config_max_access_points` слотов в `18.5.4` — неизвестно без эксперимента. | **[Требует проверки V9]** |
+| **5** | Входит ли кнопка Rambler в `Access Point Count`? | В коде репозитория Rambler полностью отделён от `Lmwv;` AP-регистрации и управляется своими флагами. На скриншоте пользователя Rambler стоит 9-м элементом справа (при максимуме настройки `MAX_COUNT = 8`!), что **сильно указывает**, что Rambler — отдельный слот вне лимита `Access Point Count`. Окончательно подтверждается в V9 (при `Count = 3` Rambler должен остаться). | Сильное косвенное свидетельство + **[проверка V9]** |
+| **6** | Как соотносятся пользовательские AP и системные элементы панели? | **[Подтверждено исходниками]** Пользовательские AP (`Editing Access Points`, `Manual Incognito`, `Floating Web Search`) добавляются в тот же `Lwpa;` каталог и регистрируются в `Lmwv;->g(mtr, false)`, как и системные AP — для движка Gboard они равноправны (что видно на скриншоте: `Select All` и `Paste` стоят в одном ряду с `Translate` и `Clipboard`). | **[Подтверждено исходниками]** |
+| **7** | Как ведёт себя панель при значениях `3`, `6` и `8`? | Точное количество видимых иконок между `⊞` и Rambler при `3`, `6` и `8`, а также поведение при попытке перетащить лишнюю иконку из меню на бар не описаны в исходниках патчей. | **[Требует проверки V9]** |
+| **8** | Что происходит при изменении состава Access Points (drag-and-drop)? | При перетаскивании порядок сохраняется самим контроллером Gboard (`Lmwv;` / `Lmwg;`), а при перетаскивании задействуется `AccessPointDragPopupView`. Пользователь может закрепить на баре **меньше** элементов, чем лимит `config_max_access_points` (гипотеза, проверяемая в V9). | Частично подтверждено + **[проверка V9]** |
+| **9** | Как ведёт себя интерфейс при включении/отключении дополнительных элементов (например, `Copy`, `Manual Incognito` или скрытии микрофона в поле пароля)? | При отключении пользовательского AP в настройках он перестаёт регистрироваться в `Lmwv;` (требуется перезапуск/переинициализация). Заполняет ли Gboard освободившийся слот следующим AP или сокращает число иконок, и перераспределяется ли ширина при скрытии Rambler в поле пароля — проверяется в V9. | **[Требует проверки V9]** |
+
+### 8.3. Сопоставление с реальной конфигурацией пользователя и безопасный эксперимент V9
+
+На скриншоте пользователя (`Screenshot_20261121_205256_ChatGPT.jpg`) слева направо расположены:
+1. `[1]` Кнопка меню/сетки (`⊞`, 4 квадрата) — без круглой подложки;
+2. `[2..8]` 7 инструментов (`Translate`, `Writing Tools`, `Clipboard`, `Select All`, `Paste`, `Text Editing`, `Globe`) — без круглых подложек;
+3. `[9]` Кнопка голосового ввода **Rambler** (`[Микрофон ✦]`) — справа, **с готовой нативной круглой подложкой**.
+
+Итого: **8 элементов до кнопки Rambler** + **1 кнопка Rambler** = **9 видимых элементов**. Из одного скриншота невозможно определить, какой именно вариант верен:
+- *Гипотеза А:* в Gboard `18.5.4` лимит `Count = 8` **включает** кнопку меню `⊞` (`1 меню + 7 AP = 8`) + отдельный Rambler (`9`).
+- *Гипотеза Б:* лимит `Count` считает **только обычные AP** (без `⊞`), и на скриншоте либо задано `Count = 7`, либо задано `Count = 8`, но закреплено 7 инструментов.
+
+#### Безопасный эксперимент на устройстве (V9, без изменений кода, ~2 минуты)
+
+На текущей установленной сборке `v4.4.2` на Samsung Galaxy S22 5G:
+1. Открыть `Настройки GboardSamsung → Клавиши, макет и символы → Количество значков на верхней панели`. Зафиксировать текущее состояние (`Вкл/Выкл` и число).
+2. Выставить **`3`**, нажать перезапуск Gboard (кнопка в правом верхнем углу). Открыть клавиатуру в обычном текстовом поле и посчитать: (а) есть ли `⊞`, (б) сколько обычных иконок между `⊞` и Rambler, (в) на месте ли Rambler. Попробовать перетащить ещё одну иконку из меню `⊞` на верхнюю панель — добавляется ли она или вытесняет существующую?
+3. Повторить шаг 2 для **`6`** и для **`8`** (после `8` попробовать перетащить максимальное число иконок на панель, пока Gboard не начнёт вытеснять старые).
+4. При одном из значений (например, `6`) открыть **поле ввода пароля** (где голосовой ввод скрывается) и проверить, исчез ли Rambler и изменилось ли число остальных иконок.
+5. Включить/выключить один пользовательский AP (например, `Копировать` в `Кнопки редактирования на панели`) и проверить, как меняется состав панели.
+6. Вернуть исходное значение настройки пользователя.
+
+### 8.4. Безопасные и небезопасные области оформления тулбара
+
+| Аспект оформления тулбара | Механизм | Безопасность и позиция v3.1 |
 | --- | --- | --- |
-| **Цвет фона тулбара** | CSS `.keyboard-header-area` (тег подтверждён в `18.5.4` через `GboardFrostedGlassRuntime.isThemeSurfaceTag`) | **Высокая степень безопасности** после проверки рендера на `18.5.4` (Этап 4). Не трогает обработчики, подсказки и drag-and-drop. |
-| **Цвет иконок обычных Access Points и меню** | CSS (кандидаты из сторонних тем: `.icon.access-point-item`, `.background-icon.access-points-menu` — **не подтверждены в `18.5.4`**) | **Средний риск:** требует проверки на устройстве (V5), не ломает ли цвета иконок в активном состоянии (например, открытый буфер/переводчик) и цвет текста подсказок. |
-| **Круглые подложки под обычными Access Points** | Потенциально CSS или ограниченный runtime-декоратор | **Высокий риск** (см. Разделы 9 и 10): риск коллизии с Rambler, риск перегрузки при 8 элементах (~38–40 dp/слот), риск поломки drag-and-drop (`AccessPointDragPopupView`), активных состояний (`isSelected`/`isActivated`) и полосы подсказок. **НЕ допускается к реализации без отдельного доказательства безопасности на устройстве (Этап 5).** |
+| **Фон тулбара** | CSS `.keyboard-header-area` (**[Подтверждено исходниками]** как View-тег в `18.5.4`) | **Безопасный кандидат Шага 5** после проверки V5 (контраст с подсказками и `Frosted Glass`). |
+| **Цвет иконок тулбара и текста подсказок** | CSS (кандидаты `.icon.access-point-item`, `.background-icon.access-points-menu` — **[Сторонние темы / CSS]**) | **Средний риск:** допускается на Шаге 5 **только** после V5 и при 100% сохранении читаемости активных состояний, подсказок и Rambler. |
+| **Круглые подложки Access Points** | **Необязательный эксперимент** (Шаг 7) — предпочтительно чистый CSS, только если он различает типы элементов | **Высокий риск.** Запрещено привязываться к индексам/позициям или использовать рискованные runtime-обходы ради декора. Если CSS не позволяет безопасно отличать типы — **отказаться от круглых подложек**. |
 
-### 8.3. Спецификация потенциального изменения (Этап 4: фон и цвета тулбара)
+### 8.5. Спецификация потенциального изменения (Шаг 5: фон и цвета тулбара)
 
-1. **Точное место в исходном коде:** CSS-файлы внутри `samsung_oneui8_light.zip` и `samsung_oneui8_dark.zip` (без изменения Kotlin/Java-хуков тулбара!).
-2. **Точный механизм реализации:** декларативные CSS-правила для `.keyboard-header-area` и проверенных в V5 селекторов иконок/кандидатов.
-3. **Какие файлы потребуется изменить:** только CSS-файлы встроенных Samsung ZIP-тем.
-4. **Какие существующие компоненты будут затронуты:** рендер `.keyboard-header-area` и `.candidates-area`, взаимодействие с `GboardFrostedGlassRuntime.applySurfaceOpacity` (который также находит `.keyboard-header-area`).
-5. **Какие функции потенциально могут пострадать:** читаемость подсказок (Suggestions), контраст активных/неактивных иконок Access Points, контраст иконки меню `⊞`, визуальная согласованность с `Frosted Glass` и `Access Points Menu`.
-6. **Уровень риска:** **Средний** (только CSS, но точные селекторы иконок и кандидатов в `18.5.4` требуют эксперимента V5).
-7. **Как проверить результат:** проверить в Light и Dark: пустой тулбар, активный набор текста (подсказки + автоисправление), открытый буфер/эмодзи/переводчик, перетаскивание Access Points, включённый `Frosted Glass`, оба режима `Access Points Menu` (Legacy и Modern).
-8. **Как откатить изменение:** удалить/скорректировать соответствующие CSS-правила в ZIP-теме и переустановить её (нулевое влияние на байткод).
+1. **Точное место:** только CSS-файлы внутри `samsung_oneui8_light.zip` и `samsung_oneui8_dark.zip` (ноль изменений в Kotlin/Java-коде тулбара).
+2. **Механизм:** декларативные правила для `.keyboard-header-area` и подтверждённых в V5 селекторов иконок/кандидатов.
+3. **Файлы:** только CSS-ассеты Samsung ZIP-тем.
+4. **Затрагиваемые компоненты:** `.keyboard-header-area`, `.candidates-area`, `GboardFrostedGlassRuntime.applySurfaceOpacity`.
+5. **Потенциально уязвимые функции:** читаемость подсказок, активных/неактивных иконок AP, кнопки `⊞`, кнопки Rambler.
+6. **Уровень риска:** **Средний** (только CSS, но селекторы иконок и кандидатов не проверены в `18.5.4`).
+7. **Проверка:** пустой тулбар, ввод текста (подсказки + автоисправление), открытые панели (`Clipboard`/`Emoji`/`Translate`), drag-and-drop AP, `Frosted Glass`, Legacy и Modern `Access Points Menu`, 5 циклов диктовки Rambler.
+8. **Откат:** удаление/корректировка CSS-правил в ZIP-теме.
 
-**Итоговый вердикт раздела 8:** **Можно реализовывать после проверки на устройстве**
+**Итоговый вердикт раздела 8:** **Требуется дополнительное исследование** *(обязательны эксперименты V5 и V9 на устройстве; до отдельного согласования пользователя в тулбаре ничего не реализовывать).*
 
 ---
 
@@ -346,267 +471,227 @@
 
 ### 9.1. Почему Rambler нельзя приравнивать к обычным Access Points
 
-На основе прямого анализа кода репозитория и реального скриншота пользователя установлены **четыре критических отличия** кнопки Rambler:
+По данным исходников (`GboardRamblerStockPolicy.java`, `GboardRamblerOfficialSelectorPatch.kt`, `GboardRamblerResetHeader.kt`) и реального скриншота пользователя установлены **четыре критических отличия**:
 
-1. **Отдельная система feature-флагов и политики (`GboardRamblerStockPolicy.java`):**
-   - `enable_agentic_dictation` (контролируется `GboardRamblerOfficialSelectionRuntime.shouldEnableAgenticDictation()` через `Lnca;->a(Context)Z`),
-   - `enable_rambler_al_toolbar`,
-   - `enable_rambler_toolbar_at_cursor_position`,
-   - `filter_rambler_contributed_input_view_session`,
-   - `show_rambler_dict_settings`,
-   - `ad_activation_type = 2L`.
-2. **Отдельный жизненный цикл захвата и освобождения заголовка (`GboardRamblerResetHeader.kt`):**
-   - Rambler использует собственную цепочку классов `Lflb;` / `Lfkl;` / `Lfkm;` / `Les;` / `Lflz;` / `Lkaf;`, вплоть до того, что в `GboardRamblerResetHeader.kt` пришлось зашивать **5 строгих SHA-256 структурных отпечатков методов `18.5.4`** и менять вызов `Lkaf;->e(...)` на `Lkaf;->h(...)`, чтобы при сбросе не происходил повторный захват голосового заголовка.
-3. **Уже существующая нативная круглая подложка на скриншоте пользователя:**
-   - На `Screenshot_20261121_205256_ChatGPT.jpg` кнопка Rambler (`🎤✦`) в правом углу тулбара **уже заключена в собственный круглый/pill-контейнер** с повышенным визуальным акцентом, тогда как 8 элементов левее её не имеют круглой подложки.
-   - Во время диктовки этот элемент трансформируется в активную голосовую панель / индикатор прослушивания (wave/pulse, кнопка остановки/сброса, toolbar-at-cursor).
-4. **Неизвестный внутренний View/CSS-контракт в APK `18.5.4`:**
-   - В исходном коде репозитория **нет** ни ресурсного ID, ни View-тега, ни CSS-селектора этой кнопки в `Gboard 18.5.4`. Делать предположение, что она использует `.icon.access-point-item` или `.background-icon.*`, **запрещено**.
+1. **Изолированная система флагов:** `enable_agentic_dictation`, `enable_rambler_al_toolbar`, `enable_rambler_toolbar_at_cursor_position`, `filter_rambler_contributed_input_view_session`, `show_rambler_dict_settings`, `ad_activation_type = 2L`.
+2. **Хрупкий жизненный цикл голосового заголовка:** 5 жёстких SHA-256 отпечатков (`Lflb;`, `Lfkl;`, `Lfkm;`, `Les;`) + патч `Lflz;->J()` → `Lkaf;->h(CharSequence)V`, защищающий от бага повторного захвата заголовка.
+3. **Готовая нативная круглая подложка:** на скриншоте пользователя кнопка Rambler (`[Микрофон ✦]`) уже имеет круглую подложку и работает штатно; во время диктовки она трансформируется в активную голосовую панель.
+4. **Неизвестный View/CSS-контракт в APK `18.5.4`:** в репозитории нет её View ID, тега или CSS-селектора. Считать её обычным Access Point без доказательства **запрещено**.
 
 ### 9.2. Архитектурное правило для кнопки Rambler
 
-- **На Этапах 1–4:** кнопка Rambler **не модифицируется вообще**. В V5 проверяется, не затрагивают ли общие CSS-правила тулбара (`.keyboard-header-area` и иконки) контраст или фон кнопки Rambler. Если общий CSS случайно искажает Rambler — правило немедленно сужается или удаляется.
-- **На Этапе 5 (если эксперимент с круглыми подложками Access Points состоится):**
-  - Валидация каждого View-слота должна происходить **строго по типу/метаданным/тегу элемента**, а **никогда не по индексу в `ViewGroup`** (например, «все кроме последнего»).
-  - Кнопка Rambler (и любая кнопка голосового ввода) должна быть **явно исключена** из добавления дополнительных круглых подложек: у неё уже есть нативный круг, и повторная обёртка приведёт к «кругу внутри круга», обрезке анимации диктовки или поломке `Lflb`/`Lkaf`.
-  - Если на устройстве не удастся со 100% точностью отличить обычные Access Points от слота Rambler — **Этап 5 отменяется целиком**.
+- Кнопка Rambler **не модифицируется вообще** ни на одном из этапов.
+- На Шаге 5 (V5) проверяется, что общие CSS-правила тулбара не искажают контраст или фон кнопки Rambler; при малейшем искажении правило сужается или удаляется.
+- На условном Шаге 7 (если до него дойдёт дело) Rambler обязан быть **явно исключён** по типу элемента (никогда не по индексу!). При невозможности 100% надёжно отделить обычные AP от Rambler — от круглых подложек AP отказываются целиком.
 
 ### 9.3. Спецификация потенциального изменения (защита Rambler)
 
-1. **Точное место в исходном коде:** `GboardRamblerOfficialSelectorPatch.kt`, `GboardRamblerResetHeader.kt`, `GboardRamblerStockPolicy.java` — **не изменяются**; ограничения применяются в CSS-теме (Этап 4) и в фильтре элементов возможного Этапа 5.
-2. **Точный механизм реализации:** явное исключение (allowlist только подтверждённых обычных Access Points) вместо слепого обхода всех детей заголовка.
-3. **Какие файлы потребуется изменить:** ни одного файла в пакете `rambler/`.
-4. **Какие существующие компоненты будут затронуты:** косвенно — рендер правого слота `.keyboard-header-area` при применении CSS-темы.
-5. **Какие функции потенциально могут пострадать:** запуск и остановка диктовки Rambler, переключение на стоковый голосовой ввод в `VoiceSettingsFragment`, анимация активного микрофона, сброс голосового заголовка (`Lflz;->J()`), `Manual Incognito` (где голосовой ввод может скрываться через `Lvec;->aQ`).
-6. **Уровень риска:** **Высокий** (при любой прямой модификации Rambler) / **Средний** (при политике «не трогать Rambler + проверка V5»).
-7. **Как проверить результат:** в Light и Dark на Galaxy S22 запустить и остановить диктовку Rambler 5+ раз подряд, проверить переход из режима диктовки обратно в тулбар, проверить режим инкогнито (`Manual Incognito`), проверить переключение официального выбора голосового ввода в настройках Gboard.
-8. **Как откатить изменение:** откат CSS-правила тулбара / отключение Этапа 5; байткод `rambler/` остаётся полностью нетронутым.
+1. **Место:** пакет `rambler/` (`GboardRambler*`) **не изменяется**.
+2. **Механизм:** политика неприкосновенности + проверка V5 (и allowlist-фильтрация, если когда-либо рассматривается Шаг 7).
+3. **Изменяемые файлы в `rambler/`:** ноль.
+4. **Затрагиваемые компоненты:** косвенно — визуальный фон `.keyboard-header-area` вокруг правого слота.
+5. **Потенциально уязвимые функции:** запуск/остановка диктовки, анимация микрофона, сброс заголовка (`Lflz;->J()`), `Manual Incognito`, переключение голосовой службы в `VoiceSettingsFragment`.
+6. **Уровень риска:** **Высокий** при любой прямой модификации / **Средний** при политике «не трогать + проверка V5».
+7. **Проверка:** 5+ циклов старта/остановки диктовки Rambler в Light и Dark, возврат в тулбар, `Manual Incognito`, переключение в `VoiceSettingsFragment`.
+8. **Откат:** удаление CSS-правила тулбара; байткод `rambler/` не затрагивался.
 
-**Итоговый вердикт раздела 9:** **Не рекомендуется реализовывать** *(модификацию самой кнопки Rambler; допустимо только безопасное сосуществование без её изменения после проверки V5).*
+**Итоговый вердикт раздела 9:** **Не рекомендуется реализовывать** *(любые прямые модификации кнопки Rambler запрещены; допускается только безопасное сосуществование без её изменения после V5).*
 
 ---
 
-## 10. Адаптивность тулбара от 3 до 8 элементов
+## 10. Адаптивность тулбара (3–8 элементов) и необязательный эксперимент с круглыми подложками
 
-Патч `Access Point Count` (`GboardAccessPointCountSettings.java`) позволяет пользователю выбирать любое число от **`3`** до **`8`** (`config_max_access_points` / `config_default_access_points_num_on_bar`). Кроме того, в тулбаре присутствуют:
-- левая кнопка меню Access Points (`⊞`);
-- правая кнопка голосового ввода Rambler (`🎤✦`) (которая может также скрываться в полях паролей или при настройке голосового ввода).
+### 10.1. Геометрическая плотность на Galaxy S22 5G (~360 dp портрет, ~348 dp рабочая ширина)
 
-### 10.1. Расчёт плотности слотов на Galaxy S22 5G (~360 dp портрет, ~780 dp ландшафт)
+Поскольку точная формула включения/исключения `⊞` в `Access Point Count` ещё подлежит проверке в **V9**, ниже приведена оценка ширины на слот по **фактическому числу видимых элементов в строке** (от 5 до 10 слотов, включая меню `⊞` и Rambler):
 
-Для оценки геометрического риска приведем расчёт доступной ширины на один элемент в портретной ориентации (~360 dp, минус ~8–12 dp боковых полей = ~348 dp рабочей ширины):
-
-| Значение `Access Point Count` | Ориентировочное число видимых слотов (включая меню и Rambler)* | Ширина на слот (портрет ~348 dp) | Оценка безопасности круглых подложек |
+| Видимых слотов в строке (включая `⊞` и Rambler) | Ширина на 1 слот (портрет ~348 dp) | Ширина в One-handed (~295 dp) | Оценка безопасности круглых подложек |
 | --- | --- | --- | --- |
-| **3** | ~4–5 слотов | ~70–87 dp | Геометрически просторно (круг `34–36 dp`, зазор `> 30 dp`). |
-| **4** | ~5–6 слотов | ~58–70 dp | Комфортно (круг `34 dp`, зазор `~24 dp`). |
-| **5** | ~6–7 слотов | ~50–58 dp | Приемлемо (круг `32–34 dp`, зазор `~16–24 dp`). |
-| **6** (по умолчанию) | ~7–8 слотов | ~43–50 dp | Впритык (круг `30–32 dp`, зазор `~11–18 dp`). |
-| **7** | ~8–9 слотов | ~39–43 dp | Плотно: круг `> 32 dp` визуально давит на соседние слоты и Rambler. |
-| **8** (реальная конфигурация пользователя!) | **9 слотов** (подтверждено на скриншоте пользователя) | **~38–39 dp** | **Критическая плотность:** нативный круг Rambler уже занимает почти всю ширину слота; добавление кругов `34–36 dp` на все 8 левых иконок оставит зазор `2–4 dp` (визуальное «слипание»), а уменьшение кругов до `28 dp` сделает их диспропорциональными относительно круга Rambler и самой иконки (`22–24 dp`). |
+| **5 слотов** (например, `Count = 3` + `⊞` + Rambler) | ~69 dp | ~59 dp | Геометрически просторно (круг `32–36 dp`). |
+| **7–8 слотов** (ориентир для `Count = 6`) | ~43–49 dp | ~37–42 dp | Впритык; при One-handed зазор резко сокращается. |
+| **9 слотов** *(факт со скриншота пользователя!)* | **~38–39 dp** | **~32–33 dp** | **Критическая плотность:** нативный круг Rambler уже близок к ширине слота; круги `34–36 dp` на левых элементах дадут слипание (`2–4 dp` зазор), а в One-handed — обрезку или перекрытие. |
+| **10 слотов** *(если `Count = 8` не включает `⊞` и Rambler!)* | **~34–35 dp** | **~29–30 dp** | **Неприемлемая плотность:** круглые подложки в портрете и One-handed будут неизбежно слипаться или обрезаться. |
 
-*(Примечание: точное соотношение между значением `config_max_access_points` и общим числом видимых слотов — включает ли `8` кнопку меню `⊞` или нет — уже видно на скриншоте пользователя: 8 иконок слева/в центре + 1 Rambler справа = 9 элементов в строке.)*
+### 10.2. Жёсткие правила для необязательного эксперимента с круглыми подложками (Шаг 7)
 
-### 10.2. Что происходит в нестандартных режимах ширины
+Круглые подложки Access Points — **необязательный эксперимент, а не обязательная часть проекта**. Они рассматриваются **самыми последними** и подчиняются строгим запретам:
 
-- **One-handed mode (режим одной рукой):** ширина клавиатуры сжимается примерно на 15–20% (~290–305 dp). При 8+1 элементах ширина слота падает до **~32–34 dp** — любые фиксированные круглые подложки `34–36 dp` будут **обрезаны (`clipChildren`) или начнут перекрывать друг друга**!
-- **Floating keyboard (плавающая клавиатура):** ширина произвольно масштабируется пользователем (часто ~280–320 dp) — та же проблема.
-- **Split keyboard (разделённая клавиатура):** верхняя полоса перестраивается под широкий экран/разделённый макет (`Lmwg;->c()`).
-- **Полоса подсказок (Suggestions / Candidates):** при вводе слова контейнер заголовка скрывает обычные Access Points и показывает подсказки; если runtime-декоратор ошибочно привязался к контейнеру или переиспользуемому слоту, подложки могут «протечь» на кандидатов.
+1. **Запрещено:** привязываться к фиксированным индексам (`0..N-1`), привязываться к постоянным позициям, предполагать неизменность числа элементов (количество AP динамически меняется от 3 до 8, элементы добавляются, удаляются и перетаскиваются), допускать «пустые» подложки, допускать смещение оформления при изменении состава панели, изменять обработчики кнопок.
+2. **Условие допуска:** допускается **только** если эксперимент **V6** на `Gboard 18.5.4` подтвердит безопасный механизм (в первую очередь чистый CSS), который детерминированно различает типы элементов: обычные AP отдельно от кнопки меню `⊞`, отдельно от кнопки Rambler и отдельно от полосы подсказок (`.candidates-area` / `.for-candidate-key`).
+3. **Запрет на рискованные runtime-обходы:** если CSS `18.5.4` не позволяет безопасно различать типы элементов — **от круглых подложек следует отказаться**, не прибегая к хрупким runtime-обходам View-дерева заголовка ради декоративного эффекта.
+4. **Отказ от реализации без отдельного согласования:** до отдельного согласования пользователя в тулбаре ничего не реализуется.
 
-### 10.3. Вывод и строгие критерии допуска Этапа 5
+### 10.3. Спецификация потенциального изменения (Шаг 7 — необязательный эксперимент)
 
-1. **Никаких фиксированных диаметров и никаких привязок к индексам (`0..N-1`).**
-2. **Адаптивное правило (если Этап 5 вообще признается безопасным после V6):**
-   - Диаметр круга вычисляется динамически от фактического размера каждого конкретного слота: `d = min(slotWidth - 6dp, slotHeight - 6dp, 36dp)`.
-   - Если `d < 28dp` (например, One-handed / узкий Floating при 8 элементах) — круглые подложки **автоматически отключаются** (graceful degradation), оставляя чистые иконки без обрезки.
-   - При активном перетаскивании (`AccessPointDragPopupView`), скрытом состоянии или показе подсказок подложки не вмешиваются.
-3. **Приоритет стабильности:** если проверка V6 покажет, что в `18.5.4` иерархия тулбара при 8 элементах не даёт чистого и безопасного способа отличить обычные Access Points от Rambler и подсказок — **отказ от круглых подложек (Этап 5) является штатным и предпочтительным решением**, а тулбар оформляется чисто через фон и контрастные цвета иконок (Этап 4).
+1. **Место:** не определено до V6 и V9; допустимо в первую очередь в CSS Samsung ZIP-тем, если `18.5.4` поддерживает изолированный селектор подложки только для обычных AP.
+2. **Механизм:** селектор/декоратор строго по типу элемента с учётом динамического состава 3–8 AP, One-handed, Floating, Split, `AccessPointDragPopupView` и исключения Rambler.
+3. **Файлы:** либо только CSS-темы, либо **полный отказ от реализации** (если CSS недостаточно).
+4. **Затрагиваемые компоненты:** `.keyboard-header-area`, `AccessPointCount`, `AccessPointsMenu` (Legacy/Modern), `EditingAccessPoints`, `FrostedGlass`, `Rambler`, `.candidates-area`.
+5. **Потенциально уязвимые функции:** кликабельность, drag-and-drop AP, активные состояния кнопок, отображение Rambler, читаемость подсказок, One-handed / Floating.
+6. **Уровень риска:** **Высокий**.
+7. **Проверка:** все значения `Count = 3, 6, 8`, перетаскивание AP, добавление/удаление AP, поле пароля (без Rambler), One-handed, Floating, Split, подсказки.
+8. **Откат:** удаление CSS-правила или полный отказ от Шага 7.
 
-### 10.4. Спецификация потенциального изменения (Этап 5 — условный эксперимент)
-
-1. **Точное место в исходном коде:** пока не определено до проверки V6; потенциально CSS (если `18.5.4` поддерживает отдельный селектор подложки только для обычных AP) либо легковесный `Drawable` в наблюдателе заголовка (по аналогии с `GboardFrostedGlassRuntime`, но строго по allowlist-тегам).
-2. **Точный механизм реализации:** динамический адаптивный круг (`GradientDrawable` / `OvalShape`) только на подтверждённых View-слотах обычных Access Points, с автоотключением при тесной ширине (`< 34dp/слот`) и жёстким исключением Rambler и `.candidates-area`.
-3. **Какие файлы потребуется изменить:** либо только CSS-темы (если CSS окажется достаточным), либо новый изолированный класс `GboardToolbarBadgeRuntime.java` + настройка-тоггл (выключен по умолчанию до подтверждения на устройстве).
-4. **Какие существующие компоненты будут затронуты:** `.keyboard-header-area`, `AccessPointCount` (3–8), `AccessPointsMenu` (Legacy/Modern и `AccessPointDragPopupView`), `EditingAccessPoints`, `FrostedGlass`, `Rambler`.
-5. **Какие функции потенциально могут пострадать:** кликабельность и drag-and-drop Access Points, отображение активного/выбранного состояния кнопок, отображение Rambler, читаемость подсказок, One-handed и Floating режимы.
-6. **Уровень риска:** **Высокий** (неизвестная иерархия слотов `18.5.4`, экстремальная плотность при 8+1 элементах и One-handed, соседство с Rambler).
-7. **Как проверить результат:** протестировать все значения `Access Point Count` = `3, 4, 6, 8` в портрете, ландшафте, One-handed, Floating, Split; проверить перетаскивание иконок, переход в подсказки и обратно, запуск Rambler, включённый `Frosted Glass`.
-8. **Как откатить изменение:** отдельный независимый выключатель «Круглые подложки панели инструментов» (мгновенно снимает декоратор без влияния на тему клавиш и шевроны) либо полный отказ от реализации Этапа 5.
-
-**Итоговый вердикт раздела 10:** **Требуется дополнительное исследование**
+**Итоговый вердикт раздела 10:** **Требуется дополнительное исследование** *(при отсутствии безопасного CSS-различения типов — отказаться от круглых подложек).*
 
 ---
 
-## 11. Архитектура автоматического Light/Dark
+## 11. Автоматическое переключение Light / Dark (`Configuration.UI_MODE_NIGHT_MASK`)
 
-### 11.1. Как определять системную тему на Android 16 / One UI 8
+### 11.1. Исследуемое направление и критическое ограничение, выявленное в исходниках
 
-- Единственный стандартный, публичный и безопасный источник истины на Android 16:
-  ```java
-  int nightMask = context.getResources().getConfiguration().uiMode
-          & Configuration.UI_MODE_NIGHT_MASK;
-  boolean isDark = (nightMask == Configuration.UI_MODE_NIGHT_YES);
-  ```
-- **Где слушать изменения (уже подтверждённые точки `18.5.4` в `gboard-version-bindings.json`):**
-  - `Lphr;->onStartInputView(EditorInfo, Z)` (`calculator_input_start` / `editing_ap_onstartinputview` / `manual_incognito_start_view`)
-  - `Lphr;->onWindowShown()` (`frosted_shown`)
-  - `Lphr;->onConfigureWindow(Window, Z, Z)` (`frosted_configure`)
-  - Опционально: `InputMethodService.onConfigurationChanged(Configuration)` (если потребуется мгновенная реакция при открытой клавиатуре — нужно проверить наличие и привязку в `18.5.4`).
+Идея автоматического переключения между `Samsung One UI 8 Light` и `Samsung One UI 8 Dark` по системной теме Android (`context.getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK`) сохраняется как **исследуемое направление (Шаг 6)**, но к ней добавляется критическая оговорка из исходников:
 
-### 11.2. Режимы работы настройки (UX)
+- **[Подтверждено исходниками]** Активная пользовательская тема Gboard задаётся одним ключом `additional_keyboard_theme` (плюс `enable_key_border`) в DE `SharedPreferences` (`context.createDeviceProtectedStorageContext().getSharedPreferences(pkg + "_preferences", MODE_PRIVATE)` — `GboardCustomThemeInstaller.java:65–71`).
+- **[Подтверждено исходниками — ВАЖНАЯ НАХОДКА v3.1]** В текущей кодовой базе существуют только два способа активации ZIP-темы:
+  1. `GboardCustomThemeGalleryView.handleCommittedInstall()` записывает DE `SharedPreferences` и **вызывает холодный перезапуск всего процесса Gboard (`System.exit(0)`)** через `requestTargetRestart()`.
+  2. `GboardCustomThemeOfficialImportRuntime` передаёт имя файла через `Intent` (`intent_extra_key_new_theme_file_name`) в `Lkhl;->i(Intent)V` внутри `ThemeListingFragment` (UI-экран выбора тем, не IME-сервис).
+- **Следствие (честный статус):**
+  - В исходниках репозитория **НЕ подтверждено**, существует ли у Gboard `18.5.4` штатный `OnSharedPreferenceChangeListener` на `additional_keyboard_theme`;
+  - **НЕ подтверждено**, когда Gboard перечитывает `additional_keyboard_theme` (сразу при записи, при следующем `onStartInputView` / переоткрытии клавиатуры или только при холодном старте процесса);
+  - **Мгновенное переключение без перезапуска клавиатуры НЕ заявляется и НЕ гарантируется** до эксперимента **V7** на Galaxy S22 5G!
+  - **Жёсткий запрет:** вызывать `System.exit(0)` или `Process.killProcess` из IME-сервиса (`Lphr;`) ради авто-переключения темы **категорически запрещено** (обрывает ввод, теряет composing text, противоречит Приоритету №1).
 
-В настройках GboardSamsung (`Внешний вид Samsung` / `Samsung Appearance`):
-- **Выключено** (по умолчанию — стоковое поведение / текущая тема пользователя).
-- **Авто (как в системе)** — автоматически выбирает `samsung_oneui8_light.zip` при `UI_MODE_NIGHT_NO` и `samsung_oneui8_dark.zip` при `UI_MODE_NIGHT_YES`.
-- **Всегда светлая (One UI 8 Light)** — фиксирует светлую тему Samsung.
-- **Всегда тёмная (One UI 8 Dark)** — фиксирует тёмную тему Samsung.
+### 11.2. Подтверждённые точки наблюдения и ограничения `Lphr;`
 
-### 11.3. Защита от гонок, циклов и перезаписи ручного выбора пользователя
+- **[Подтверждено исходниками]** Точки жизненного цикла в `Lphr;` (`gboard-version-bindings.json`): `onStartInputView(EditorInfo, Z)`, `onWindowShown()`, `onConfigureWindow(Window, Z, Z)`.
+- **[Архитектурное предположение]** Точка `onConfigurationChanged(Configuration)` в `18.5.4` в `gboard-version-bindings.json` сейчас **не привязана** — её наличие/обфускация потребуют отдельной проверки, если понадобится реакция при уже открытой клавиатуре.
+- **Производительность:** установка/валидация обоих ZIP (`Light` и `Dark`) должна выполняться **заранее** в Settings UI (когда пользователь включает режим), чтобы на горячем пути `onStartInputView` не было никакого файлового I/O и ZIP-распаковки (только идемпотентная проверка флагов и при несовпадении — запись в DE `SharedPreferences`).
 
-1. **Direct Boot guard:** перед любым чтением `gboard_patches_settings` или обращением к `context.getFilesDir()` обязательна проверка `GboardPatchesSettings.isUserUnlocked(context)`. До разблокировки код делает немедленный `return` (no-op).
-2. **Идемпотентность:** если `additional_keyboard_theme` в DE `SharedPreferences` уже равен целевому `"files:<target_samsung_zip>"` и `enable_key_border` уже совпадает — **никакой записи в `SharedPreferences` не выполняется** (ноль лишнего I/O и ноль циклов перезагрузки темы).
-3. **Защита от перезаписи новой Custom Theme пользователя (Ownership Check):**
-   - Мы храним имена установленных нами файлов (`samsung_light_file`, `samsung_dark_file`) в `gboard_patches_settings`.
-   - При очередном `onStartInputView`, если текущее значение `additional_keyboard_theme` **не является** ни нашим Light ZIP, ни нашим Dark ZIP (значит, пользователь сам зашёл в Gboard → «Тема» и выбрал другую тему!), авто-переключатель **НЕ перезаписывает** выбор пользователя, а аккуратно переводит режим Samsung Appearance в «Выключено» (или «Приостановлено»), уважая явное действие пользователя!
-4. **Вопрос мгновенной перерисовки в `18.5.4` (требует проверки V7):**
-   - Изменение DE `SharedPreferences` (`additional_keyboard_theme`) обновляет хранилище, из которого Gboard читает активную тему. Однако в репозитории **не подтверждено**, подписывается ли Gboard `18.5.4` на `OnSharedPreferenceChangeListener` для мгновенной перестройки уже открытого `InputView`, или тема подхватывается при следующем `onStartInputView`.
-   - **Запрещено** убивать процесс IME (`System.exit`, `killProcess`) ради мгновенной смены темы — это разрушает текущую сессию ввода и противоречит приоритету #1 (стабильность).
+### 11.3. Возможные исходы эксперимента V7
 
-### 11.4. Спецификация потенциального изменения (Этап 6: авто-переключение Light/Dark)
+1. *Исход A (лучший):* Gboard `18.5.4` реагирует на запись `additional_keyboard_theme` немедленно (есть штатный listener) или при следующем открытии клавиатуры (`onStartInputView`) без рестарта процесса → авто-переключение реализуемо безопасно (с честным описанием момента обновления в UI).
+2. *Исход B (ограничение Gboard):* Gboard `18.5.4` кэширует `additional_keyboard_theme` в памяти на всё время жизни процесса и **не перечитывает** его без перезапуска процесса → автоматическое переключение из `Lphr;` **не сработает без недопустимого `System.exit(0)`**; в этом случае от автоматического переключения следует **отказаться или отложить его**, оставив ручной выбор Light / Dark с применением через Settings UI.
 
-1. **Точное место в исходном коде:**
-   - Существующие перехваты `Lphr;->onStartInputView` / `onWindowShown` (через уже существующий lifecycle-композитор `Lphr;` из `gboard-version-bindings.json`).
-   - Новый класс `extensions/extension/src/main/java/dev/jason/gboardpatches/extension/samsungappearance/GboardSamsungAppearanceRuntime.java`.
-2. **Точный механизм реализации:** проверка `isUserUnlocked` → чтение режима из `gboard_patches_settings` → чтение `Configuration.UI_MODE_NIGHT_MASK` → проверка ownership текущего `additional_keyboard_theme` → идемпотентная установка/переключение на предвалидированный `samsung_oneui8_light.zip` или `samsung_oneui8_dark.zip` через DE `SharedPreferences`.
-3. **Какие файлы потребуется изменить:** `GboardSamsungAppearanceRuntime.java`, `GboardSamsungAppearanceSettings.java`, регистрация вызова в существующем `Lphr;` lifecycle-патче, экран настроек в `GboardPatchesSettingsActivity.java`, локализация RU/EN.
-4. **Какие существующие компоненты будут затронуты:** `Lphr;` lifecycle hooks (`Frosted Glass`, `Manual Incognito`, `Editing Access Points`, `Calculator`), `GboardCustomThemeInstaller`, DE `SharedPreferences` (`<pkg>_preferences`).
-5. **Какие функции потенциально могут пострадать:** время открытия клавиатуры (`onStartInputView` должен оставаться O(1) и не делать дисковых копирований на горячем пути — ZIP-файлы должны устанавливаться заранее, при включении настройки в Settings UI!), `Custom Theme`, `Frosted Glass` (перерасчёт альфы поверхностей после смены темы).
-6. **Уровень риска:** **Средний** (lifecycle-точки подтверждены в `18.5.4`, но реакция Gboard на смену `additional_keyboard_theme` «на лету» и взаимодействие с `Frosted Glass` при смене Light↔Dark требуют проверки V7 на устройстве).
-7. **Как проверить результат:** переключить тёмную тему Android в шторке Samsung One UI 8 при закрытой и при открытой клавиатуре; проверить переключение по расписанию; проверить ручной выбор другой темы в Gboard → «Тема» (не должна перезаписаться); проверить задержку открытия клавиатуры.
-8. **Как откатить изменение:** переключить режим в «Выключено» (восстановит исходную тему) или удалить вызов из `Lphr;` lifecycle-композитора.
+### 11.4. Спецификация потенциального изменения (Шаг 6: авто-переключение Light/Dark)
 
-**Итоговый вердикт раздела 11:** **Можно реализовывать после проверки на устройстве**
+1. **Точное место:** существующий lifecycle-композитор `Lphr;` (`onStartInputView` / `onWindowShown`) + новый пакет `extension/samsungappearance/`.
+2. **Механизм:** проверка `isUserUnlocked` → чтение режима из CE `gboard_patches_settings` → чтение `Configuration.UI_MODE_NIGHT_MASK` → проверка существования целевого ZIP в CE `getFilesDir()` → проверка `Ownership Check` → идемпотентная запись `additional_keyboard_theme` в DE `SharedPreferences` (только при положительном результате V7!).
+3. **Изменяемые файлы:** `GboardSamsungAppearanceRuntime.java`, `GboardSamsungAppearanceSettings.java`, регистрация в `Lphr;`, экран настроек в группе `Клавиши, макет и символы` (RU/EN) + `GboardSettingsSearchIndexData.java`.
+4. **Затрагиваемые компоненты:** `Lphr;` lifecycle hooks (`Frosted Glass`, `Manual Incognito`, `Editing Access Points`, `Calculator`), `GboardCustomThemeInstaller`, DE `<pkg>_preferences`.
+5. **Потенциально уязвимые функции:** время открытия IME, `Custom Theme`, `Frosted Glass` (перерасчёт прозрачности после смены темы), сохранность ручного выбора темы пользователем.
+6. **Уровень риска:** **Средний / Высокий** до прохождения V7 и V8.
+7. **Проверка:** переключение системной темы при закрытой и открытой клавиатуре, ручной выбор другой темы в Gboard → «Тема», перезагрузка устройства (Direct Boot).
+8. **Откат:** выключить режим в настройках (восстановит исходную тему по схеме Раздела 12) или удалить вызов из `Lphr;`.
+
+**Итоговый вердикт раздела 11:** **Требуется дополнительное исследование** *(критически зависит от результата эксперимента V7: перечитывает ли `Gboard 18.5.4` ключ `additional_keyboard_theme` без перезапуска процесса).*
 
 ---
 
-## 12. Сохранение и восстановление настроек
+## 12. Сохранение и восстановление пользовательских настроек
 
-Пользователь может включать Samsung Appearance поверх:
-- стоковой темы Dynamic Color (когда ключа `additional_keyboard_theme` **вообще нет** в `<pkg>_preferences`!);
-- встроенной темы Gboard (`assets:...` или иной строковый идентификатор);
-- пользовательской ZIP-темы (`Custom Theme`, `"files:user_theme_1730000000000.zip"`);
-- пользовательской фото-темы, созданной штатной кнопкой «+» Gboard;
-- любого состояния переключателя «Контуры клавиш» (`enable_key_border` = `true`, `false` или ключ отсутствует).
+### 12.1. Полная модель состояния и 10 сценариев устойчивости
 
-### 12.1. Точная схема Snapshot / Restore (без потери данных)
+Чтобы автоматический режим **никогда** не перезаписывал навсегда пользовательскую тему и не оставлял битых ссылок, проектируется строгий снимок исходного состояния в CE `gboard_patches_settings` до первой записи Samsung-темы:
 
-При **первом** переходе Samsung Appearance из `OFF` в любой активный режим (`AUTO` / `LIGHT` / `DARK`) — **и строго до** записи нашей темы в DE `SharedPreferences` — в `gboard_patches_settings` сохраняется полный снимок:
-
-| Ключ в `gboard_patches_settings` | Тип | Назначение |
+| Ключ в CE `gboard_patches_settings` | Тип | Назначение |
 | --- | --- | --- |
-| `pref_samsung_appearance_backup_valid` | `boolean` | Флаг, что исходный снимок сохранён и ещё не восстановлен (защищает от перезаписи бэкапа нашей же Samsung-темой при повторном переключении Light↔Dark!). |
-| `pref_samsung_appearance_prev_theme_present` | `boolean` | Был ли ключ `additional_keyboard_theme` физически присутствует в `<pkg>_preferences` (`prefs.contains(...)`). |
-| `pref_samsung_appearance_prev_theme_value` | `String` | Точное прежнее строковое значение `additional_keyboard_theme` (если `present == true`). |
-| `pref_samsung_appearance_prev_border_present` | `boolean` | Присутствовал ли ключ `enable_key_border` (`prefs.contains(...)`). |
+| `pref_samsung_appearance_backup_valid` | `boolean` | Маркер активного снимка (запрещает перезаписывать бэкап нашей же Samsung-темой при переключении Light↔Dark). |
+| `pref_samsung_appearance_prev_theme_present` | `boolean` | Физическое наличие ключа `additional_keyboard_theme` (`prefs.contains(...)`) до активации. |
+| `pref_samsung_appearance_prev_theme_value` | `String` | Прежнее значение `additional_keyboard_theme` (если `present == true`). |
+| `pref_samsung_appearance_prev_border_present` | `boolean` | Физическое наличие ключа `enable_key_border` (`prefs.contains(...)`). |
 | `pref_samsung_appearance_prev_border_value` | `boolean` | Прежнее значение `enable_key_border` (если `present == true`). |
-| `pref_samsung_appearance_owned_light_file` | `String` | Имя нашего установленного Light ZIP (например, `user_theme_gboardsamsung_oneui8_light_v1.zip`). |
-| `pref_samsung_appearance_owned_dark_file` | `String` | Имя нашего установленного Dark ZIP (например, `user_theme_gboardsamsung_oneui8_dark_v1.zip`). |
+| `pref_samsung_appearance_owned_light_file` | `String` | Имя установленного нами Light ZIP (уникальный префикс, не пересекается с пользовательскими файлами). |
+| `pref_samsung_appearance_owned_dark_file` | `String` | Имя установленного нами Dark ZIP. |
 
-### 12.2. Правила безопасного восстановления при выключении режима
+#### Разбор всех 10 обязательных сценариев (включая частичное выполнение и ошибки)
 
-1. **Проверка перед восстановлением:** если пользователь уже сам сменил тему в Gboard на другую (текущее значение `additional_keyboard_theme` не равно ни `files:<owned_light>`, ни `files:<owned_dark>`), то при выключении режима Samsung **не откатываем** тему поверх нового ручного выбора пользователя — только сбрасываем `backup_valid = false`.
-2. **Точное восстановление `additional_keyboard_theme`:**
-   - Если `prev_theme_present == false`: вызываем `editor.remove("additional_keyboard_theme")` (НЕ `putString(..., "")`, так как пустая строка может отличаться от отсутствия ключа!).
-   - Если `prev_theme_present == true`: проверяем, если значение начинается с `"files:"`, существует ли исходный файл в `getFilesDir()`. Если файл существует (или это не `"files:"`) — восстанавливаем `putString("additional_keyboard_theme", prev_theme_value)`. Если пользователь успел удалить старый файл — безопасно `remove("additional_keyboard_theme")` (возврат к стоку без битой ссылки!).
-3. **Точное восстановление `enable_key_border`:**
-   - Если `prev_border_present == false` → `editor.remove("enable_key_border")`.
-   - Если `prev_border_present == true` → `editor.putBoolean("enable_key_border", prev_border_value)`.
-4. **Неприкосновенность пользовательских ZIP:** код Samsung Appearance **никогда не удаляет и не перезаписывает** файлы, не совпадающие с `owned_light_file` / `owned_dark_file`. Также `findDuplicate` в `GboardCustomThemeInstaller` должен быть учтён: наши встроенные архивы лучше хранить под собственным префиксом или фиксированными именами, чтобы никогда не «присвоить» пользовательский файл как owned.
-5. **Интеграция с `Backup & Restore` (резервное копирование настроек GboardSamsung):** при импорте бэкапа настроек на другом устройстве или после переустановки ключи `backup_valid` и `owned_*_file` должны переустанавливаться/перепроверяться, чтобы не оставить ссылку на несуществующий ZIP.
+1. **Исходная активная тема пользователя (сток Dynamic Color / `assets:...` / `files:user_theme_...` / фото-тема):** сохраняется пара `(contains, value)` до первой записи; при `present == false` восстановление выполняется строго через `editor.remove("additional_keyboard_theme")`, а не пустой строкой.
+2. **Исходное значение `enable_key_border`:** аналогично сохраняется `(contains, value)` и восстанавливается через `remove` либо `putBoolean`.
+3. **Ручная смена темы пользователем (модель передачи управления — Ownership Check):** при каждом срабатывании авто-режима проверяется текущее значение `additional_keyboard_theme`. Если оно **не совпадает** ни с `files:<owned_light>`, ни с `files:<owned_dark>` (значит, пользователь сам выбрал тему в Gboard → «Тема» или в галерее `Custom Theme`), авто-режим **немедленно уступает управление**: не перезаписывает `additional_keyboard_theme`, переводит себя в состояние «Выключено» и сбрасывает `backup_valid = false`, сохраняя новый выбор пользователя нетронутым!
+4. **Отключение автоматического режима:** если владение ещё за нами (`additional_keyboard_theme` указывает на наш Light или Dark ZIP), восстанавливаются сохранённые `additional_keyboard_theme` и `enable_key_border`, после чего `backup_valid = false`.
+5. **Повторное включение автоматического режима:** так как `backup_valid == false`, делается **свежий снимок** актуальных на этот момент настроек пользователя (если пользователь успел сменить тему за время отключения — сохранится именно новая тема, а не устаревшая).
+6. **Удаление или замена исходной пользовательской темы:** перед восстановлением `files:<prev_name>` проверяется `new File(context.getFilesDir(), prevName).isFile()`. Если исходный ZIP уже удалён — выполняется безопасный `editor.remove("additional_keyboard_theme")` (откат к стоку вместо битой ссылки). Пользовательские ZIP-файлы нашим кодом **никогда не удаляются**; при установке Samsung ZIP нельзя переиспользовать чужой файл через `findDuplicate` в качестве `owned_*`.
+7. **Ошибки установки ZIP (нехватка места, ошибка валидации `Lrnw;->h`, I/O error):** staging-файл удаляется, DE `SharedPreferences` вообще не затрагиваются, `backup_valid` не выставляется, режим остаётся в `OFF` с понятным сообщением пользователю.
+8. **Частичное выполнение операции (краш/убийство процесса между установкой 1-го и 2-го ZIP или между записью снимка и записью DE-ключа):**
+   - Порядок операций строго транзакционный по инварианту: **(1)** установить и провалидировать оба ZIP в CE → **(2)** синхронно (`commit()`) сохранить снимок в CE `gboard_patches_settings` → **(3)** синхронно (`commit()`) записать `additional_keyboard_theme` в DE → **(4)** включить флаг режима в CE.
+   - Если сбой произошёл на шаге (1) — ничего не изменилось. На шаге (2)/(3) — режим остался `OFF`, при следующем запуске лишний `backup_valid` при `mode == OFF` игнорируется и безопасно очищается.
+9. **Перезапуск устройства:** DE `<pkg>_preferences` и CE-файлы сохраняются штатно; после разблокировки IME сверяет целостность `owned_light_file` / `owned_dark_file` до переключения.
+10. **Direct Boot (до разблокировки):** см. Раздел 13 — авто-переключатель полностью неактивен и не делает никаких записей ни в CE, ни в DE.
 
-### 12.3. Спецификация потенциального изменения (Backup/Restore настроек темы)
+*Примечание по `Backup & Restore` и `Frosted Glass`:* ключи снимка (`backup_valid`, `prev_*`, `owned_*`) являются локально-привязанными к файлам конкретного устройства и должны исключаться из кросс-устройственного экспорта настроек; `Frosted Glass` продолжает работать штатно поверх любой активной темы.
 
-1. **Точное место в исходном коде:** `GboardSamsungAppearanceSettings.java` (новый класс), использующий `GboardPatchesSettings.java` (CE) и `context.createDeviceProtectedStorageContext().getSharedPreferences(pkg + "_preferences", MODE_PRIVATE)` (DE).
-2. **Точный механизм реализации:** атомарная запись (`commit()`) снимка перед первой активацией + безопасное восстановление с проверкой `contains()`, существования файла и ownership.
-3. **Какие файлы потребуется изменить:** `GboardSamsungAppearanceSettings.java` + unit-тесты (покрытие всех 5 сценариев: сток, assets, Custom Theme ZIP, удалённый Custom Theme ZIP, ручная смена темы пользователем).
-4. **Какие существующие компоненты будут затронуты:** DE `<pkg>_preferences`, CE `gboard_patches_settings`, `GboardBackupRestore` (исключить эфемерные поля снимка из кросс-устройственного экспорта).
-5. **Какие функции потенциально могут пострадать:** сохранность исходной пользовательской темы и настройки контуров клавиш при многократном включении/выключении Samsung Appearance.
-6. **Уровень риска:** **Средний** (ключи `additional_keyboard_theme` и `enable_key_border` подтверждены в `GboardCustomThemeInstaller.java`, но поведение `Gboard 18.5.4` при `remove("additional_keyboard_theme")` для возврата к стоковому Dynamic Color требует разовой проверки на устройстве в Этапе 2).
-7. **Как проверить результат:** автоматические unit-тесты всех веток + ручной тест на Galaxy S22: (а) сток Dynamic Color → включить Samsung → выключить → вернулся Dynamic Color; (б) Custom Theme ZIP → включить Samsung → выключить → вернулась Custom Theme ZIP с исходным `enable_key_border`.
-8. **Как откатить изменение:** ручной выбор любой темы в Gboard → «Тема» полностью перекрывает `additional_keyboard_theme`.
+### 12.2. Спецификация потенциального изменения (Snapshot / Restore)
+
+1. **Место:** `GboardSamsungAppearanceSettings.java` (новый класс), использующий `GboardPatchesSettings` (CE) и DE `<pkg>_preferences`.
+2. **Механизм:** упорядоченный 4-шаговый `commit()`, `Ownership Check`, проверка существования `files:` при восстановлении.
+3. **Файлы:** `GboardSamsungAppearanceSettings.java` + unit-тесты всех 10 сценариев.
+4. **Затрагиваемые компоненты:** CE `gboard_patches_settings`, DE `<pkg>_preferences`, `GboardBackupRestore`.
+5. **Потенциально уязвимые функции:** сохранность исходной пользовательской темы и `enable_key_border`.
+6. **Уровень риска:** **Средний** (необходимо подтвердить на `18.5.4`, что `editor.remove("additional_keyboard_theme")` корректно возвращает стоковый Dynamic Color).
+7. **Проверка:** unit-тесты всех 10 веток + ручной прогон на Galaxy S22 (Dynamic Color → Samsung → Off; Custom Theme → Samsung → Off; Samsung → ручной выбор другой темы → смена системной темы не перезаписывает выбор).
+8. **Откат:** ручной выбор темы в Gboard → «Тема» немедленно забирает управление через `Ownership Check`.
 
 **Итоговый вердикт раздела 12:** **Можно реализовывать после проверки на устройстве**
 
 ---
 
-## 13. Direct Boot и хранение ZIP
+## 13. Direct Boot и хранение данных (CE vs DE)
 
-### 13.1. Подтверждённое расхождение CE vs DE в текущей кодовой базе
+### 13.1. Подтверждённая карта хранилищ [Подтверждено исходниками]
 
-Прямое чтение `GboardCustomThemeInstaller.java` и `GboardPatchesSettings.java` выявило **архитектурно критический факт**:
-
-| Данные | Файл в репозитории | Фактическое хранилище | Доступно в Direct Boot (до ввода PIN)? |
+| Данные | Источник в репозитории | Хранилище | Доступно в Direct Boot (до ввода PIN)? |
 | --- | --- | --- | --- |
-| ZIP-файлы тем (`user_theme_*.zip`) | `GboardCustomThemeInstaller.java` (стр. 38, 118, 126) | **`context.getFilesDir()` (CE — Credential-Encrypted)** | **НЕТ** (чтение/запись бросает `IllegalStateException` до разблокировки) |
-| Ключи `additional_keyboard_theme` и `enable_key_border` | `GboardCustomThemeInstaller.java` (стр. 65–71) | **`context.createDeviceProtectedStorageContext().getSharedPreferences(...)` (DE — Device-Encrypted)** | **ДА** |
-| Настройки патчей (`gboard_patches_settings`) | `GboardPatchesSettings.java` (стр. 21–28, 55–89) | **CE** с жёсткой защитой `isUserUnlocked(context)` | **НЕТ** (fail-closed → `null` / `fallback`) |
+| ZIP-файлы тем (`user_theme_*.zip`) | `GboardCustomThemeInstaller.java` (стр. 38, 118, 126) | **`context.getFilesDir()` — CE** (`/data/user/0/<pkg>/files`) | **НЕТ** (`IllegalStateException` при доступе до разблокировки) |
+| Ключи `additional_keyboard_theme`, `enable_key_border` | `GboardCustomThemeInstaller.java` (стр. 65–71) | **`createDeviceProtectedStorageContext().getSharedPreferences(...)` — DE** | **ДА** |
+| Настройки патчей (`gboard_patches_settings`) | `GboardPatchesSettings.java` (стр. 21–28, 55–89) | **CE** за проверкой `isUserUnlocked(context)` | **НЕТ** (fail-closed → `null` / `fallback`) |
 
-### 13.2. Почему ЗАПРЕЩЕНО вслепую переносить ZIP в DE-хранилище
+### 13.2. Почему нельзя переносить ZIP-файлы в DE без доказательства
 
-На первый взгляд может возникнуть соблазн «исправить» Direct Boot, положив `samsung_oneui8_light.zip` и `samsung_oneui8_dark.zip` в `context.createDeviceProtectedStorageContext().getFilesDir()` (DE-хранилище).
+- В Android `context.getFilesDir()` (CE) и `context.createDeviceProtectedStorageContext().getFilesDir()` (DE) — это **два разных каталога файловой системы** (`/data/user/0/...` и `/data/user_de/0/...`).
+- **[Подтверждено исходниками]** Существующий рабочий `Custom Theme` (`GboardCustomThemeInstaller.java`) кладёт ZIP строго в **CE `context.getFilesDir()`**, а в DE-преференсы пишет `"files:" + committed.getName()`.
+- В репозитории **отсутствуют доказательства**, что внутренний загрузчик `"files:"` в `Gboard 18.5.4` умеет читать DE `filesDir`. Перенос ZIP в DE без проверки реального загрузчика способен сломать загрузку темы даже после разблокировки! **Не менять существующую архитектуру хранения без доказанной необходимости.**
 
-**Это опасно и НЕДОПУСТИМО без доказательства из байткода `Gboard 18.5.4`**, по двум причинам:
+### 13.3. Поведение до разблокировки и почему одного `isUserUnlocked()` недостаточно
 
-1. В `GboardCustomThemeInstaller.java` префикс `"files:"` (`"files:" + committed.getName()`) работает на `18.5.4`, когда файл лежит в **CE `context.getFilesDir()`**. В репозитории **нет доказательств**, что внутренний загрузчик тем Gboard `18.5.4` ищет `"files:"` в DE `filesDir` (на Android `context.getFilesDir()` и `context.createDeviceProtectedStorageContext().getFilesDir()` — это **разные каталоги файловой системы**: `/data/user/0/<pkg>/files` против `/data/user_de/0/<pkg>/files`!).
-2. Если положить ZIP только в DE-каталог, а Gboard `18.5.4` резолвит `"files:"` из CE `getFilesDir()`, тема **вообще не загрузится даже после разблокировки**. А если дублировать файл в оба каталога без понимания поведения Gboard — возникнет расхождение состояний и мусорные файлы.
-
-### 13.3. Безопасная стратегия Direct Boot
-
-1. **Хранить ZIP-файлы строго в том же каталоге, что и `GboardCustomThemeInstaller.java` (`context.getFilesDir()`, CE)** — это уже проверенный и работающий путь для `Gboard 18.5.4` в существующей фиче `Custom Theme`.
-2. **Все runtime-хуки Samsung Appearance (`onStartInputView`, `onWindowShown`, `SoftKeyView.s`) MUST начинаться с `if (!GboardPatchesSettings.isUserUnlocked(context)) return;`** — точно так же, как уже сделано в `GboardFrostedGlassRuntime.java` и `GboardPatchesSettings.java`. Это гарантирует **0% риска `IllegalStateException`** в режиме Direct Boot со стороны нашего кода.
-3. **Обязательный тест V8 на Galaxy S22 5G:** с активной пользовательской ZIP-темой (`"files:..."` в DE `SharedPreferences`) полностью перезагрузить смартфон и до первого ввода PIN проверить, корректно ли открывается системная клавиатура / GboardSamsung без крашей (если на экране PIN Samsung использует системную клавиатуру ввода PIN — также проверить сценарий защищённого поля до разблокировки). Если бы выяснилось, что сам Gboard `18.5.4` имеет проблему с `"files:"` до разблокировки, это затронуло бы и существующий `Custom Theme` и потребовало бы отдельного исследования загрузчика `"files:"` в APK `18.5.4`.
+1. **Когда безопасно устанавливать тему:** исключительно после разблокировки пользователя (`isUserUnlocked == true`) и из Settings UI (или в момент, когда подтверждён доступ одновременно к CE `getFilesDir()`, CE `gboard_patches_settings` и DE `<pkg>_preferences`).
+2. **Что произойдёт при запуске IME до разблокировки (Direct Boot):**
+   - Наш код не может прочитать CE `gboard_patches_settings` и не может проверить наличие ZIP в CE `getFilesDir()`.
+   - Сам Gboard `18.5.4` увидит DE-ключ `additional_keyboard_theme = "files:..."`, но физический ZIP в CE в этот момент заблокирован системой Android! Как именно поведёт себя загрузчик `18.5.4` (тихий откат к стоку или исключение) — **не доказано по исходникам** и обязательно проверяется в тесте **V8** (перезагрузка Galaxy S22 с активной Custom Theme / Samsung ZIP до ввода PIN).
+3. **Почему одной проверки `isUserUnlocked()` недостаточно для доказательства безопасности:**
+   - `isUserUnlocked()` защищает наш код от `IllegalStateException` при чтении CE, но **НЕ гарантирует**: (а) что сам Gboard `18.5.4` безопасно обработает `"files:..."` в DE до разблокировки; (б) что сразу после разблокировки файлы не были удалены/повреждены; (в) что не произойдёт гонка записи DE-преференсов до завершения инициализации CE; (г) что при сбое записи снимка не потеряются исходные настройки пользователя.
+4. **Безопасная деградация (обязательный принцип):**
+   - До полной доступности **всех** необходимых данных (`isUserUnlocked == true`, успешно прочитан CE `gboard_patches_settings`, физически существует целевой ZIP в CE `getFilesDir()`, и успешно прочитан DE `<pkg>_preferences`) **не выполнять никаких переключений и записей темы** (строгий no-op).
+   - Никогда не модифицировать DE `additional_keyboard_theme` в Direct Boot, чтобы не стереть или не испортить сохранённую конфигурацию пользователя до проверки `Ownership Check`.
 
 ### 13.4. Спецификация потенциального изменения (политика хранения и Direct Boot)
 
-1. **Точное место в исходном коде:** `GboardCustomThemeInstaller.java` (переиспользование без ломки пути CE `getFilesDir()`), `GboardPatchesSettings.isUserUnlocked(Context)` во всех новых runtime-классах.
-2. **Точный механизм реализации:** установка ZIP в CE `context.getFilesDir()` только из Settings UI (когда пользователь гарантированно разблокирован); в IME runtime — строгий `isUserUnlocked(context)` guard перед любым обращением к CE-файлам или `gboard_patches_settings`.
-3. **Какие файлы потребуется изменить:** новые классы в `extension/samsungappearance/` (используют существующие `GboardPatchesSettings.isUserUnlocked` и `GboardCustomThemeInstaller`).
-4. **Какие существующие компоненты будут затронуты:** файловое хранилище CE `getFilesDir()`, DE `<pkg>_preferences`.
-5. **Какие функции потенциально могут пострадать:** первый запуск клавиатуры после перезагрузки устройства (Direct Boot), стабильность IME при заблокированном CE-хранилище.
-6. **Уровень риска:** **Средний** (код расширения гарантированно fail-closed, но реакция самого Gboard `18.5.4` на `"files:..."` в DE-преференсах при заблокированном CE-каталоге требует проверки V8 на Galaxy S22).
-7. **Как проверить результат:** перезагрузка Galaxy S22 5G с активной Samsung ZIP-темой → проверка экрана ввода PIN до разблокировки → разблокировка → немедленное открытие клавиатуры (должна подняться Samsung-тема без ошибок).
-8. **Как откатить изменение:** отключение режима Samsung Appearance удаляет ссылку `"files:..."` из DE `SharedPreferences` и возвращает исходное значение.
+1. **Место:** переиспользование CE-каталога `GboardCustomThemeInstaller` + многоступенчатый guard (unlock + CE prefs + file exists + ownership) в будущих runtime-классах.
+2. **Механизм:** установка ZIP только в разблокированном состоянии; в Direct Boot — полная деградация в no-op без записи в DE/CE.
+3. **Файлы:** новые классы будущего Шага 6 (без изменения хранилища `GboardCustomThemeInstaller`).
+4. **Затрагиваемые компоненты:** CE `getFilesDir()`, CE `gboard_patches_settings`, DE `<pkg>_preferences`.
+5. **Потенциально уязвимые функции:** первый запуск IME после перезагрузки (ввод PIN/пароля), сохранность настроек темы.
+6. **Уровень риска:** **Средний** (код расширения fail-closed, но реакция загрузчика `Gboard 18.5.4` на `"files:..."` в Direct Boot требует реальной проверки V8).
+7. **Проверка:** полная перезагрузка Galaxy S22 5G с активной ZIP-темой → экран PIN до разблокировки → разблокировка → открытие клавиатуры.
+8. **Откат:** выключение режима удаляет `"files:..."` из DE `SharedPreferences` и возвращает исходное значение.
 
-**Итоговый вердикт раздела 13:** **Можно реализовывать после проверки на устройстве**
+**Итоговый вердикт раздела 13:** **Можно реализовывать после проверки на устройстве** *(обязателен тест V8; при проблемах Gboard в Direct Boot — не переносить в DE вслепую, а провести отдельное исследование загрузчика `18.5.4`).*
 
 ---
 
-## 14. Совместимость с Custom Theme, Frosted Glass и всеми функциями Gboard/GboardSamsung
-
-Ниже проверена совместимость предполагаемой архитектуры Samsung Appearance со всеми 19 критическими функциями и режимами:
+## 14. Совместимость с Custom Theme, Frosted Glass и всеми функциями Gboard / GboardSamsung
 
 | # | Функция / режим | Механизм взаимодействия | Риск конфликта | Защитные меры |
 | --- | --- | --- | --- | --- |
-| 1 | **Custom Theme** (импорт ZIP и галерея) | Разделяют один ключ `additional_keyboard_theme` и каталог `getFilesDir()`. | Средний | Снимок/восстановление (Раздел 12), проверка ownership (ручной выбор Custom Theme не перезаписывается авто-переключателем), уникальные имена файлов Samsung ZIP. |
-| 2 | **Frosted Glass** (размытие и прозрачность) | `GboardFrostedGlassRuntime` находит `.keyboard-base-area`, `.keyboard-header-area`, `.keyboard-body-area`, `.keytop`, `.space_bar`, `.background-icon.for-action-key` и меняет их `Drawable.setAlpha(...)`. | Средний | Samsung CSS **не должна** использовать несовместимые кастомные drawables/обёртки, блокирующие `setAlpha`. Проверить `Frosted Glass` поверх Samsung Light и Dark в Этапе 2 (включая `key opacity` и `surface opacity`). Шевроны в `ViewOverlay` не трогают `background` `.space_bar`, поэтому с `Frosted Glass` не конфликтуют. |
-| 3 | **Swipe typing** (непрерывный ввод жестами) | Обрабатывается `ScrubMotionEventHandler` / движком Gboard. | Низкий | CSS-темы и пассивный `ViewOverlay` не касаются `MotionEvent`. Проверить контраст линии следа свайпа на `#EAEAEF` (Light) и `#08080A` (Dark)! |
-| 4 | **Переключение языков** (клавиша глобуса и системные субтипы) | `GboardSpacebarGlobeKeyRuntime` (хук `SoftKeyView.s`, `afterOrder = 900`). | Низкий | Шевроны используют `afterOrder = 950` и фильтруют строго `KEYCODE_SPACE == 62`, никогда не скрывают глобус. |
-| 5 | **Samsung Spacebar Gestures** (свайп по пробелу для смены языка) | Перехватывает `MotionEvent` на `KeyboardViewHolder` / `SoftKeyboardView`. | Низкий | `ViewOverlay` не перехватывает касания и не меняет размеры/хитбокс `SoftKeyView`. Обязателен регрессионный тест после Этапа 3. |
-| 6 | **Удержание пробела и управление курсором** | `FreeCursorMotionEventHandler` / `TriggerFreeCursorMotionEventHandler`. | Низкий | `ViewOverlay` полностью пассивен; не вызывает `requestLayout` и не сбрасывает указатель. |
-| 7 | **Clipboard** (буфер обмена + `Clipboard Content Limit`) | Отдельная клавиатура `ClipboardKeyboard` использует `.keyboard-base-area`, `.keyboard-header-area`, карточки буфера. | Средний | Проверить в Этапе 2, чтобы тёмный фон `#08080A` и светлый `#EAEAEF` сохраняли высокий контраст текста на карточках буфера и кнопках закрепления/удаления. |
-| 8 | **Emoji** (панель эмодзи + `Emoji Size`) | Использует `.keyboard-base-area`, `.keyboard-header-area`, нижнюю навигацию категорий. | Средний | Проверить контраст активной вкладки, строки поиска эмодзи и нижней панели категорий в Light и Dark. |
-| 9 | **GIF / Stickers** | Панели поиска и вкладок выражения (`Expression`). | Средний | Проверить контраст поля поиска GIF и вкладок в Light и Dark. |
-| 10 | **Подсказки (Suggestions / Autocorrect / Inline Suggestions)** | Рендерятся в `.candidates-area` внутри `.keyboard-header-area`; тег `.for-candidate-key` специально оберегается даже в `Frosted Glass`. | Средний | В CSS задавать контрастный цвет текста кандидатов в Light и Dark, **не добавлять** непрозрачную заливку на неактивный `.for-candidate-key` и не цеплять круглые подложки к области кандидатов. |
-| 11 | **Вторичные символы** (`.label.secondary`) | Верхний правый угол буквенных клавиш (включены у пользователя на скриншоте!). | Средний | Явно настроить контрастный цвет `.label.secondary` в Light (`#6B6E75`) и Dark (`#B0B3B8`), проверить читаемость в Этапе 2. |
-| 12 | **Long press** (всплывающие альтернативные символы и quick actions) | Popup-окно над клавишей + `Long Press Quick Actions` (`Lphr;->aw`). | Средний | Проверить контраст фона и текста popup-подсказок в Light и Dark (частая ошибка сторонних CSS-тем — невидимый текст в popup!). |
-| 13 | **Action Keys** (`Enter`, `Search`, `Send`, `Done`, `Next`, `Go`) | В `18.5.4` заливка `.background-icon.for-action-key` может быть `ImageView.getDrawable()`, отдельным от иконки (подтверждено в `GboardFrostedGlassRuntime:1071`). | Средний | Обязательная матрица проверки всех 6 типов Action Keys в Light и Dark на Этапе 2 (проверка V3). |
-| 14 | **Нижняя навигационная панель (Nav bar)** | На Android 16 (`STOCK_STRIP_SDK = 36`) окрашивается самим Gboard в `InputView` через `Lrra;->f(Window, Lrqz;)`. | Средний | Проверить, подхватывает ли `Lrra;->f` цвет фона из Samsung ZIP-темы (`#EAEAEF` / `#08080A`) и корректно ли выставляется флаг `Lrqz;->e` (`light` для системных иконок навигации). |
-| 15 | **Floating keyboard** | Использует `.keyboard-base-area` (без `.keyboard-outline`), произвольная ширина и ручка перемещения. | Средний | Проверить контраст ручки перетаскивания, отступы; авто-скрытие шевронов пробела при ширине `< 120dp` и отказ от тесных кругов в тулбаре. |
-| 16 | **Split keyboard** (`split_eligibility`, `Lpqw;`) | Пробел делится на 2 узкие половинки; тулбар растягивается. | Средний | Авто-скрытие шевронов пробела, если ширина каждой половинки `< 120dp`; проверить симметрию клавиш и фона в разрыве. |
-| 17 | **One-handed mode** | Клавиатура сжимается до ~80% ширины + боковая панель переключения стороны. | Средний | Проверить контраст боковых кнопок One-handed; авто-скрытие шевронов и круглых подложек при нехватке ширины. |
-| 18 | **Разные раскладки и языки** (RU 11-кол., EN 10-кол., 123, Символы, Телефон/PIN, RTL) | Динамическая ширина клавиш и разные `SoftKeyDef`. | Средний | В RU 11 клавиш в ряду (уже, чем в EN 10) — проверить `padding_ratio_*` и размер шрифта, чтобы буквы и вторичные символы не обрезались; в `?123` и телефонной раскладке шевроны не должны появляться на не-пробельных клавишах. |
-| 19 | **Key Shape Selection** (`more_pill_keys`) | Включённый флаг делает `?123` и `Enter` круглыми/pill (видно на скриншоте пользователя). | Средний | Сохранить патч `Key Shape Selection` нетронутым; в Этапе 2 (V2) выяснить реальный приоритет CSS над `more_pill_keys` и задокументировать совместимость. |
+| 1 | **Custom Theme** (импорт ZIP и галерея) | Общий ключ `additional_keyboard_theme` (DE) и каталог `getFilesDir()` (CE). | Средний | Снимок/восстановление (Раздел 12), `Ownership Check`, уникальные имена Samsung ZIP, запрет удаления пользовательских ZIP. |
+| 2 | **Frosted Glass** (размытие и прозрачность) | `GboardFrostedGlassRuntime` меняет `Drawable.setAlpha(...)` на `.keyboard-base-area`, `.keyboard-header-area`, `.keyboard-body-area`, `.keytop`, `.space_bar`, `.background-icon.for-action-key`. | Средний | Чистые CSS-заливки без нестандартных обёрток; обязательный тест с прозрачностью 0%/50%/100%; шевроны в `ViewOverlay` не трогают `background` `.space_bar`. |
+| 3 | **Swipe typing** (ввод жестами) | `ScrubMotionEventHandler` / движок Gboard. | Низкий | Ни CSS, ни пассивный `ViewOverlay` не касаются `MotionEvent`; проверить контраст линии следа в Light и Dark. |
+| 4 | **Переключение языков** (глобус / системные субтипы) | `GboardSpacebarGlobeKeyRuntime` (`SoftKeyView.s`, `afterOrder = 900`). | Низкий | Шевроны независимы от видимости глобуса, используют `afterOrder = 950` и фильтр `KEYCODE_SPACE == 62`. |
+| 5 | **Samsung Spacebar Gestures** (свайп по пробелу) | Перехват `MotionEvent` в `KeyboardViewHolder`. | Низкий | Шевроны абсолютно пассивны и полностью независимы от тоггла свайпа по пробелу; обязателен регрессионный тест. |
+| 6 | **Удержание пробела и перемещение курсора** | `FreeCursorMotionEventHandler` / `TriggerFreeCursorMotionEventHandler`. | Низкий | Нулевое вмешательство в `MotionEvent`, отсутствие `requestLayout()`. |
+| 7 | **Swipe Down to Dismiss Keyboard** | Перехват свайпа вниз от заголовка/подсказок. | Низкий | Шевроны и CSS-темы полностью независимы и не затрагивают touch-диспетчер заголовка. |
+| 8 | **Clipboard** (буфер обмена + лимиты) | `ClipboardKeyboard` наследует `.keyboard-base-area`, `.keyboard-header-area`, карточки буфера. | Средний | Проверить контраст текста карточек, закреплённых элементов и кнопок в Light и Dark. |
+| 9 | **Emoji / GIF / Stickers** | Панели `Expression`, поиск и нижние вкладки категорий. | Средний | Проверить контраст строки поиска, активной вкладки и фона в Light и Dark. |
+| 10 | **Подсказки (Suggestions / Autocorrect / Inline)** | `.candidates-area` внутри `.keyboard-header-area`; `.for-candidate-key` защищён даже в `Frosted Glass`. | Средний | Контрастный цвет текста кандидатов; не добавлять непрозрачный фон на неактивный `.for-candidate-key` и не привязывать подложки AP к области кандидатов. |
+| 11 | **Вторичные символы** (`.label.secondary`) | Верхний правый угол клавиш (включены у пользователя). | Средний | Оригинальная карта Gboard не меняется; проверить читаемость в RU (11 кол.) и EN (10 кол.). |
+| 12 | **Long press и popup-клавиши** | Всплывающее окно альтернатив + `Long Press Quick Actions`. | Средний | Проверить контраст фона и текста popup в Light и Dark (частый дефект сторонних CSS-тем). |
+| 13 | **Action Keys** (`Enter`, `Search`, `Send`, `Done`, `Next`, `Go`) | Заливка `.background-icon.for-action-key` может быть отдельным `ImageView.getDrawable()`. | Средний | Проверить все 6 типов Action Key в Light и Dark (V3); синий акцент только при безопасных селекторах. |
+| 14 | **Seamless Navigation Bar / Nav bar (API 36)** | `Lrra;->f(Window, Lrqz;)` (`STOCK_STRIP_SDK = 36`). | Средний | Проверить совпадение цвета нижней полосы и корректность `Lrqz;->e` (светлые/тёмные системные иконки) в Light, Dark и с `Frosted Glass`. |
+| 15 | **Floating keyboard** | Произвольная ширина, ручка перетаскивания, ресайз. | Средний | Проверить контраст ручки; адаптивное уменьшение/скрытие шевронов; отсутствие тесных подложек. |
+| 16 | **Split keyboard** | Две узкие половинки пробела с `KEYCODE_SPACE`. | Средний | Авто-скрытие шевронов на узких половинках; проверка симметрии и фона разрыва. |
+| 17 | **One-handed mode** | Сжатие ширины ~15–20% + боковая панель. | Средний | Проверить контраст боковых кнопок; динамическое уменьшение/скрытие шевронов; защита от слипания тулбара. |
+| 18 | **Dynamic Color** | Системная палитра Material You. | Средний | При выключенном Samsung Appearance — 100% сохранение Dynamic Color; для шевронов поверх Dynamic Color требуется проверка V4 (цвет не гарантирован заранее). |
+| 19 | **Key Shape Selection (`more_pill_keys`)** | Флаг в `GboardFeatureFlagsRuntime` (order `40`). | Средний | Патч не удалять и не ломать; зафиксировать реальное взаимодействие с CSS в V2. |
 
 **Итоговый вердикт раздела 14:** **Можно реализовывать после проверки на устройстве**
 
@@ -614,197 +699,263 @@
 
 ## 15. Матрица рисков
 
-Ни одной позиции не присвоен уровень `Низкий`, если отсутствует прямое доказательство в коде и/или на устройстве `18.5.4`.
+Ни одному пункту не присвоен уровень `Низкий`, если отсутствует прямое доказательство в коде и/или на устройстве `18.5.4`.
 
-| ID | Риск | Компонент / этап | Вероятность | Тяжесть | Итоговый уровень | Смягчение и триггер остановки |
+| ID | Риск | Компонент / шаг | Вероятность | Тяжесть | Итоговый уровень | Смягчение и триггер остановки |
 | --- | --- | --- | --- | --- | --- | --- |
-| **R1** | Искажение или поломка кнопки голосового ввода Rambler (двойной круг, обрезка анимации, баг захвата заголовка `Lflb`/`Lkaf`). | Тулбар (Этапы 4–5) | Высокая (при наивной реализации) | Критическая | **Высокий** | Явно не модифицировать Rambler; в Этапе 5 — только allowlist обычных AP; при невозможности 100% изоляции — **отмена Этапа 5**. |
-| **R2** | Визуальное слипание или обрезка круглых подложек при `Access Point Count = 8` (9 слотов в строке) и в One-handed/Floating. | Тулбар (Этап 5) | Высокая | Высокая | **Высокий** | Динамический расчёт диаметра + авто-выключение при `< 34dp/слот`, либо полный отказ от Этапа 5. |
-| **R3** | Нечитаемые Action Keys (`Enter`/`Search`/`Send`/`Done`/`Next`), popup long-press, подсказки или карточки буфера из-за особенностей CSS в `18.5.4`. | ZIP/CSS-темы (Этапы 1–2) | Средняя | Высокая | **Средний** | Обязательный чек-лист прогона всех 6 Action Keys + popup + Clipboard + Emoji + Suggestions на S22 в Этапе 2 до перехода к Этапу 3. |
-| **R4** | `more_pill_keys` (Material 3) игнорирует CSS-форму `?123` / `Enter`. | ZIP/CSS-темы (Этап 2) | Средняя | Низкая/Средняя | **Средний** | Проверить в V2; не внедрять опасные байткод-хаки геометрии клавиш; документировать поведение с `Key Shape Selection`. |
-| **R5** | Перенос ZIP в DE-хранилище ломает загрузку `"files:"` в `18.5.4`, либо CE-блокировка в Direct Boot вызывает сбой до ввода PIN. | Хранение ZIP / Direct Boot (Этапы 1, 2, 6) | Средняя (если переносить в DE) / Низкая (если оставить CE + guard) | Критическая | **Средний** | **Запрет переноса в DE без доказательства**; обязательный тест перезагрузки V8 на S22 до ввода PIN. |
-| **R6** | Шевроны пробела смещены относительно keycap, наезжают на длинное название языка или остаются «призраками» на переиспользованной клавише. | Шевроны (Этап 3) | Средняя | Средняя | **Средний** | Привязка к внутреннему `.space_bar`, замер ширины `TextView`, порог `< 120dp`, `WeakHashMap` + мгновенная очистка при `keycode != SPACE`. |
-| **R7** | Перезапись пользовательской `Custom Theme` авто-переключателем Light/Dark или потеря исходного `enable_key_border`. | Авто Light/Dark + Backup/Restore (Этап 6) | Низкая (при ownership check) | Средняя | **Средний** | Снимок с проверкой `contains()` + ownership check (если пользователь сменил тему вручную — авто-переключатель уступает). |
-| **R8** | Задержка смены Light/Dark при открытой клавиатуре (Gboard не перезагружает тему мгновенно при изменении `SharedPreferences`). | Авто Light/Dark (Этап 6) | Средняя | Низкая | **Средний** | Проверить в V7; не применять `killProcess`; принять мягкое обновление на следующем `onStartInputView`, если мгновенного listener нет. |
-| **R9** | Конфликт с `Frosted Glass` (прозрачность поверхностей/клавиш не применяется или даёт артефакты с Samsung CSS). | Совместимость (Этап 2) | Средняя | Средняя | **Средний** | Использовать только стандартные CSS-заливки без нестандартных обёрток; обязательный тест с `Frosted Glass` на 0%/50%/100% прозрачности. |
-| **R10** | Попытка форсировать байткод-переписывание приватных классов рендера Gboard ради 100% копии One UI 8. | Любой этап | — | Критическая | **Недопустимый** | **Строго запрещено архитектурой аудита.** Визуальное сходство никогда не важнее стабильности и обновлений Gboard. |
+| **R1** | Искажение или поломка кнопки Rambler (двойной круг, обрезка диктовки, баг `Lflb`/`Lkaf`). | Тулбар (Шаги 5, 7) | Высокая (при наивной правке) | Критическая | **Высокий** | Запрет модификации Rambler; проверка V5; если на Шаге 7 нет 100% изоляции без индексов — **отказ от Шага 7**. |
+| **R2** | Слипание, обрезка или пустые подложки AP при динамическом `Count = 3..8` и в One-handed/Floating. | Круглые подложки AP (Шаг 7) | Высокая | Высокая | **Высокий** | Сначала эксперимент V9 + V6; только безопасный CSS по типу элемента; при малейших проблемах — **отказ от Шага 7**. |
+| **R3** | «Призрачные» шевроны на другой клавише после recycling `SoftKeyView` или смещённые bounds / плохой контраст в Custom Theme / Dynamic Color. | Шевроны пробела (Шаг 4) | Средняя | Высокая | **Высокий / Средний** | Двойной барьер (`afterSoftKeyBind` + проверка keycode в `draw`), привязка к `.space_bar`, замер текста, авто-скрытие; при провале V4 — **отложить Шаг 4**. |
+| **R4** | Gboard `18.5.4` не перечитывает `additional_keyboard_theme` без `System.exit(0)` (подтверждено, что галерея `Custom Theme` делает cold restart!). | Авто Light/Dark (Шаг 6) | Высокая / Средняя | Высокая | **Высокий / Средний** | Обязательный пред-гейт V7; **запрет `System.exit(0)` из IME**; если живого обновления нет — отказаться/отложить авто-переключение. |
+| **R5** | Нечитаемые Action Keys, popup long-press, вторичные символы, подсказки или карточки буфера из-за неподтверждённых CSS-свойств в `18.5.4`. | CSS ZIP-темы (Шаги 1–3) | Средняя | Высокая | **Средний** | Проверка через штатный `Custom Theme` без правок runtime; полный прогон V1–V3 на Galaxy S22. |
+| **R6** | `more_pill_keys` (`Key Shape Selection`) перекрывает CSS-форму `?123` / `Enter`. | Геометрия клавиш (Шаг 3) | Средняя | Низкая / Средняя | **Средний** | Проверить в V2; не ломать `Key Shape Selection` и не добавлять bytecode-хаки формы клавиш. |
+| **R7** | Перенос ZIP в DE ломает `"files:"` в `18.5.4`, либо CE-блокировка в Direct Boot вызывает сбой до ввода PIN. | Хранение ZIP / Direct Boot (Шаги 3, 6) | Средняя (при переносе в DE) / Низкая (в CE + деградация) | Критическая | **Средний** | Запрет переноса в DE без доказательства; полная деградация (no-op) до доступности CE+DE; обязательный тест V8. |
+| **R8** | Потеря исходной темы или `enable_key_border` при частичном выполнении, ручном выборе темы или повторном включении авто-режима. | Backup/Restore (Шаг 6) | Низкая (при 4-шаговом commit + Ownership Check) | Средняя | **Средний** | 4-шаговый порядок записи, проверка `contains()`, `Ownership Check`, проверка существования `files:` при восстановлении. |
+| **R9** | Конфликт CSS-тем с `Frosted Glass` (прозрачность поверхностей/клавиш, Seamless Nav Bar). | Совместимость (Шаг 3) | Средняя | Средняя | **Средний** | Стандартные CSS-заливки без нестандартных обёрток; тест `Frosted Glass` на 0%/50%/100% прозрачности. |
+| **R10** | Попытка переписать `SoftKeyboardView` / обработчики касаний / приватные классы рендера ради 100% копии One UI 8. | Любой шаг | — | Критическая | **Недопустимый** | **Строго запрещено.** Лучше отказаться от декоративной детали, чем сломать клавиатуру. |
 
 **Итоговый вердикт раздела 15:** **Можно реализовывать после проверки на устройстве**
 
 ---
 
-## 16. Рекомендуемая архитектура
+## 16. Рекомендуемая модульная архитектура (уточнена в v3.1)
 
-Рекомендуется **трёхслойная модульная архитектура** с независимыми переключателями, жёсткой изоляцией отказов (fail-closed) и нулевыми изменениями существующих патчей жестов, Rambler, Custom Theme и Key Shape Selection:
+В редакции v3.1 исправлена схема настроек из v3: **«Шевроны переключения языка на пробеле»** полностью отделены от блока «Внешний вид Samsung One UI 8» и размещены в уже существующем экране **«Язык» (`GboardLanguageSettingsFeature`)**:
 
 ```
 ┌────────────────────────────────────────────────────────────────────────────┐
 │ Настройки GboardSamsung (GboardPatchesSettingsActivity, RU + EN)           │
-│ [Внешний вид Samsung One UI 8]                                             │
-│  ├─ Режим темы: Выкл / Авто (система) / Светлая / Тёмная                   │
-│  ├─ Шевроны на пробеле (‹ Язык ›): Вкл / Выкл (независимо!)                │
-│  └─ (Условно, только после V6) Подложки панели инструментов: Выкл          │
-└─────────────────────────────────────┬──────────────────────────────────────┘
-                                      │ (CE: gboard_patches_settings + guard)
-      ┌───────────────────────────────┼───────────────────────────────┐
-      ▼                               ▼                               ▼
-┌─────────────────────┐ ┌───────────────────────────┐ ┌───────────────────────────┐
-│ СЛОЙ 1: ZIP/CSS     │ │ СЛОЙ 2: ViewOverlay       │ │ СЛОЙ 3: Auto Light/Dark   │
-│ (Этапы 1, 2, 4)     │ │ (Этап 3)                  │ │ + Backup/Restore (Эт. 6)  │
-│                     │ │                           │ │                           │
-│ • samsung_light.zip │ │ • GboardSpacebarChevron   │ │ • GboardSamsungAppearance │
-│ • samsung_dark.zip  │ │   Runtime                 │ │   Runtime + Settings      │
-│ • Валидация через   │ │ • Хук SoftKeyView.s       │ │ • Хук Lphr;               │
-│   Lrnw;->h(File)Z   │ │   (afterOrder = 950)      │ │   onStartInputView /      │
-│ • Установка в CE    │ │ • Фильтр KEYCODE_SPACE    │ │   onWindowShown           │
-│   getFilesDir()     │ │ • Пассивный Drawable в    │ │ • Snapshot/Restore        │
-│ • Активация в DE    │ │   ViewOverlay (.space_bar │ │   additional_keyboard_    │
-│   <pkg>_preferences │ │   bounds, >=120dp, text   │ │   theme & enable_key_     │
-│ • Фон клавиш, фон   │ │   collision guard)        │ │   border + ownership      │
-│   тулбара, цвета    │ │ • 0 касаний MotionEvent   │ │ • 0 I/O на горячем пути   │
-└─────────────────────┘ └───────────────────────────┘ └───────────────────────────┘
+│                                                                            │
+│ 1) Существующий экран «Язык» (GboardLanguageSettingsFeature)               │
+│    └─ Секция «Переключение языка»:                                         │
+│        ├─ Переключение языка свайпом по пробелу     (уже есть, независим)  │
+│        ├─ Скрыть клавишу переключения языка         (уже есть, независим)  │
+│        └─ Шевроны переключения языка на пробеле     (НОВЫЙ, по умолч. Выкл)│
+│                                                                            │
+│ 2) Существующая группа «Клавиши, макет и символы»                          │
+│    └─ (После Шагов 1–3 и V7) Внешний вид Samsung One UI 8:                 │
+│        └─ Режим темы: Выкл / Светлая / Тёмная / [Авто — только после V7]  │
+└──────────────────────────┬──────────────────────────────┬──────────────────┘
+                           │ (CE: gboard_patches_settings │  + Direct Boot guard)
+              ┌────────────▼────────────┐   ┌─────────────▼─────────────┐
+              │ НЕЗАВИСИМЫЙ СЛОЙ        │   │ СЛОЙ ОФОРМЛЕНИЯ SAMSUNG   │
+              │ Шевроны пробела (Шаг 4) │   │ (Шаги 1–3, 5, 6)          │
+              │ [ТОЛЬКО ПОСЛЕ V4!]      │   │                           │
+              │ • SoftKeyView.s (950)   │   │ • Шаги 1–3: CSS ZIP-темы  │
+              │ • KEYCODE_SPACE == 62   │   │   Light & Dark через      │
+              │ • Пассивный ViewOverlay │   │   штатный Custom Theme    │
+              │   + проверка в draw()   │   │ • Шаг 5: CSS фона/цветов  │
+              │ • Границы .space_bar,   │   │   тулбара (без Rambler!)  │
+              │   адаптивный размер/цвет│   │ • Шаг 6 (после V7/V8):    │
+              │ • 0 касаний MotionEvent │   │   Авто Light/Dark в Lphr; │
+              │ • Не связан с темой!    │   │   + Snapshot/Ownership    │
+              └─────────────────────────┘   │ • Шаг 7 (опционально):    │
+                                            │   Круги AP — только если  │
+                                            │   безопасный CSS по типу  │
+                                            └───────────────────────────┘
 ```
 
 ### Ключевые архитектурные инварианты
 
-1. **Пространство имён сохраняется:** все новые классы размещаются в `dev.jason.gboardpatches.extension.samsungappearance.*` и `dev.jason.gboardpatches.patches.gboard.features.samsungappearance.*` (совместимость с `extensions/gboard-patches.rve` и `Package Rename`).
-2. **Независимость подфункций:** пользователь может включить тему Samsung **без** шевронов, либо включить шевроны `‹ Русский ›` поверх **любой** своей темы (включая сток Dynamic Color или Custom Theme), независимо от `Samsung Spacebar Gestures` и `Swipe Down to Dismiss`.
-3. **Изоляция ошибок:** каждый runtime-вызов обёрнут в `try/catch (Throwable)` и `isUserUnlocked(context)`, никогда не бросает исключения в процесс Gboard.
-4. **Нулевая модификация Rambler и обработки касаний:** пакет `rambler/`, `GboardSpacebarGestureRuntime`, `FreeCursorMotionEventHandler`, `ScrubMotionEventHandler` не изменяются.
-5. **Опциональность Этапа 5:** круглые подложки Access Points не являются частью базового контракта; они могут быть добавлены только как отдельный отключаемый слой, если и только если эксперимент V6 на Galaxy S22 подтвердит 100% безопасность при 3–8 элементах, One-handed и рядом с Rambler.
+1. **Пространство имён и совместимость:** все технические namespaces (`dev.jason.gboardpatches`, `extensions/gboard-patches.rve`) и поддержка `Package Rename` сохраняются без изменений.
+2. **Абсолютная независимость подфункций:** шевроны пробела не зависят от Samsung Appearance, `Samsung Spacebar Gestures`, `Swipe Down to Dismiss`, видимости глобуса и активной темы; выбор Samsung-темы не включает шевроны автоматически.
+3. **Нулевое вмешательство в ввод и Rambler:** движок клавиатуры, `MotionEvent`, жесты, карта вторичных символов, `Key Shape Selection` и пакет `rambler/` не изменяются.
+4. **Безопасная деградация вместо жёстких обходов:** при провале V4 — отложить шевроны; при провале V6 — отказаться от круглых подложек AP; при провале V7 — отказаться от авто-переключения без перезапуска (запрет `System.exit(0)` в IME).
 
 **Итоговый вердикт раздела 16:** **Можно реализовывать после проверки на устройстве**
 
 ---
 
-## 17. План безопасной реализации по этапам
+## 17. Рекомендуемая последовательность будущей реализации (7 независимых шагов)
 
-Реализация строго разбита на **6 последовательных этапов** с обязательными воротами проверки (Gate) после каждого этапа. Переход к следующему этапу **запрещён**, пока не закрыты критерии приёмки текущего.
+> **Важно:** это план исследования и возможной поэтапной реализации, а **не** разрешение немедленно менять код. Никаких рискованных изменений в одном этапе не объединяется; переход к следующему шагу разрешён только после закрытия ворот проверки предыдущего.
 
-### Этап 1: Создание ZIP/CSS тем Light и Dark, оформление клавиш и фона
-
-- **Цель:** подготовить два чистых, самодостаточных архива (`samsung_oneui8_light.zip` и `samsung_oneui8_dark.zip`) формата `format_version: 3` с базовой палитрой One UI 8 (фон, буквенные клавиши, функциональные клавиши, пробел, основной и вторичный текст, состояния `:pressed`, контрастные popup-подсказки и Action Keys).
-- **Объём:** только ZIP/CSS-ассеты и их валидация контрактом `GboardThemeImportContract` (размеры, отсутствие path traversal, валидный JSON).
-- **Результат этапа:** два готовых ZIP-файла, которые можно протестировать на реальном устройстве **через уже существующую функцию `Custom Theme` (импорт ZIP)** ещё до написания единой строчки нового runtime-кода!
-- **Риск:** Средний.
-
-### Этап 2: Проверка отображения на Gboard 18.5.4
-
-- **Цель:** прогнать ZIP-темы Этапа 1 на реальном **Samsung Galaxy S22 5G (Android 16 / One UI 8, Gboard 18.5.4)** и закрыть гипотезы **V1, V2, V3, V8** (плюс `Frosted Glass`, `Clipboard`, `Emoji`, `Suggestions`, `Action Keys`, `Nav bar`, `Floating/Split/One-handed`, `Key Shape Selection`).
-- **Ворота (Gate 2):**
-  - Валидатор `Lrnw;->h(File)Z` принимает оба архива;
-  - Все 6 Action Keys, secondary symbols, long-press popup, Clipboard, Emoji и Suggestions полностью читаемы в Light и Dark;
-  - Зафиксировано фактическое поведение `more_pill_keys` и Direct Boot (перезагрузка до PIN);
-  - Палитра и скругления откалиброваны по живому экрану S22.
-- **Риск:** Средний (эксперимент полностью обратим — смена темы в Gboard за 2 секунды).
-
-### Этап 3: Исследование и безопасная реализация шевронов пробела
-
-- **Цель:** проверить внутреннюю геометрию `SoftKeyView` пробела на `18.5.4` (V4) и реализовать `GboardSpacebarChevronRuntime` (пассивный `Drawable` в `ViewOverlay` через `SoftKeyView.s`, `afterOrder = 950`, фильтр `KEYCODE_SPACE == 62`).
-- **Ворота (Gate 3):**
-  - Шевроны симметрично выровнены внутри `.space_bar` в RU и EN, цвет адаптируется к Light/Dark и `Frosted Glass`;
-  - Автоматически скрываются в Split / узком Floating / при коллизии с длинным текстом;
-  - Мгновенно исчезают при переключении на `?123`/цифры/эмодзи (нет артефактов переиспользования `SoftKeyView`);
-  - 100% работоспособность тапа пробела, `Samsung Spacebar Gestures` и удержания пробела для курсора.
-- **Риск:** Средний.
-
-### Этап 4: Оформление фона и цветов верхнего тулбара
-
-- **Цель:** добавить в проверенные ZIP/CSS-темы правила фона `.keyboard-header-area` и (только после подтверждения V5 на `18.5.4`) цвета иконок тулбара и текста подсказок — **не трогая кнопку Rambler**.
-- **Ворота (Gate 4):**
-  - Фон тулбара гармонично сочетается с телом клавиатуры в Light и Dark и корректно работает с `Frosted Glass`;
-  - Иконки меню `⊞`, всех 3–8 Access Points и текста подсказок имеют высокий контраст;
-  - Кнопка Rambler (`🎤✦`) и её анимации диктовки на 100% не затронуты.
-- **Риск:** Средний.
-
-### Этап 5: Эксперимент с круглыми подложками Access Points (условный)
-
-- **Жёсткое предусловие:** запускается **ТОЛЬКО** если диагностика V6 на Galaxy S22 (`18.5.4`) докажет, что обычные Access Points можно детерминированно отличить от кнопки Rambler, кнопки меню `⊞` и области подсказок по типу/тегу (без индексов!), а также что адаптивный диаметр не создаёт слипания при `Access Point Count = 8` и в One-handed.
-- **Объём (если допущен):** изолированный отключаемый слой с автоотключением при тесной ширине (`< 34dp/слот`) и нулевым влиянием на `AccessPointDragPopupView` и Rambler.
-- **Штатный альтернативный выход:** если V6 выявляет нестабильность или тесноту при 8+1 элементах — **Этап 5 официально закрывается отказом** без ущерба для Этапов 1–4 и 6.
-- **Риск:** Высокий.
-
-### Этап 6: Автоматическое переключение Light/Dark с сохранением и восстановлением исходных настроек
-
-- **Цель:** реализовать встроенную установку предпроверенных ZIP-тем из Settings UI, полную схему Backup/Restore (`additional_keyboard_theme` + `enable_key_border` с проверкой `contains()` и ownership), а также автоматическое переключение по `Configuration.UI_MODE_NIGHT_MASK` в `Lphr;` (с защитой `isUserUnlocked`) и полную RU/EN локализацию экрана настроек.
-- **Ворота (Gate 6):**
-  - Подтверждён сценарий V7 (переключение системной темы Light ↔ Dark);
-  - Проверен полный цикл Backup/Restore для стока Dynamic Color и для пользовательской Custom Theme ZIP;
-  - Ручной выбор другой темы в Gboard не перезаписывается;
-  - Перезагрузка устройства (Direct Boot, V8) проходит без единого сбоя;
-  - Все unit/Robolectric-тесты проекта проходят без регрессий.
-- **Риск:** Средний.
+1. **Шаг 1 — Подготовить CSS ZIP-темы Samsung One UI 8 Light и Dark:**
+   - Создать два чистых автономных архива (`samsung_oneui8_light.zip` и `samsung_oneui8_dark.zip`) формата `format_version: 3`, проверенных по `GboardThemeImportContract` (палитра, клавиши, границы, тени, вторичные символы, popup-клавиши, аккуратные Action Keys). **Ноль изменений в runtime и патчах.**
+2. **Шаг 2 — Проверить их штатным механизмом импорта `Custom Theme`, не меняя runtime:**
+   - Импортировать оба ZIP на Galaxy S22 5G (`v4.4.2`, `Gboard 18.5.4`) через уже работающий `Custom Theme` (`ThemeListingFragment` → «+» → ZIP) и убедиться, что `Lrnw;->h(File)Z` принимает оба архива без ошибок.
+3. **Шаг 3 — Проверить внешний вид и совместимость на `Gboard 18.5.4`:**
+   - Закрыть на реальном устройстве эксперименты **V1** (CSS-свойства и контраст), **V2** (`Key Shape Selection` / `more_pill_keys`), **V3** (все 6 Action Keys), **V8** (Direct Boot до ввода PIN), а также проверить `Frosted Glass`, `Clipboard`, `Emoji`, `Suggestions`, `Nav bar`, `Floating`, `Split`, `One-handed`, RU/EN/цифры/символы/popup. Откалибровать палитру и радиусы по живому экрану.
+4. **Шаг 4 — Отдельно исследовать и реализовать настройку шевронов (только если механизм признан безопасным):**
+   - Сначала провести диагностику **V4** на `18.5.4` (структура `SoftKeyView`, `.space_bar`, `TextView`, цвет при Dynamic Color/Custom Theme, recycling across layouts, Floating/Split/One-handed).
+   - Только если `ViewOverlay` с двойным барьером recycling доказал 100% безопасность и отсутствие артефактов — реализовать самостоятельную настройку «Шевроны переключения языка на пробеле» в секции «Переключение языка» (`GboardLanguageSettingsFeature`), выключенную по умолчанию. Если безопасность не подтверждена — отложить Шаг 4.
+5. **Шаг 5 — Исследовать оформление фона и цветов верхнего тулбара:**
+   - Провести эксперименты **V9** (`Access Point Count` = 3, 6, 8) и **V5** (CSS `.keyboard-header-area`, цвета иконок и кандидатов, неприкосновенность Rambler).
+   - Внести в CSS-темы только подтверждённые безопасные правила фона и цветов, не затрагивая Rambler и подсказки.
+6. **Шаг 6 — Только после подтверждения предыдущих этапов исследовать автоматическое переключение Light/Dark:**
+   - Провести эксперимент **V7** (перечитывает ли `Gboard 18.5.4` ключ `additional_keyboard_theme` без `System.exit(0)`) и повторно проверить **V8** (Direct Boot).
+   - Только при безопасном результате V7 реализовать встроенную установку тем, 4-шаговый Snapshot/Restore с `Ownership Check`, переключение по `Configuration.UI_MODE_NIGHT_MASK` в `Lphr;` и RU/EN UI.
+7. **Шаг 7 — Круглые подложки Access Points рассматривать последними и только при наличии безопасного способа различать типы элементов:**
+   - Провести пред-гейт **V6** на основе результатов **V9**.
+   - Реализовывать **исключительно** если существует безопасный (предпочтительно CSS) способ отличать обычные AP от кнопки `⊞`, Rambler и подсказок без привязки к индексам и без слипания при `3..8` и One-handed. В противном случае — **официально отказаться от Шага 7**.
 
 **Итоговый вердикт раздела 17:** **Можно реализовывать после проверки на устройстве**
 
 ---
 
-## 18. План тестирования
+## 18. Проверка совместимости и расширенная тестовая матрица
 
-Тестирование проводится в два уровня: (A) локальные JVM/Robolectric unit-тесты в репозитории и (B) ручной приёмочный прогон на реальном **Samsung Galaxy S22 5G (`SM-S901U1`, Android 16 / One UI 8, `Gboard 18.5.4`, без root)**.
+> **Статус выполнения:** ни один из перечисленных ниже тестов **фактически ещё не выполнялся**, так как текущая задача — строго технический аудит и документация без модификации кода.
 
-### 18.1. Автоматические JVM/Robolectric тесты (в коде после начала реализации)
+### 18.1. Автоматические JVM / Robolectric тесты (проектируются для будущих этапов)
 
-1. **Валидация ZIP-ассетов:** `GboardThemeImportContract` принимает оба архива (`samsung_oneui8_light.zip`, `samsung_oneui8_dark.zip`), валидный `metadata.json`, нулевые ошибки path traversal и лимитов.
-2. **Backup/Restore & Ownership:** 5 сценариев (сток без ключа, `assets:...`, `files:user_theme_...`, удалённый исходный файл, ручная смена темы пользователем поверх Samsung Appearance) + Direct Boot (`isUserUnlocked == false` → no-op).
-3. **Шевроны пробела (`GboardSpacebarChevronRuntimeTest`):** привязка при `KEYCODE_SPACE`, немедленная очистка при переиспользовании `SoftKeyView` под другой keycode, скрытие при ширине `< 120dp`, скрытие при коллизии с широким текстом, выключение тоггла снимает все `Drawable` из `ViewOverlay`.
-4. **Авто Light/Dark:** `UI_MODE_NIGHT_NO` → Light, `UI_MODE_NIGHT_YES` → Dark, повторный вызов при уже активной теме → 0 записей в `SharedPreferences`.
-5. **Локализация RU/EN:** проверка наличия и непустоты всех новых ключей в `gboard_settings_text.xml` (RU и EN).
+1. Валидация Samsung ZIP-архивов контрактом `GboardThemeImportContract` (структура, размеры, `metadata.json`, защита от path traversal).
+2. Unit-тесты `GboardSamsungAppearanceSettings` на все 10 сценариев Snapshot / Restore / `Ownership Check` / частичный сбой / Direct Boot (`isUserUnlocked == false` → no-op).
+3. Unit/Robolectric-тесты `GboardSpacebarChevronRuntime` (если Шаг 4 допущен): привязка только на `KEYCODE_SPACE == 62`, очистка при recycling на другой keycode, проверка keycode в `draw()`, скрытие при узкой ширине / коллизии с текстом, независимость от `Samsung Spacebar Gestures` и от темы, мгновенное снятие `ViewOverlay` при выключении тоггла.
+4. Unit-тесты локализации RU/EN (`gboard_settings_text.xml`) и поискового индекса (`GboardSettingsSearchIndexData`).
 
-### 18.2. Приёмочная матрица на реальном Galaxy S22 5G (`Gboard 18.5.4`)
+### 18.2. Полная матрица тестирования на реальном устройстве (Galaxy S22 5G, Android 16 / One UI 8, Gboard 18.5.4)
 
-| Группа тестов | Конкретные сценарии | Ожидаемый результат |
-| --- | --- | --- |
-| **Базовый ввод и раскладки** | RU (11 колонок), EN (10 колонок), Цифры, `?123`, Символы, Телефон/PIN, вторичные символы, long-press popup. | Все буквы, символы и popup чётко читаемы в Light и Dark; нет обрезки текста. |
-| **Пробел и жесты** | Быстрый тап пробела; свайп пробела влево/вправо (`Samsung Spacebar Gestures`); удержание пробела + движение курсора; свайп-набор текста; смена глобусом. | Шевроны `‹ Русский ›` / `‹ English (US) ›` ровно по краям; ни одного ложного срабатывания или залипания жестов. |
-| **Action Keys** | Поля ввода: `Enter` (чат), `Search` (браузер/Google), `Send` (мессенджер), `Done`, `Next`, `Go`. | Все 6 кнопок контрастны и однозначно различимы в Light и Dark. |
-| **Тулбар и Rambler** | `Access Point Count` = `3`, `6`, `8`; перетаскивание Access Points; Legacy и Modern `Access Points Menu`; 5 циклов запуска/остановки диктовки **Rambler**; `Manual Incognito`. | Тулбар ровный, нет наложений; Rambler и его анимации работают на 100% штатно. |
-| **Панели Gboard** | `Clipboard` (обычные и закреплённые элементы), `Emoji`, `GIF`, `Suggestions` (подсказки + автоисправление). | Высокий контраст во всех панелях; при показе подсказок нет посторонних артефактов. |
-| **Режимы и ориентация** | Портрет ↔ Ландшафт; `Floating`; `Split`; `One-handed` (левая/правая); нижняя полоса Nav bar (жесты и 3 кнопки). | Шевроны и элементы тулбара корректно скрываются/адаптируются при сжатии; Nav bar совпадает по цвету. |
-| **Совместимость патчей** | `Frosted Glass` (выкл / 50% / макс. прозрачность); `Rounded Keyboard Panel`; `Key Shape Selection` (вкл/выкл); `Custom Theme` (вкл Samsung → выкл Samsung → возврат Custom Theme). | Ни один существующий патч не сломан; исходная тема и `enable_key_border` восстанавливаются точно. |
-| **Авто Light/Dark и Direct Boot** | Переключение системной темы Android в шторке (при закрытой и открытой клавиатуре); полная перезагрузка Galaxy S22 → экран PIN до разблокировки → разблокировка → открытие клавиатуры. | Плавная смена Light ↔ Dark без крашей; ноль ошибок после перезагрузки в Direct Boot. |
+#### A. Языки и раскладки
 
-**Итоговый вердикт раздела 18:** **Можно реализовывать безопасно**
+| Тест | Цель | Проверяемое поведение | Критерий успеха | Возможный риск | На устройстве |
+| --- | --- | --- | --- | --- | --- |
+| **T-L1** | Русская раскладка (11 кол.) | Отображение букв, цифр, вторичных символов, пробела `Русский` в Light и Dark. | Нет обрезки букв и вторичных символов, высокий контраст, ровные границы клавиш. | Слишком узкие клавиши при некорректных `padding_ratio_*`. | Обязательно |
+| **T-L2** | Английская раскладка (10 кол.) | Отображение QWERTY, вторичных символов, пробела `English (US)`. | Соответствие палитре One UI 8, чёткое разделение буквенных и функциональных клавиш. | Визуальный дисбаланс с русской раскладкой. | Обязательно |
+| **T-L3** | Переключение между языками | Переключение свайпом по пробелу, клавишей глобуса и системным диалогом при вкл/выкл шевронах. | Язык переключается мгновенно; при вкл шевронах текст пробела обновляется без дублей и залипаний. | Задержка, «призраки» или сбой `Samsung Spacebar Gestures`. | Обязательно |
+| **T-L4** | Длинные названия языков | Языки с длинной подписью на пробеле (например, `English (US)`, двуязычный режим) + увеличенный системный шрифт. | Шевроны уменьшаются или полностью скрываются при зазоре `< 6 dp`, никогда не наезжают на текст. | Наложение шевронов на текст языка. | Обязательно |
+| **T-L5** | Символьные, цифровые и телефонные раскладки | Переход `QWERTY` → `?123` → `=\<` → цифры / PIN и обратно. | Все клавиши читаемы; на переиспользованных не-пробельных `SoftKeyView` нет «призрачных» шевронов. | Появление шевронов на другой клавише после recycling. | Обязательно |
+| **T-L6** | Popup-клавиши (long-press) | Долгое нажатие на буквы (ё, ъ, акценты, цифры) и пунктуацию (`.`, `,`). | Фон и символы всплывающего окна чётко контрастны в Light и Dark; выбор символа работает штатно. | Невидимый текст в popup (частая ошибка CSS-тем). | Обязательно |
+
+#### B. Клавиши и действия
+
+| Тест | Цель | Проверяемое поведение | Критерий успеха | Возможный риск | На устройстве |
+| --- | --- | --- | --- | --- | --- |
+| **T-K1** | Action Keys (`Enter`, `Search`, `Send`, `Done`, `Next`, `Go`) | Открытие полей чата, браузера, мессенджера, форм входа в Light и Dark. | Все 6 иконок и их подложки контрастны, различимы, выполняют исходное действие. | «Белое на белом» или двойная заливка `.background-icon.for-action-key`. | Обязательно |
+| **T-K2** | Обычное нажатие пробела | Серия быстрых тапов пробела при вкл и выкл шевронах. | 100% тапов вставляют пробел без задержек и пропусков. | Побочное влияние на `SoftKeyView`. | Обязательно |
+| **T-K3** | Удержание пробела и курсор | Длительное удержание пробела + плавное движение курсора влево/вправо (при вкл/выкл шевронах). | Курсор управляется идентично стабильной `v4.4.2`, нет сброса указателя. | Конфликт с `FreeCursorMotionEventHandler` при неверном хуке. | Обязательно |
+| **T-K4** | Функциональные клавиши | `Shift` (строчные/заглавные/Caps Lock), `Backspace` (тап и свайп-удаление), `?123`, `,`, `.`. | Визуально отличны от буквенных; состояние Caps Lock чётко видно; свайп-удаление работает. | Потеря индикации Caps Lock или неконтрастная иконка. | Обязательно |
+| **T-K5** | Вторичные символы | Отображение и ввод всех вторичных символов долгим нажатием. | Оригинальная карта Gboard полностью сохранена; символы чётко читаются в Light и Dark. | Низкий контраст `.label.secondary` или обрезка в углу клавиши. | Обязательно |
+
+#### C. Верхний тулбар
+
+| Тест | Цель | Проверяемое поведение | Критерий успеха | Возможный риск | На устройстве |
+| --- | --- | --- | --- | --- | --- |
+| **T-T1** | `Access Point Count` = `3`, `6`, `8` (Эксперимент V9) | Переключение значения с перезапуском Gboard, подсчёт `⊞`, обычных AP и Rambler. | Зафиксирована точная формула слотов; нет обрезки и наложения элементов. | Неверная оценка ширины слотов и теснота при 8+1/10 слотах. | Обязательно |
+| **T-T2** | Изменение состава и порядка AP | Вкл/выкл `Editing Access Points` (`Copy`/`Cut`), перетаскивание AP на бар и обратно (`AccessPointDragPopupView`). | Порядок сохраняется, анимация drag-and-drop плавная, нет «пустых» подложек или смещения стилей. | Поломка `AccessPointDragPopupView` или «прилипшее» оформление. | Обязательно |
+| **T-T3** | Голосовой ввод **Rambler** | 5+ циклов запуска/остановки диктовки в Light и Dark, поле пароля (скрытие микрофона), `Manual Incognito`. | Нативный круг Rambler и анимация диктовки на 100% не затронуты; возврат в тулбар без артефактов. | Двойной круг, обрезка диктовки, регрессия `Lflb`/`Lkaf`. | Обязательно |
+| **T-T4** | Кнопка меню/сетки (`⊞`) | Открытие панели инструментов в Legacy и Modern режимах `Access Points Menu`. | Иконка `⊞` и плитки внутри меню читаемы в Light и Dark; переключение стилей меню работает. | Потеря контраста иконки меню или фона сетки. | Обязательно |
+| **T-T5** | `Clipboard`, `Emoji`, `GIF`, `Suggestions` | Открытие буфера (обычные и закреплённые карточки), панели эмодзи/GIF, активный ввод с подсказками и автоисправлением. | Высокий контраст во всех панелях; нет посторонних рамок/кругов поверх подсказок (`.for-candidate-key`). | Нечитаемый текст подсказок или карточек буфера. | Обязательно |
+
+#### D. Режимы клавиатуры
+
+| Тест | Цель | Проверяемое поведение | Критерий успеха | Возможный риск | На устройстве |
+| --- | --- | --- | --- | --- | --- |
+| **T-M1** | Стандартный режим | Обычная закреплённая клавиатура в портрете. | Ровные клавиши, корректные отступы, симметричные шевроны (если включены). | Смещение границ относительно `.space_bar`. | Обязательно |
+| **T-M2** | Floating Keyboard | Переключение в плавающий режим, перемещение, изменение ширины/размера окна. | Ручка перетаскивания видна; шевроны уменьшаются/скрываются при сужении; нет выхода за границы. | Выход `ViewOverlay` за пределы клавиши при ресайзе. | Обязательно |
+| **T-M3** | Split Keyboard | Включение разделённой клавиатуры (ландшафт/планшетный вид). | Обе половинки ровные; шевроны не сжимаются в «кашу» на узких половинках пробела. | Дублирование тесных шевронов на обеих половинках. | Обязательно |
+| **T-M4** | One-handed Keyboard | Переключение влево и вправо при `Access Point Count = 8` и включённых шевронах. | Боковые кнопки контрастны; тулбар не слипается; шевроны не наезжают на название языка. | Перекрытие иконок тулбара и обрезка на ~295 dp. | Обязательно |
+| **T-M5** | Разные масштабы и ориентации | Портрет ↔ Ландшафт; системный Font Size (мин/макс) и Display Size; настройка высоты клавиатуры Gboard. | Корректный пересчёт bounds и контраста без перезапуска клавиатуры. | Залипшие старые координаты `Drawable` после поворота/масштабирования. | Обязательно |
+
+#### E. Совместимость тем и существующих функций
+
+| Тест | Цель | Проверяемое поведение | Критерий успеха | Возможный риск | На устройстве |
+| --- | --- | --- | --- | --- | --- |
+| **T-C1** | Samsung Light / Dark + `Custom Theme` | Включение Samsung-темы поверх пользовательской ZIP-темы и последующее выключение / возврат. | Исходная `Custom Theme` и `enable_key_border` восстанавливаются точно; пользовательский ZIP не удалён. | Потеря пользовательской темы или битая ссылка. | Обязательно |
+| **T-C2** | `Frosted Glass` + `Seamless Navigation Bar` | Samsung Light/Dark совместно с `Frosted Glass` (0%/50%/100% прозрачность фона и клавиш, расширение на Nav bar на API 36). | Размытие и прозрачность работают; нижняя полоса навигации и её системные иконки контрастны. | Непрозрачные артефакты, чёрные углы или невидимые кнопки Nav bar. | Обязательно |
+| **T-C3** | `Dynamic Color` + независимые шевроны | Samsung Appearance = Выкл (активен стоковый Dynamic Color), Шевроны пробела = Вкл. | Клавиатура остаётся в Dynamic Color; шевроны видны и гармонируют (или зафиксировано ограничение цвета). | Неконтрастный или устаревший цвет шевронов после смены обоев. | Обязательно |
+| **T-C4** | `Key Shape Selection` (`more_pill_keys`) | Переключение `Key Shape Selection` вкл/выкл при активной Samsung-теме (Эксперимент V2). | Настройка остаётся рабочей; поведение формы `?123` и `Enter` предсказуемо и задокументировано. | Конфликт формы клавиш или неожиданное игнорирование CSS. | Обязательно |
+| **T-C5** | `Samsung Spacebar Gestures` + `Swipe Down to Dismiss` | Проверка обеих функций при всех комбинациях: Samsung-тема (вкл/выкл) × Шевроны (вкл/выкл) × Глобус (вкл/выкл). | Ни одна функция не зависит от другой и не имеет регрессий относительно `v4.4.2`. | Нежелательная связность настроек или перехват жестов. | Обязательно |
+
+#### F. Системные условия
+
+| Тест | Цель | Проверяемое поведение | Критерий успеха | Возможный риск | На устройстве |
+| --- | --- | --- | --- | --- | --- |
+| **T-S1** | Системная светлая / тёмная тема | Запуск клавиатуры при системной светлой и системной тёмной теме Android 16 / One UI 8. | Корректная тема при старте в обоих режимах (при включённом авто-режиме на Шаге 6). | Неверное чтение `UI_MODE_NIGHT_MASK`. | Обязательно |
+| **T-S2** | Смена системной темы при открытой и закрытой клавиатуре (V7) | Переключение «Тёмный режим» в шторке Samsung One UI 8: (а) когда клавиатура закрыта; (б) когда клавиатура открыта. | Зафиксирован точный момент смены темы без краша, мерцания и без `System.exit(0)`. | Тема не перечитывается без перезапуска процесса Gboard. | Обязательно |
+| **T-S3** | Перезапуск устройства, Direct Boot, блокировка/разблокировка (V8) | Полная перезагрузка Galaxy S22 → экран ввода PIN до разблокировки → разблокировка → блокировка экрана → разблокировка → ввод текста. | Ноль крашей до разблокировки; после разблокировки тема и настройки в целостности. | `IllegalStateException` в CE или сбой загрузчика `"files:"` до ввода PIN. | Обязательно |
+| **T-S4** | Ручной выбор темы пользователем поверх авто-режима | Включить авто-режим Samsung → вручную выбрать любую другую тему в Gboard → переключить системную тему Android. | `Ownership Check` уступает управление: ручной выбор пользователя **не перезаписывается**. | Навязчивый возврат Samsung-темы поверх выбора пользователя. | Обязательно |
+
+**Итоговый вердикт раздела 18:** **Можно реализовывать безопасно** *(имеется в виду сама методика тестирования).*
 
 ---
 
 ## 19. План отката
 
-Архитектура проектируется так, чтобы **каждый слой имел мгновенный пользовательский откат (без перепрошивки/переустановки APK)** и **независимый кодовый откат (по коммитам/этапам)**:
+Архитектура проектируется так, чтобы каждый независимый слой имел **мгновенный откат на устройстве без переустановки APK** и **изолированный кодовый откат по коммитам**:
 
-### 19.1. Пользовательский откат на устройстве (0 переустановок)
+### 19.1. Пользовательский откат на устройстве
 
-1. **Откат темы оформления (Этапы 1, 4, 6):**
-   - Выключить `Внешний вид Samsung` в настройках GboardSamsung → автоматически восстанавливаются сохранённые `additional_keyboard_theme` и `enable_key_border`.
-   - Альтернативный аварийный путь: открыть штатные настройки **Gboard → Тема** и выбрать любую стоковую или свою Custom Theme — `Ownership Check` немедленно уступает управление пользователю.
-2. **Откат шевронов пробела (Этап 3):**
-   - Выключить отдельный переключатель `Шевроны на пробеле` → `GboardSpacebarChevronRuntime` немедленно удаляет все `Drawable` из `ViewOverlay` всех отслеживаемых `SoftKeyView`.
-3. **Откат круглых подложек тулбара (Этап 5, если будет реализован):**
-   - Выключить отдельный переключатель `Подложки панели инструментов` → декоратор мгновенно снимается.
-4. **Аварийный полный сброс (на случай гипотетического бага до разблокировки):**
-   - Все runtime-хуки защищены `isUserUnlocked(context)` и `try/catch (Throwable)`, поэтому клавиатура не может «окирпичить» ввод PIN. В крайнем случае пользователь всегда может переключиться на системную «Клавиатуру Samsung» в системном переключателе IME на панели навигации и отключить/переустановить пропатченный GboardSamsung.
+1. **Откат CSS ZIP-тем (Шаги 1–3, 5, 6):** выбрать любую другую тему в штатных настройках **Gboard → Тема** (`Ownership Check` сразу передаёт управление пользователю), либо выключить режим Samsung Appearance (восстанавливаются исходные `additional_keyboard_theme` и `enable_key_border`).
+2. **Откат шевронов пробела (Шаг 4):** выключить независимый переключатель **«Шевроны переключения языка на пробеле»** в разделе **«Язык» → «Переключение языка»** — все `Drawable` немедленно удаляются из `ViewOverlay`.
+3. **Откат круглых подложек AP (Шаг 7, если вообще будет реализован):** удалить CSS-правило или выключить отдельный независимый переключатель без влияния на тему и шевроны.
+4. **Аварийный выход в Direct Boot:** все runtime-хуки полностью бездействуют до доступности CE + DE; на крайний случай пользователь всегда может переключиться на системную «Клавиатуру Samsung» в системном переключателе IME.
 
-### 19.2. Кодовый откат в репозитории (поэтапная обратимость)
+### 19.2. Кодовый откат в репозитории
 
-- Каждый из 6 этапов коммитится **отдельным изолированным PR/коммитом**.
-- Отмена Этапа 5 (если провалит тесты) или Этапа 3 (шевроны) выполняется одним `git revert` без затрагивания ZIP-тем, `Custom Theme`, `Frosted Glass`, `Samsung Spacebar Gestures` или `Rambler`.
-- Существующие патчи репозитория и `gboard-version-bindings.json` не переписываются деструктивно — новые вызовы добавляются только как независимые участники существующих композиторов (`SoftKeyView.s`, `Lphr;`).
+- Каждый шаг реализуется отдельным изолированным PR/коммитом.
+- Откат любого шага (например, Шага 4 или Шага 6) выполняется одним `git revert` без затрагивания подтверждённой базы `v4.4.2`, `Custom Theme`, `Frosted Glass`, `Samsung Spacebar Gestures`, `Swipe Down to Dismiss`, `Key Shape Selection` и `Rambler`.
 
 **Итоговый вердикт раздела 19:** **Можно реализовывать безопасно**
 
 ---
 
-## 20. Список нерешённых вопросов
+## 20. Список нерешённых вопросов (техническая сводка)
 
-Ниже честно зафиксированы все вопросы, на которые **невозможно дать окончательный ответ без эксперимента на реальном Galaxy S22 5G (`Gboard 18.5.4`) или инспекции проприетарного APK `18.5.4`**:
+Краткий перечень технических вопросов, остающихся открытыми до экспериментов на Galaxy S22 5G (`Gboard 18.5.4`) — развёрнутая итоговая классификация приведена в Разделе 21:
 
-1. **Точный список рабочих CSS-селекторов в `Gboard 18.5.4`:** подтвердятся ли на практике сторонние селекторы `.keytop.dark`, `.keytop.for-action-key`, `.background-icon.for-action-key`, `.icon.for-action-key`, `.label.secondary`, `.icon.access-point-item`, `.background-icon.access-points-menu`, `elevation`, `shadow_color`? *(Закрывается в Этапах 2 и 4.)*
-2. **Приоритет Material 3 `more_pill_keys` над CSS-формой клавиш `?123` и `Enter`:** возвращает ли `background_shape: rectangle` прямоугольную форму при включённом `Key Shape Selection` или требуется переключение `Key Shape Selection`? *(Закрывается в Этапе 2, тест V2.)*
-3. **Внутренняя структура `SoftKeyView` пробела в `18.5.4`:** имеет ли дочерний view keycap точный тег `.space_bar`, какие у него `padding`/отступы относительно `SoftKeyView`, и каков ID/способ поиска `TextView` метки языка для точного расчёта зазора до шевронов? *(Закрывается в Этапе 3, тест V4.)*
-4. **Точная View-иерархия верхнего тулбара `18.5.4` и изоляция Rambler:** какими тегами/классами/ID в `18.5.4` представлены кнопка меню `⊞`, обычные Access Points (3–8 шт.), кнопка Rambler (`🎤✦`) и область подсказок, и возможно ли 100% безопасно отделить обычные Access Points от Rambler без опоры на индекс? *(Закрывается в пред-гейте V6 перед Этапом 5; при отрицательном ответе Этап 5 отменяется.)*
-5. **Мгновенная перезагрузка темы в `18.5.4` при записи `additional_keyboard_theme`:** обновляется ли уже открытый `InputView` сразу при изменении DE `SharedPreferences` в `onStartInputView`/`onConfigurationChanged`, или смена вступает в силу при следующем показе клавиатуры? *(Закрывается в Этапе 6, тест V7.)*
-6. **Поведение Gboard `18.5.4` в Direct Boot при `"files:..."` в DE `SharedPreferences` и заблокированном CE `getFilesDir()`:** откатывается ли Gboard бесшумно к стоковой теме до ввода PIN, и читает ли его загрузчик `"files:"` исключительно CE `filesDir`? *(Закрывается в Этапе 2 и Этапе 6, тест V8.)*
-7. **Оптимальный визуальный вариант Action Key в `18.5.4`:** будет ли стабильнее и ближе к эталону Samsung One UI 8 вариант «функциональная клавиша + синяя иконка (`#2A6BF2` / `#4D8BFF`)» или вариант «синяя заливка + белая иконка» для всех 6 типов (`Enter`, `Search`, `Send`, `Done`, `Next`, `Go`)? *(Закрывается в Этапе 2, тест V3.)*
-8. **Влияние `enable_key_border` и `lock_key_border` в `metadata.json` на отображение границ/теней и `Frosted Glass`:** как ведёт себя Samsung ZIP-тема при включённом `Frosted Glass` с разной прозрачностью клавиш и фона? *(Закрывается в Этапе 2.)*
+1. **CSS-совместимость в `Gboard 18.5.4` (V1, V2, V3, V5):** фактическая поддержка сторонних свойств (`background_shape`, `background_corner_radius`, `elevation`, `shadow_color`, `edge_color`, `padding_ratio_*`) и селекторов (`.keytop.dark`, `.label.secondary`, `.background-icon.for-action-key`, `.icon.for-action-key`, `.icon.access-point-item`, `.background-icon.access-points-menu`).
+2. **Приоритет `Key Shape Selection` (`more_pill_keys`) над CSS (V2):** возвращает ли CSS прямоугольную форму `?123` и `Enter` при включённом `more_pill_keys`.
+3. **Точная семантика `Access Point Count` в `18.5.4` (V9):** включает ли число `3..8` кнопку меню `⊞` или считает только обычные AP, и как ведёт себя бар при `3`, `6`, `8` и скрытии Rambler.
+4. **Безопасность `ViewOverlay` для шевронов на `18.5.4` (V4):** внутренняя иерархия `SoftKeyView` (`.space_bar` и `TextView`), отсутствие «призраков» при всех путях recycling, поведение в Floating/Split/One-handed, и надёжность чтения цвета текста на Dynamic Color и Custom Theme.
+5. **Момент перечитывания `additional_keyboard_theme` без `System.exit(0)` (V7):** обновляется ли тема при записи DE `SharedPreferences` сразу, при следующем `onStartInputView`, или только после холодного перезапуска процесса.
+6. **Direct Boot и загрузчик `"files:"` в `18.5.4` (V8):** падает ли `18.5.4` или мягко откатывается к стоку до ввода PIN, и читает ли `"files:"` исключительно CE `getFilesDir()`.
+7. **Различение типов слотов верхнего тулбара без индексов (V6):** существует ли в `18.5.4` чистый CSS-селектор, отделяющий обычные AP от `⊞`, Rambler и подсказок.
 
 **Итоговый вердикт раздела 20:** **Требуется дополнительное исследование**
+
+---
+
+## 21. Итоговая архитектура и открытые вопросы перед реализацией
+
+### A. Можно реализовывать после документальной проверки
+
+Сюда входят исключительно те части, для которых найден безопасный, полностью обратимый путь с минимальным риском для работоспособности Gboard:
+
+1. **Две автономные CSS ZIP-темы (`Samsung One UI 8 Light` и `Samsung One UI 8 Dark`)** формата `format_version: 3`, валидируемые существующим `GboardThemeImportContract` и `Lrnw;->h(File)Z`, предназначенные для проверки через уже работающий импорт `Custom Theme` **без каких-либо изменений runtime и байткода**.
+2. **Безопасное оформление палитры фона, буквенных/функциональных клавиш, пробела и вторичных символов** исключительно средствами CSS (с сохранением оригинальной сетки, карты символов, долгого нажатия, popup-логики и патча `Key Shape Selection`).
+3. **Архитектура размещения будущей отдельной настройки шевронов** — 3-й независимый `ToggleRow` («Шевроны переключения языка на пробеле», выключен по умолчанию) внутри уже существующей секции «Переключение языка» экрана `GboardLanguageSettingsFeature` (сама реализация runtime — только после проверки V4!).
+4. **Модель хранения и 4-шагового Snapshot / Restore с `Ownership Check`** (сохранение `contains()` + значений `additional_keyboard_theme` и `enable_key_border`, сохранение CE-хранилища ZIP-файлов, запрет удаления пользовательских ZIP) — при условии положительного результата проверок V7 и V8.
+
+### B. Обязательно проверить на устройстве
+
+Всё, что невозможно достоверно подтвердить по исходникам репозитория и что обязательно проверяется на **Samsung Galaxy S22 5G (`SM-S901U1`, Android 16 / One UI 8, `Gboard 18.5.4`, база `v4.4.2`)**:
+
+1. **V1:** принятие Samsung Light/Dark ZIP валидатором `Lrnw;->h(File)Z` и фактический рендер сторонних CSS-свойств (`background_shape`, `background_corner_radius`, `elevation`, `shadow_color`, `edge_color`, `padding_ratio_*`, `.keytop.dark`, `.label.secondary`, popup long-press, Clipboard, Emoji, Suggestions, swipe-след, `Frosted Glass`, `Seamless Navigation Bar`).
+2. **V2:** реальное взаимодействие CSS-формы клавиш с существующим патчем `Key Shape Selection` (`more_pill_keys` вкл/выкл) на `?123` и `Enter`.
+3. **V3:** контраст и заливка всех 6 типов Action Key (`Enter`, `Search`, `Send`, `Done`, `Next`, `Go`) в Light и Dark (включая проверку синего акцента).
+4. **V4:** реальная иерархия `SoftKeyView` пробела (`.space_bar`, `TextView`), проверка `ViewOverlay` по всем 11 пунктам (recycling, «призраки», координаты при ресайзе/повороте/масштабе, Floating, Split, One-handed, адаптация цвета на Light/Dark/Samsung/Dynamic Color/Custom Theme).
+5. **V5:** работа CSS-селекторов верхнего тулбара (`.keyboard-header-area`, иконки, кандидаты) и подтверждение нулевого искажения кнопки **Rambler**.
+6. **V6:** проверка, существует ли в `18.5.4` безопасный механизм различения типов слотов тулбара (обычные AP vs `⊞` vs Rambler vs подсказки) без индексов.
+7. **V7:** фактический момент перечитывания `additional_keyboard_theme` в `Gboard 18.5.4` без `System.exit(0)` (при открытой клавиатуре, при следующем `onStartInputView` или только при холодном перезапуске процесса).
+8. **V8:** поведение Direct Boot после полной перезагрузки смартфона до первого ввода PIN с `"files:..."` в DE `SharedPreferences` и заблокированным CE `getFilesDir()`, а также корректность `editor.remove("additional_keyboard_theme")` для возврата к стоку Dynamic Color.
+9. **V9:** безопасный эксперимент `Access Point Count` на значениях `3`, `6`, `8` (+ поле пароля и вкл/выкл пользовательского AP) для установления точной формулы подсчёта слотов.
+
+### C. Пока не рекомендуется реализовывать
+
+Функции с повышенным риском, неподтверждённой совместимостью или угрозой критическим механизмам Gboard:
+
+1. **Любая модификация кнопки голосового ввода Rambler** (у неё уже есть нативный круг, отдельные флаги и 5 SHA-256 отпечатков голосового заголовка).
+2. **Круглые подложки обычных Access Points через runtime-обходы View-дерева или привязку к индексам/позициям** (высокий риск слипания при 8+1/10 элементах, обрезки в One-handed, поломки `AccessPointDragPopupView`, наложения на подсказки и двойного круга на Rambler). Без безопасного CSS-различения типов — **отказаться целиком**.
+3. **Принудительный `System.exit(0)` / `killProcess` из IME-сервиса ради авто-переключения Light/Dark** (разрушает сессию ввода).
+4. **Перенос ZIP-тем из CE `getFilesDir()` в DE `createDeviceProtectedStorageContext().getFilesDir()`** без доказательства из байткода `18.5.4`, что загрузчик `"files:"` читает DE-каталог.
+5. **Мутация `TextView.setText` пробела для шевронов или обёртка `background` `.space_bar`** (конфликты с перепривязкой, TalkBack и `Frosted Glass`), а также **отгрузка шевронов без прохождения V4**.
+6. **Переписывание `SoftKeyboardView` / `KeyboardView`, изменение сетки/карты клавиш, перенос проприетарной карты вторичных символов Samsung, удаление или изменение назначения `Key Shape Selection`.**
+
+### D. Открытые технические вопросы
+
+1. **Access Point Count:** включает ли `config_max_access_points` / `config_default_access_points_num_on_bar` кнопку меню `⊞` или считает только обычные AP? Сколько именно обычных AP помещается при `3`, `6`, `8`? *(Закрывается экспериментом V9.)*
+2. **`ViewOverlay` на `SoftKeyView` в `18.5.4`:** существует ли путь recycling `SoftKeyView` в обход `SoftKeyView.s(...)`? Какова точная структура дочерних View (`.space_bar` и `TextView`)? Обновляется ли `getCurrentTextColor()` до `SoftKeyView.s` при Dynamic Color и всех Custom Theme? *(Закрывается экспериментом V4.)*
+3. **CSS-совместимость `18.5.4`:** какие именно свойства из сторонних тем (`background_shape`, `background_corner_radius`, `elevation`, `shadow_color`, `edge_color`, `padding_ratio_*`) и селекторы (`.keytop.dark`, `.label.secondary`, `.background-icon.for-action-key`, `.icon.access-point-item`) реально работают в `18.5.4`, и каков их приоритет относительно `more_pill_keys`? *(Закрывается экспериментами V1–V3, V5.)*
+4. **Момент перечитывания `additional_keyboard_theme`:** имеет ли `Gboard 18.5.4` штатный listener на DE `<pkg>_preferences`, перечитывает ли ключ при следующем `onStartInputView`, или для смены ZIP-темы действительно нужен перезапуск процесса (как сейчас делает `GboardCustomThemeGalleryView`)? *(Закрывается экспериментом V7.)*
+5. **Direct Boot и `"files:"`:** как именно загрузчик `18.5.4` ведёт себя до первого ввода PIN, когда в DE записан `"files:..."`, а CE `getFilesDir()` заблокирован? *(Закрывается экспериментом V8.)*
+6. **Типизация слотов тулбара:** можно ли в `18.5.4` средствами CSS отличить обычные AP от кнопки `⊞`, кнопки Rambler и полосы подсказок? *(Закрывается экспериментом V6.)*
+
+### E. Следующий безопасный этап
+
+После утверждения этого аудита пользователем рекомендуется выполнить **два микро-шага с нулевым риском для кода `v4.4.2`**:
+
+1. **Без единой правки исходного кода выполнить на текущей `v4.4.2` (Galaxy S22 5G) 2-минутный эксперимент V9** (`Access Point Count` = `3`, `6`, `8`, поле пароля, вкл/выкл AP), чтобы окончательно закрыть вопрос структуры верхнего тулбара.
+2. **Перейти исключительно к Шагам 1–3:** подготовить два автономных тестовых файла `samsung_oneui8_light.zip` и `samsung_oneui8_dark.zip` и проверить их на Galaxy S22 5G через уже существующий `Custom Theme` (без модификации runtime, патчей и релизов), закрыв на практике гипотезы **V1, V2, V3, V5 и V8**. Только по фактическим результатам этих проверок принимать отдельное решение по Шагу 4 (шевроны), Шагу 6 (авто Light/Dark) и целесообразности Шага 7 (подложки AP).
+
+**Итоговый вердикт раздела 21:** **Можно реализовывать после проверки на устройстве**
