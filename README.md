@@ -58,6 +58,18 @@ This project builds Morphe patch bundles (`.mpp`) and patch catalog metadata (`p
 - Run unit tests: `./gradlew test`
 - Morphe GitHub Packages authentication requires `gpr.user` / `gpr.key` (or `GITHUB_ACTOR` / `GITHUB_TOKEN`). Never commit credentials, tokens, or proprietary Gboard APKs.
 
+## Morphe Manager remote source
+
+Add this repository once in Morphe Manager under **Patch sources → + → Remote**:
+
+`https://github.com/vortexnode/GboardSamsung`
+
+Or use the one-tap link:
+
+[Add GboardSamsung to Morphe Manager](https://morphe.software/add-source?github=vortexnode/GboardSamsung)
+
+After setup, Morphe Manager can check this source for updates automatically. Successful changes merged into `main` are tested first; conventional `fix:`, `feat:`, `bump:`, `perf:`, and `build(morphe-source):` commits trigger a versioned Morphe release. The release contains the MPP bundle and refreshed source metadata. Test-only and documentation-only commits do not publish a new bundle.
+
 ## Documentation
 
 - [docs/PROJECT_SCOPE.md](docs/PROJECT_SCOPE.md) — product scope, engineering rules, and acceptance criteria
