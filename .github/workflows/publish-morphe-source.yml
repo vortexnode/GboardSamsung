@@ -11,7 +11,7 @@ on:
 
 concurrency:
   group: morphe-source-release-main
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   release:
