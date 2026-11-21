@@ -72,7 +72,7 @@
 - `gradle.properties`
 - `patches-bundle.json`
 - 8 тестов в `extensions/extension/src/test/java`
-- 13 тестов в `patches/src/test/kotlin`
+- 12 тестов в `patches/src/test/kotlin`
 
 Отчёт обновлён в этой ветке. Остальные Package Rename файлы из проблемного commit сохраняются.
 
