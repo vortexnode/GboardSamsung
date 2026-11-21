@@ -30,7 +30,10 @@ class GboardSamsungSpacebarGesturesPatchRegistryTest {
             },
         )
         assertEquals(
-            setOf("samsung_spacebar_gestures.dispatch"),
+            setOf(
+                "samsung_spacebar_gestures.dispatch",
+                "samsung_spacebar_gestures.soft_key",
+            ),
             GboardTargetAdmission.admittedContributionIdsByFeature["samsung_spacebar_gestures"],
         )
     }
