@@ -467,8 +467,8 @@
         <translation locale="ru">Неподдерживаемый пакет Gboard</translation>
     </string>
     <string name="gboard_patches_developer_options_package_warning_message">
-        <translation locale="en">The current Gboard package is %1$s. Gboard Patches supports only the official package com.google.android.inputmethod.latin and dev.jason.com.google.android.inputmethod.latin. Mixing Gboard builds from multiple sources may cause instability.</translation>
-        <translation locale="ru">Текущий пакет Gboard: %1$s. Патчи Gboard поддерживают только официальный пакет com.google.android.inputmethod.latin и dev.jason.com.google.android.inputmethod.latin. Смешивание сборок Gboard из разных источников может привести к нестабильной работе.</translation>
+        <translation locale="en">The current Gboard package is %1$s. Gboard Patches supports the official package com.google.android.inputmethod.latin and the package name configured by the Package Rename patch. Mixing Gboard builds from multiple sources may cause instability.</translation>
+        <translation locale="ru">Текущий пакет Gboard: %1$s. Патчи Gboard поддерживают официальный пакет com.google.android.inputmethod.latin и имя пакета, заданное в патче «Package Rename». Смешивание сборок Gboard из разных источников может привести к нестабильной работе.</translation>
     </string>
     <string name="gboard_patches_developer_options_try_anyway">
         <translation locale="en">Try anyway</translation>

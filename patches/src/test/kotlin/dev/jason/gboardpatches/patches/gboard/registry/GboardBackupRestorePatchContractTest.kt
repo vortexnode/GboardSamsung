@@ -94,9 +94,9 @@ class GboardBackupRestorePatchContractTest {
         assertTrue(text.contains(
             "<translation locale=\"en\">Export or restore all Patches settings</translation>",
         ))
-        assertTrue(text.contains("<translation locale=\"ru\">Резервное копирование и восстановление</translation>"))
+        assertTrue(text.contains("<translation locale=\"zh-Hant\">備份與還原</translation>"))
         assertTrue(text.contains(
-            "<translation locale=\"ru\">Экспорт и восстановление всех настроек патчей</translation>",
+            "<translation locale=\"zh-Hant\">匯出或還原全部 Patches 設定</translation>",
         ))
     }
 

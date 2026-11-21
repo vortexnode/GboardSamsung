@@ -50,13 +50,13 @@ class GboardRuntimePatchesContractTest {
     @Test
     fun `public descriptions match the requested bilingual product copy`() {
         assertEquals(
-            "Show a dismiss button in the proactive suggestions bar.\n" +
-                "Показывает кнопку закрытия на панели проактивных подсказок.",
+            "在主動建議列顯示關閉按鈕\n" +
+                "Show a dismiss button in the proactive suggestions bar.",
             gboardCloseProactiveSuggestionsPatch.description,
         )
         assertEquals(
-            "Enable the Quick Insert panel and toolbar access point.\n" +
-                "Включает панель быстрой вставки и её значок на панели инструментов.",
+            "啟用快速插入面板與工具列入口\n" +
+                "Enable the Quick Insert panel and toolbar access point.",
             gboardQuickInsertPatch.description,
         )
     }

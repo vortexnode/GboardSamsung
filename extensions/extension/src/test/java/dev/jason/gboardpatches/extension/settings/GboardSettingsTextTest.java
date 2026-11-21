@@ -40,11 +40,11 @@ public final class GboardSettingsTextTest {
 
         GboardPatchesSettings.preferences(context).edit()
                 .putString(GboardPatchesSettings.PREF_KEY_SETTINGS_UI_LANGUAGE,
-                        GboardSettingsLocaleManager.LANGUAGE_RUSSIAN)
+                        GboardSettingsLocaleManager.LANGUAGE_TRADITIONAL_CHINESE)
                 .commit();
-        Assert.assertEquals("Выберите источник темы", GboardSettingsText.get(context,
+        Assert.assertEquals("選擇主題來源", GboardSettingsText.get(context,
                 R.string.gboard_patches_custom_theme_source_chooser_title));
-        Assert.assertEquals("Выберите тему для импорта", GboardSettingsText.get(context,
+        Assert.assertEquals("選擇要匯入的主題", GboardSettingsText.get(context,
                 R.string.gboard_patches_custom_theme_choose_import));
     }
 
@@ -56,20 +56,20 @@ public final class GboardSettingsTextTest {
                         R.string.gboard_patches_header_title,
                         "en"));
         Assert.assertEquals(
-                "Настройки патчей",
+                "Patch 設定",
                 GboardSettingsText.resolveStableTextForTesting(
                         R.string.gboard_patches_header_title,
-                        "ru"));
+                        "zh-Hant"));
     }
 
     @Test
     public void localeNormalizationAndFormattingStayBehindTheSeam() {
         Assert.assertEquals(
-                "Системный (Русский)",
+                "跟隨系統（繁體中文）",
                 GboardSettingsText.resolveStableTextForTesting(
                         R.string.gboard_patches_language_system_value,
-                        "ru-RU",
-                        "Русский"));
+                        "zh-TW",
+                        "繁體中文"));
         Assert.assertEquals(
                 "System default (English)",
                 GboardSettingsText.resolveStableTextForTesting(
@@ -108,15 +108,15 @@ public final class GboardSettingsTextTest {
                         "en",
                         2));
         Assert.assertEquals(
-                "2 минуты",
+                "2 分鐘",
                 GboardSettingsText.resolveStableQuantityForTesting(
                         R.plurals.gboard_patches_minutes,
-                        "ru",
+                        "zh-Hant",
                         2));
     }
 
     @Test
-    public void everyGeneratedSettingsStringHasEnglishAndRussianCoverage()
+    public void everyGeneratedSettingsStringHasEnglishAndTraditionalChineseCoverage()
             throws Exception {
         for (Field field : R.string.class.getDeclaredFields()) {
             if (!Modifier.isStatic(field.getModifiers()) || field.getType() != int.class) {
@@ -127,8 +127,8 @@ public final class GboardSettingsTextTest {
                     field.getName() + " missing English settings text",
                     GboardSettingsText.resolveStableTextForTesting(resId, "en"));
             Assert.assertNotNull(
-                    field.getName() + " missing Russian settings text",
-                    GboardSettingsText.resolveStableTextForTesting(resId, "ru"));
+                    field.getName() + " missing zh-Hant settings text",
+                    GboardSettingsText.resolveStableTextForTesting(resId, "zh-Hant"));
         }
     }
 }

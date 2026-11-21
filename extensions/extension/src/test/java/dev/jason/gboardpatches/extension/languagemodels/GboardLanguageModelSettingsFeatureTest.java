@@ -46,17 +46,17 @@ public class GboardLanguageModelSettingsFeatureTest {
         assertFalse(GboardLanguageModelSettings.read(preferences).enabled);
     }
 
-    @Test public void russianUsesRequestedModelTitlesAndGenericDescriptions() {
+    @Test public void traditionalChineseUsesRequestedModelTitlesAndGenericDescriptions() {
         Context app = RuntimeEnvironment.getApplication();
         var config = new android.content.res.Configuration(app.getResources().getConfiguration());
-        config.setLocale(Locale.forLanguageTag("ru-RU"));
+        config.setLocale(Locale.forLanguageTag("zh-Hant-TW"));
         Context context = app.createConfigurationContext(config);
         var feature = new GboardLanguageModelSettingsFeature(context);
-        assertEquals("Словари и подсказки", feature.getEntryTitle());
+        assertEquals("字典與預測", feature.getEntryTitle());
         var screen = feature.buildScreen(null);
         var hmm = screen.getSections().get(2).getItems().get(0);
         assertEquals("HMM", hmm.getTitle());
-        assertTrue(hmm.getSummary().startsWith("Традиционный и упрощённый китайский, корейский и родственные языки"));
+        assertTrue(hmm.getSummary().startsWith("繁體中文、其他中韓語言"));
         String explanation = screen.getSections().get(5).getItems().stream()
                 .map(r -> r.getSummary()).reduce("", (a, b) -> a + b);
         assertFalse(explanation.contains("最新 Pixel"));

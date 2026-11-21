@@ -406,7 +406,7 @@ public final class GboardPatchesSettingsActivity extends Activity
             return;
         }
         String currentPackage = getPackageName();
-        if (!isSupportedTargetPackage(currentPackage)) {
+        if (!isSupportedTargetPackage(currentPackage, getPackageName())) {
             showUnsupportedDeveloperOptionsPackageDialog(currentPackage, headerKeyResourceId);
             return;
         }
@@ -516,7 +516,13 @@ public final class GboardPatchesSettingsActivity extends Activity
         return SUPPORTED_DEVELOPER_OPTIONS_TARGET_VERSION.equals(versionName);
     }
 
-    private static boolean isSupportedTargetPackage(String packageName) {
+    static boolean isSupportedTargetPackage(String packageName, String ownPackageName) {
+        if (packageName == null || packageName.isEmpty()) {
+            return false;
+        }
+        if (packageName.equals(ownPackageName)) {
+            return true;
+        }
         return GBOARD_PACKAGE_STABLE.equals(packageName)
                 || GBOARD_PACKAGE_JASON_DEV.equals(packageName)
                 || GBOARD_PACKAGE_REVERSED_DEV.equals(packageName);

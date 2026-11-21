@@ -84,7 +84,7 @@ class GboardBluetoothMicrophonePatchContractTest {
 
     private companion object {
         const val BLUETOOTH_MICROPHONE_DESCRIPTION =
-            "Enable Voice typing -> Use Bluetooth microphone.\n" +
-                "Включает опцию «Голосовой ввод -> Использовать Bluetooth-микрофон»."
+            "啟用 語音輸入 -> 使用藍芽麥克風\n" +
+                "Enable Voice typing -> Use Bluetooth microphone."
     }
 }

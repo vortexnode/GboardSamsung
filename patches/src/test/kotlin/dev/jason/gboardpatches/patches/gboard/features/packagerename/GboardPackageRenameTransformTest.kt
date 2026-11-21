@@ -683,11 +683,362 @@ class GboardPackageRenameTransformTest {
         )
     }
 
+    @Test
+    fun `package name validation accepts default official and valid custom names and rejects invalid values`() {
+        val maxLengthPackage = "a." + "b".repeat(MAX_GBOARD_PACKAGE_NAME_LENGTH - 2)
+        listOf(
+            FINAL_PACKAGE,
+            SOURCE_PACKAGE,
+            CUSTOM_PACKAGE,
+            PREFIXED_CUSTOM_PACKAGE,
+            "a.b",
+            "io.vortexnode.gboard_2",
+            maxLengthPackage,
+        ).forEach { value ->
+            assertTrue("Expected valid package name: $value", isValidGboardPackageName(value))
+            assertTrue("Expected valid target package name: $value", isValidGboardTargetPackageName(value))
+        }
+
+        val tooLongPackage = "a." + "b".repeat(MAX_GBOARD_PACKAGE_NAME_LENGTH - 1)
+        listOf(
+            null,
+            "",
+            " ",
+            "   ",
+            " $CUSTOM_PACKAGE",
+            "$CUSTOM_PACKAGE ",
+            "com.example.my app",
+            "gboard",
+            "com",
+            ".$CUSTOM_PACKAGE",
+            "$CUSTOM_PACKAGE.",
+            "com..example.gboardsamsung",
+            "com.1example.gboardsamsung",
+            "1com.example.gboardsamsung",
+            "com.example.gboard-samsung",
+            "com.example.gboard\$samsung",
+            "com.example/gboardsamsung",
+            "com.example.приложение",
+            "$CUSTOM_PACKAGE\n",
+            tooLongPackage,
+        ).forEach { value ->
+            assertFalse("Expected invalid package name: $value", isValidGboardPackageName(value))
+            assertFalse("Expected invalid target package name: $value", isValidGboardTargetPackageName(value))
+        }
+    }
+
+    @Test
+    fun `invalid target package fails before any manifest or settings mutation`() {
+        listOf("", " ", "gboard", "com..bad", "com.example.bad-pkg", "com.1bad.pkg").forEach { invalid ->
+            val manifest = loadManifest()
+            val settings = loadSettingsDocuments()
+            val before = listOf(manifest, *settings.toTypedArray()).map(::serialize)
+
+            assertFails<IllegalArgumentException> {
+                applyGboardPackageRename(manifest, settings, invalid)
+            }
+
+            assertEquals(before, listOf(manifest, *settings.toTypedArray()).map(::serialize))
+        }
+    }
+
+    @Test
+    fun `official package mode keeps manifest and settings unchanged without mapping conflicts`() {
+        val manifest = loadManifest()
+        val settings = loadSettingsDocuments()
+        val before = listOf(manifest, *settings.toTypedArray()).map(::serialize)
+
+        val first = applyGboardPackageRename(manifest, settings, SOURCE_PACKAGE)
+        val afterFirst = listOf(manifest, *settings.toTypedArray()).map(::serialize)
+        val second = applyGboardPackageRename(manifest, settings, SOURCE_PACKAGE)
+        val afterSecond = listOf(manifest, *settings.toTypedArray()).map(::serialize)
+
+        assertEquals(GboardPackageRenameResult.UNCHANGED, first)
+        assertEquals(GboardPackageRenameResult.UNCHANGED, second)
+        assertEquals(before, afterFirst)
+        assertEquals(before, afterSecond)
+        assertEquals(SOURCE_PACKAGE, manifest.documentElement.getAttribute("package"))
+        assertPackageIdentity(manifest, SOURCE_PACKAGE)
+    }
+
+    @Test
+    fun `official package mode keeps injected settings identity consistent in both finalize orders`() {
+        val manifestRenameFirst = loadManifest()
+        val settingsRenameFirst = loadSettingsDocuments()
+        assertEquals(
+            GboardPackageRenameResult.UNCHANGED,
+            applyGboardPackageRename(manifestRenameFirst, settingsRenameFirst, SOURCE_PACKAGE),
+        )
+        applyGboardPatchesSettings(manifestRenameFirst, settingsRenameFirst)
+        assertEquals(
+            GboardPackageRenameResult.UNCHANGED,
+            applyGboardPackageRename(manifestRenameFirst, settingsRenameFirst, SOURCE_PACKAGE),
+        )
+        assertFinalSettingsIdentity(manifestRenameFirst, settingsRenameFirst, SOURCE_PACKAGE)
+
+        val manifestSettingsFirst = loadManifest()
+        val settingsSettingsFirst = loadSettingsDocuments()
+        applyGboardPatchesSettings(manifestSettingsFirst, settingsSettingsFirst)
+        val before = listOf(manifestSettingsFirst, *settingsSettingsFirst.toTypedArray()).map(::serialize)
+        assertEquals(
+            GboardPackageRenameResult.UNCHANGED,
+            applyGboardPackageRename(manifestSettingsFirst, settingsSettingsFirst, SOURCE_PACKAGE),
+        )
+        assertEquals(
+            before,
+            listOf(manifestSettingsFirst, *settingsSettingsFirst.toTypedArray()).map(::serialize),
+        )
+        assertFinalSettingsIdentity(manifestSettingsFirst, settingsSettingsFirst, SOURCE_PACKAGE)
+    }
+
+    @Test
+    fun `official package mode rejects already renamed manifest before mutation`() {
+        val manifest = loadManifest()
+        val settings = loadSettingsDocuments()
+        applyGboardPackageRename(manifest, settings, FINAL_PACKAGE)
+        val before = listOf(manifest, *settings.toTypedArray()).map(::serialize)
+
+        assertFails<IllegalStateException> {
+            applyGboardPackageRename(manifest, settings, SOURCE_PACKAGE)
+        }
+
+        assertEquals(before, listOf(manifest, *settings.toTypedArray()).map(::serialize))
+    }
+
+    @Test
+    fun `custom package name transforms all sixteen mappings permissions providers and settings consistently`() {
+        val manifest = loadManifest()
+        val settings = loadSettingsDocuments()
+        val originalComponents = componentNames(manifest)
+
+        applyGboardPatchesSettings(manifest, settings)
+        val first = applyGboardPackageRename(manifest, settings, CUSTOM_PACKAGE)
+        val afterFirst = listOf(manifest, *settings.toTypedArray()).map(::serialize)
+        val second = applyGboardPackageRename(manifest, settings, CUSTOM_PACKAGE)
+
+        assertEquals(GboardPackageRenameResult.RENAMED, first)
+        assertEquals(GboardPackageRenameResult.ALREADY_RENAMED, second)
+        assertEquals(afterFirst, listOf(manifest, *settings.toTypedArray()).map(::serialize))
+        assertPackageIdentity(manifest, CUSTOM_PACKAGE)
+        assertFinalSettingsIdentity(manifest, settings, CUSTOM_PACKAGE)
+        assertEquals("com.android.inputmethod.latin", originalPackageName(manifest))
+        assertTrue(componentNames(manifest).getValue("activity").containsAll(originalComponents.getValue("activity")))
+        assertFalse(manifest.documentElement.hasAttributeNS(ANDROID_NS, "requiredSplitTypes"))
+        assertFalse(manifest.documentElement.hasAttributeNS(ANDROID_NS, "splitTypes"))
+        assertTrue(elements(manifest, "meta-data").none { element ->
+            androidAttribute(element, "name") == "com.android.vending.splits.required"
+        })
+    }
+
+    @Test
+    fun `custom package rename then settings finalize uses only custom identity and preserves extension classes`() {
+        val manifest = loadManifest()
+        val settings = loadSettingsDocuments()
+        val application = elements(manifest, "application").single()
+        val service = manifest.createElement("service")
+        service.setAttributeNS(
+            ANDROID_NS,
+            "android:name",
+            "dev.jason.gboardpatches.extension.custom.SampleExtensionService",
+        )
+        application.appendChild(service)
+
+        assertEquals(
+            GboardPackageRenameResult.RENAMED,
+            applyGboardPackageRename(manifest, settings, CUSTOM_PACKAGE),
+        )
+        applyGboardPatchesSettings(manifest, settings)
+        assertEquals(
+            GboardPackageRenameResult.ALREADY_RENAMED,
+            applyGboardPackageRename(manifest, settings, CUSTOM_PACKAGE),
+        )
+
+        assertPackageIdentity(manifest, CUSTOM_PACKAGE)
+        assertEquals(
+            "$CUSTOM_PACKAGE.gboard_patches",
+            elements(manifest, "provider").single { provider ->
+                androidAttribute(provider, "name") == SETTINGS_PROVIDER_CLASS
+            }.let { provider -> androidAttribute(provider, "authorities") },
+        )
+        settings.forEach { document ->
+            assertEquals(
+                CUSTOM_PACKAGE,
+                elements(document, "intent").single { intent ->
+                    androidAttribute(intent, "targetClass") == SETTINGS_ACTIVITY_CLASS
+                }.let { intent -> androidAttribute(intent, "targetPackage") },
+            )
+        }
+        assertEquals(
+            "dev.jason.gboardpatches.extension.custom.SampleExtensionService",
+            androidAttribute(service, "name"),
+        )
+    }
+
+    @Test
+    fun `custom prefixed package rejects repeated prefix values before mutation`() {
+        val manifest = loadManifest()
+        val mapping = gboardPackageRenameMappings(PREFIXED_CUSTOM_PACKAGE).single {
+            it.originalValue == "$SOURCE_PACKAGE.tracing"
+        }
+        mappingAttributes(manifest, mapping, mapping.originalValue)
+            .single()
+            .value = "com.vortex.com.vortex.$SOURCE_PACKAGE.tracing"
+        val before = serialize(manifest)
+
+        assertFails<IllegalStateException> {
+            applyGboardPackageRename(manifest, loadSettingsDocuments(), PREFIXED_CUSTOM_PACKAGE)
+        }
+
+        assertEquals(before, serialize(manifest))
+    }
+
+    @Test
+    fun `custom package rejects self double prefix and mismatched already renamed root before mutation`() {
+        val manifestDouble = loadManifest()
+        val tracingMapping = gboardPackageRenameMappings(CUSTOM_PACKAGE).single {
+            it.originalValue == "$SOURCE_PACKAGE.tracing"
+        }
+        mappingAttributes(manifestDouble, tracingMapping, tracingMapping.originalValue)
+            .single()
+            .value = "$CUSTOM_PACKAGE.$CUSTOM_PACKAGE.tracing"
+        val beforeDouble = serialize(manifestDouble)
+        assertFails<IllegalStateException> {
+            applyGboardPackageRename(manifestDouble, loadSettingsDocuments(), CUSTOM_PACKAGE)
+        }
+        assertEquals(beforeDouble, serialize(manifestDouble))
+
+        val manifestRenamedDefault = loadManifest()
+        val settings = loadSettingsDocuments()
+        applyGboardPackageRename(manifestRenamedDefault, settings, FINAL_PACKAGE)
+        val beforeMismatch = listOf(manifestRenamedDefault, *settings.toTypedArray()).map(::serialize)
+        assertFails<IllegalStateException> {
+            applyGboardPackageRename(manifestRenamedDefault, settings, CUSTOM_PACKAGE)
+        }
+        assertEquals(beforeMismatch, listOf(manifestRenamedDefault, *settings.toTypedArray()).map(::serialize))
+    }
+
+    @Test
+    fun `official package mode rejects unexpected package derived attribute before mutation`() {
+        val manifest = loadManifest()
+        val settings = loadSettingsDocuments()
+        val application = elements(manifest, "application").single()
+        val strayMeta = manifest.createElement("meta-data")
+        strayMeta.setAttributeNS(ANDROID_NS, "android:name", "$SOURCE_PACKAGE.unexpected.extra")
+        application.appendChild(strayMeta)
+        val before = serialize(manifest)
+
+        assertFails<IllegalStateException> {
+            applyGboardPackageRename(manifest, settings, SOURCE_PACKAGE)
+        }
+
+        assertEquals(before, serialize(manifest))
+    }
+
+    @Test
+    fun `package rename target holder defaults to default side by side package and updates cleanly`() {
+        val original = GboardPackageRenameTarget.packageName
+        try {
+            assertEquals(FINAL_PACKAGE, original)
+            GboardPackageRenameTarget.packageName = CUSTOM_PACKAGE
+            assertEquals(CUSTOM_PACKAGE, GboardPackageRenameTarget.packageName)
+            GboardPackageRenameTarget.packageName = SOURCE_PACKAGE
+            assertEquals(SOURCE_PACKAGE, GboardPackageRenameTarget.packageName)
+        } finally {
+            GboardPackageRenameTarget.packageName = original
+        }
+    }
+
+    @Test
+    fun `app display name works independently across default official and custom package modes`() {
+        listOf(
+            FINAL_PACKAGE to "Gboard Mod",
+            SOURCE_PACKAGE to "My Official Gboard",
+            CUSTOM_PACKAGE to "GboardSamsung",
+        ).forEach { (targetPackage, displayName) ->
+            val manifest = loadManifest()
+            val settings = loadSettingsDocuments()
+            val resources = displayNameResources()
+
+            val result = applyGboardPackageRename(manifest, settings, targetPackage)
+            applyGboardApplicationDisplayName(manifest, displayName, resources)
+
+            val expectedResult = if (targetPackage == SOURCE_PACKAGE) {
+                GboardPackageRenameResult.UNCHANGED
+            } else {
+                GboardPackageRenameResult.RENAMED
+            }
+            assertEquals(expectedResult, result)
+            assertEquals(targetPackage, manifest.documentElement.getAttribute("package"))
+            assertPackageIdentity(manifest, targetPackage)
+            assertEquals(
+                "@string/gboard_patches_app_display_name",
+                androidAttribute(elements(manifest, "application").single(), "label"),
+            )
+            assertEquals(
+                "\"$displayName\"",
+                elements(resources, "string").single {
+                    it.getAttribute("name") == "gboard_patches_app_display_name"
+                }.textContent,
+            )
+        }
+    }
+
+    private fun assertPackageIdentity(
+        manifest: Document,
+        expectedPackage: String,
+    ) {
+        val mappings = gboardPackageRenameMappings(expectedPackage)
+        assertEquals(expectedPackage, manifest.documentElement.getAttribute("package"))
+        mappings.forEach { mapping ->
+            assertEquals(
+                "Expected exact attribute for ${mapping.elementName} ${mapping.qualifiedAttributeName}",
+                1,
+                mappingAttributes(manifest, mapping, mapping.renamedValue).size,
+            )
+            if (expectedPackage != SOURCE_PACKAGE) {
+                assertEquals(
+                    "Expected no leftover original value for ${mapping.elementName} ${mapping.qualifiedAttributeName}",
+                    0,
+                    mappingAttributes(manifest, mapping, mapping.originalValue).size,
+                )
+            }
+        }
+        assertEquals(
+            setOf(
+                "$expectedPackage.pixelbundle.RECEIVER",
+                "$expectedPackage.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION",
+            ),
+            androidAttributeValues(manifest, "permission", "name").toSet(),
+        )
+        assertEquals(
+            1,
+            androidAttributeValues(manifest, "receiver", "permission").count {
+                it == "$expectedPackage.pixelbundle.RECEIVER"
+            },
+        )
+        assertTrue(
+            androidAttributeValues(manifest, "provider", "authorities").containsAll(
+                listOf(
+                    expectedPackage,
+                    "$expectedPackage.clipboard_content",
+                    "$expectedPackage.inputactionprovider",
+                    "$expectedPackage.swissarmyknifefileprovider",
+                    "$expectedPackage.androidx-startup",
+                    "$expectedPackage.fileprovider",
+                    "$expectedPackage.tracing",
+                    "$expectedPackage.wdb",
+                    "$expectedPackage.mlkitinitprovider",
+                ),
+            ),
+        )
+    }
+
     private fun assertFinalSettingsIdentity(
         manifest: Document,
         settings: List<Document>,
+        expectedPackage: String = FINAL_PACKAGE,
     ) {
-        assertEquals(FINAL_PACKAGE, manifest.documentElement.getAttribute("package"))
+        assertEquals(expectedPackage, manifest.documentElement.getAttribute("package"))
         assertFalse(serialize(manifest).contains(DOUBLE_PREFIX))
 
         val settingsProviders = elements(manifest, "provider").filter { provider ->
@@ -695,7 +1046,7 @@ class GboardPackageRenameTransformTest {
         }
         assertEquals(1, settingsProviders.size)
         assertEquals(
-            "$FINAL_PACKAGE.gboard_patches",
+            "$expectedPackage.gboard_patches",
             androidAttribute(settingsProviders.single(), "authorities"),
         )
 
@@ -704,9 +1055,11 @@ class GboardPackageRenameTransformTest {
                 androidAttribute(intent, "targetClass") == SETTINGS_ACTIVITY_CLASS
             }
             assertEquals(1, matchingIntents.size)
-            assertEquals(FINAL_PACKAGE, androidAttribute(matchingIntents.single(), "targetPackage"))
+            assertEquals(expectedPackage, androidAttribute(matchingIntents.single(), "targetPackage"))
             val xml = serialize(document)
-            assertFalse(xml.contains("targetPackage=\"$SOURCE_PACKAGE\""))
+            if (expectedPackage != SOURCE_PACKAGE) {
+                assertFalse(xml.contains("targetPackage=\"$SOURCE_PACKAGE\""))
+            }
             assertFalse(xml.contains(DOUBLE_PREFIX))
         }
 
@@ -840,6 +1193,8 @@ class GboardPackageRenameTransformTest {
     private companion object {
         const val SOURCE_PACKAGE = "com.google.android.inputmethod.latin"
         const val FINAL_PACKAGE = "dev.jason.com.google.android.inputmethod.latin"
+        const val CUSTOM_PACKAGE = "com.example.gboardsamsung"
+        const val PREFIXED_CUSTOM_PACKAGE = "com.vortex.com.google.android.inputmethod.latin"
         const val DOUBLE_PREFIX = "dev.jason.dev.jason.com.google.android.inputmethod.latin"
         const val SETTINGS_ACTIVITY_CLASS =
             "dev.jason.gboardpatches.extension.settings.GboardPatchesSettingsActivity"

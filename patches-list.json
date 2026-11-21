@@ -291,7 +291,7 @@
     },
     {
       "name": "Package Rename",
-      "description": "Rename the package to dev.jason.com.google.android.inputmethod.latin and allow a custom app name so it can be installed alongside the official Gboard.\nПереименовывает пакет в dev.jason.com.google.android.inputmethod.latin и позволяет задать название приложения для установки рядом с официальным Gboard.",
+      "description": "Configure the Android package name (default dev.jason.com.google.android.inputmethod.latin, official com.google.android.inputmethod.latin, or a custom package ID) and allow a custom app name.\nПозволяет задать имя Android-пакета (по умолчанию dev.jason.com.google.android.inputmethod.latin, официальный com.google.android.inputmethod.latin или собственный ID пакета) и пользовательское название приложения.",
       "use": true,
       "dependencies": [],
       "compatiblePackages": {
@@ -300,6 +300,18 @@
         ]
       },
       "options": [
+        {
+          "key": "package_name",
+          "title": "Package name / Имя пакета",
+          "description": "Android package ID for the patched app: keep the default side-by-side ID, use com.google.android.inputmethod.latin, or enter any valid custom Android package name.\nID Android-пакета пропатченного приложения: оставьте значение по умолчанию для установки рядом, выберите com.google.android.inputmethod.latin или введите собственное корректное имя пакета.",
+          "required": true,
+          "type": "kotlin.String",
+          "default": "dev.jason.com.google.android.inputmethod.latin",
+          "values": {
+            "dev.jason.com.google.android.inputmethod.latin": "dev.jason.com.google.android.inputmethod.latin",
+            "com.google.android.inputmethod.latin": "com.google.android.inputmethod.latin"
+          }
+        },
         {
           "key": "app_display_name",
           "title": "App name / Название приложения",

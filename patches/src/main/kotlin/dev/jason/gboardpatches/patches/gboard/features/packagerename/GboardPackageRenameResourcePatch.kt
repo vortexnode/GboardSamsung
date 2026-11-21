@@ -10,8 +10,8 @@ import dev.jason.gboardpatches.patches.gboard.shared.GBOARD_PATCHES_SETTINGS_PRO
 import dev.jason.gboardpatches.patches.gboard.shared.GBOARD_SETTINGS_XML_PATHS
 import dev.jason.gboardpatches.patches.gboard.shared.childElements
 import dev.jason.gboardpatches.patches.gboard.shared.elements
+import dev.jason.gboardpatches.patches.shared.Constants.GBOARD_DEFAULT_PATCHED_PACKAGE_NAME
 import dev.jason.gboardpatches.patches.shared.Constants.GBOARD_PACKAGE_NAME
-import dev.jason.gboardpatches.patches.shared.Constants.GBOARD_PATCHED_PACKAGE_NAME
 import java.io.StringWriter
 import javax.xml.parsers.DocumentBuilderFactory
 import javax.xml.transform.OutputKeys
@@ -22,23 +22,32 @@ import org.w3c.dom.Attr
 import org.w3c.dom.Document
 import org.w3c.dom.Element
 
+internal object GboardPackageRenameTarget {
+    @Volatile
+    var packageName: String = GBOARD_DEFAULT_PATCHED_PACKAGE_NAME
+}
+
 internal val gboardPackageRenameResourcePatch = resourcePatch(
     description =
-        "將套件名稱改成可共存安裝的自訂值；僅支援單一 APK 產物，不可搭配原套件名稱的 split APK。"
+        "Apply the configured Gboard Android package name across manifest and settings entries; " +
+            "renamed packages require a standalone APK without original split dependencies."
 ) {
     finalize {
-        applyManifestPackageOverride()
+        applyManifestPackageOverride(targetPackage = GboardPackageRenameTarget.packageName)
     }
 }
 
 context(context: ResourcePatchContext)
-private fun applyManifestPackageOverride() = with(context) {
+private fun applyManifestPackageOverride(
+    targetPackage: String = GBOARD_DEFAULT_PATCHED_PACKAGE_NAME,
+) = with(context) {
     document("AndroidManifest.xml").use { manifestDocument ->
         document(GBOARD_SETTINGS_XML_PATHS[0]).use { settingsDocument ->
             document(GBOARD_SETTINGS_XML_PATHS[1]).use { legacySettingsDocument ->
                 applyGboardPackageRename(
                     manifestDocument = manifestDocument,
                     settingsDocuments = listOf(settingsDocument, legacySettingsDocument),
+                    targetPackage = targetPackage,
                 )
             }
         }
@@ -59,7 +68,21 @@ internal data class GboardPackageRenameMapping(
 internal enum class GboardPackageRenameResult {
     RENAMED,
     ALREADY_RENAMED,
+    UNCHANGED,
 }
+
+internal const val MAX_GBOARD_PACKAGE_NAME_LENGTH = 255
+private val GBOARD_PACKAGE_NAME_REGEX =
+    Regex("^[A-Za-z][A-Za-z0-9_]*(\\.[A-Za-z][A-Za-z0-9_]*)+$")
+
+internal fun isValidGboardPackageName(value: String?): Boolean {
+    if (value.isNullOrEmpty() || value.length > MAX_GBOARD_PACKAGE_NAME_LENGTH) return false
+    if (value != value.trim()) return false
+    return GBOARD_PACKAGE_NAME_REGEX.matches(value)
+}
+
+internal fun isValidGboardTargetPackageName(value: String?): Boolean =
+    isValidGboardPackageName(value)
 
 internal const val MAX_GBOARD_APP_DISPLAY_NAME_CODE_POINTS = 40
 
@@ -187,124 +210,144 @@ private fun encodeAndroidDisplayName(value: String): String = buildString {
     append('"')
 }
 
-internal val GBOARD_PACKAGE_RENAME_MAPPINGS = listOf(
-    mapping("manifest", null, "package", GBOARD_PACKAGE_NAME, GBOARD_PATCHED_PACKAGE_NAME),
-    androidMapping(
-        "permission",
-        "name",
-        "$GBOARD_PACKAGE_NAME.pixelbundle.RECEIVER",
-        "$GBOARD_PATCHED_PACKAGE_NAME.pixelbundle.RECEIVER",
-    ),
-    androidMapping(
-        "permission",
-        "name",
-        "$GBOARD_PACKAGE_NAME.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION",
-        "$GBOARD_PATCHED_PACKAGE_NAME.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION",
-    ),
-    androidMapping(
-        "meta-data",
-        "name",
-        "com.google.android.gms.phenotype.registration.binarypb:$GBOARD_PACKAGE_NAME",
-        "com.google.android.gms.phenotype.registration.binarypb:$GBOARD_PATCHED_PACKAGE_NAME",
-    ),
-    androidMapping(
-        "meta-data",
-        "name",
-        "com.google.android.gms.phenotype.registration.xml:$GBOARD_PACKAGE_NAME",
-        "com.google.android.gms.phenotype.registration.xml:$GBOARD_PATCHED_PACKAGE_NAME",
-    ),
-    androidMapping(
-        "provider",
-        "authorities",
-        GBOARD_PACKAGE_NAME,
-        GBOARD_PATCHED_PACKAGE_NAME,
-    ),
-    androidMapping(
-        "data",
-        "host",
-        "deeplink.$GBOARD_PACKAGE_NAME",
-        "deeplink.$GBOARD_PATCHED_PACKAGE_NAME",
-    ),
-    androidMapping(
-        "provider",
-        "authorities",
-        "$GBOARD_PACKAGE_NAME.clipboard_content",
-        "$GBOARD_PATCHED_PACKAGE_NAME.clipboard_content",
-    ),
-    androidMapping(
-        "provider",
-        "authorities",
-        "$GBOARD_PACKAGE_NAME.inputactionprovider",
-        "$GBOARD_PATCHED_PACKAGE_NAME.inputactionprovider",
-    ),
-    androidMapping(
-        "provider",
-        "authorities",
-        "$GBOARD_PACKAGE_NAME.swissarmyknifefileprovider",
-        "$GBOARD_PATCHED_PACKAGE_NAME.swissarmyknifefileprovider",
-    ),
-    androidMapping(
-        "provider",
-        "authorities",
-        "$GBOARD_PACKAGE_NAME.androidx-startup",
-        "$GBOARD_PATCHED_PACKAGE_NAME.androidx-startup",
-    ),
-    androidMapping(
-        "provider",
-        "authorities",
-        "$GBOARD_PACKAGE_NAME.fileprovider",
-        "$GBOARD_PATCHED_PACKAGE_NAME.fileprovider",
-    ),
-    androidMapping(
-        "receiver",
-        "permission",
-        "$GBOARD_PACKAGE_NAME.pixelbundle.RECEIVER",
-        "$GBOARD_PATCHED_PACKAGE_NAME.pixelbundle.RECEIVER",
-    ),
-    androidMapping(
-        "provider",
-        "authorities",
-        "$GBOARD_PACKAGE_NAME.tracing",
-        "$GBOARD_PATCHED_PACKAGE_NAME.tracing",
-    ),
-    androidMapping(
-        "provider",
-        "authorities",
-        "$GBOARD_PACKAGE_NAME.wdb",
-        "$GBOARD_PATCHED_PACKAGE_NAME.wdb",
-    ),
-    androidMapping(
-        "provider",
-        "authorities",
-        "$GBOARD_PACKAGE_NAME.mlkitinitprovider",
-        "$GBOARD_PATCHED_PACKAGE_NAME.mlkitinitprovider",
-    ),
-)
+internal fun gboardPackageRenameMappings(
+    targetPackage: String = GBOARD_DEFAULT_PATCHED_PACKAGE_NAME,
+): List<GboardPackageRenameMapping> {
+    require(isValidGboardTargetPackageName(targetPackage)) {
+        "Invalid Gboard target package name '$targetPackage'"
+    }
+    return listOf(
+        mapping("manifest", null, "package", GBOARD_PACKAGE_NAME, targetPackage),
+        androidMapping(
+            "permission",
+            "name",
+            "$GBOARD_PACKAGE_NAME.pixelbundle.RECEIVER",
+            "$targetPackage.pixelbundle.RECEIVER",
+        ),
+        androidMapping(
+            "permission",
+            "name",
+            "$GBOARD_PACKAGE_NAME.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION",
+            "$targetPackage.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION",
+        ),
+        androidMapping(
+            "meta-data",
+            "name",
+            "com.google.android.gms.phenotype.registration.binarypb:$GBOARD_PACKAGE_NAME",
+            "com.google.android.gms.phenotype.registration.binarypb:$targetPackage",
+        ),
+        androidMapping(
+            "meta-data",
+            "name",
+            "com.google.android.gms.phenotype.registration.xml:$GBOARD_PACKAGE_NAME",
+            "com.google.android.gms.phenotype.registration.xml:$targetPackage",
+        ),
+        androidMapping(
+            "provider",
+            "authorities",
+            GBOARD_PACKAGE_NAME,
+            targetPackage,
+        ),
+        androidMapping(
+            "data",
+            "host",
+            "deeplink.$GBOARD_PACKAGE_NAME",
+            "deeplink.$targetPackage",
+        ),
+        androidMapping(
+            "provider",
+            "authorities",
+            "$GBOARD_PACKAGE_NAME.clipboard_content",
+            "$targetPackage.clipboard_content",
+        ),
+        androidMapping(
+            "provider",
+            "authorities",
+            "$GBOARD_PACKAGE_NAME.inputactionprovider",
+            "$targetPackage.inputactionprovider",
+        ),
+        androidMapping(
+            "provider",
+            "authorities",
+            "$GBOARD_PACKAGE_NAME.swissarmyknifefileprovider",
+            "$targetPackage.swissarmyknifefileprovider",
+        ),
+        androidMapping(
+            "provider",
+            "authorities",
+            "$GBOARD_PACKAGE_NAME.androidx-startup",
+            "$targetPackage.androidx-startup",
+        ),
+        androidMapping(
+            "provider",
+            "authorities",
+            "$GBOARD_PACKAGE_NAME.fileprovider",
+            "$targetPackage.fileprovider",
+        ),
+        androidMapping(
+            "receiver",
+            "permission",
+            "$GBOARD_PACKAGE_NAME.pixelbundle.RECEIVER",
+            "$targetPackage.pixelbundle.RECEIVER",
+        ),
+        androidMapping(
+            "provider",
+            "authorities",
+            "$GBOARD_PACKAGE_NAME.tracing",
+            "$targetPackage.tracing",
+        ),
+        androidMapping(
+            "provider",
+            "authorities",
+            "$GBOARD_PACKAGE_NAME.wdb",
+            "$targetPackage.wdb",
+        ),
+        androidMapping(
+            "provider",
+            "authorities",
+            "$GBOARD_PACKAGE_NAME.mlkitinitprovider",
+            "$targetPackage.mlkitinitprovider",
+        ),
+    )
+}
+
+internal val GBOARD_PACKAGE_RENAME_MAPPINGS: List<GboardPackageRenameMapping> =
+    gboardPackageRenameMappings(GBOARD_DEFAULT_PATCHED_PACKAGE_NAME)
 
 internal fun applyGboardPackageRename(
     manifestDocument: Document,
     settingsDocuments: List<Document>,
+    targetPackage: String = GBOARD_DEFAULT_PATCHED_PACKAGE_NAME,
 ): GboardPackageRenameResult {
-    val rootPackage = manifestDocument.documentElement.getAttribute("package")
-    val state = when (rootPackage) {
-        GBOARD_PACKAGE_NAME -> PackageState.ORIGINAL
-        GBOARD_PATCHED_PACKAGE_NAME -> PackageState.RENAMED
-        else -> error(
-            "Unexpected Gboard manifest package '$rootPackage'; expected " +
-                "'$GBOARD_PACKAGE_NAME' or '$GBOARD_PATCHED_PACKAGE_NAME'",
-        )
+    require(isValidGboardTargetPackageName(targetPackage)) {
+        "Invalid Gboard target package name '$targetPackage'"
     }
-
     require(settingsDocuments.size == GBOARD_SETTINGS_XML_PATHS.size) {
         "Expected both Gboard settings documents"
+    }
+
+    val keepOriginalPackage = targetPackage == GBOARD_PACKAGE_NAME
+    val rootPackage = manifestDocument.documentElement.getAttribute("package")
+    val state = when {
+        rootPackage == GBOARD_PACKAGE_NAME -> PackageState.ORIGINAL
+        !keepOriginalPackage && rootPackage == targetPackage -> PackageState.RENAMED
+        else -> error(
+            if (keepOriginalPackage) {
+                "Unexpected Gboard manifest package '$rootPackage'; expected '$GBOARD_PACKAGE_NAME'"
+            } else {
+                "Unexpected Gboard manifest package '$rootPackage'; expected " +
+                    "'$GBOARD_PACKAGE_NAME' or '$targetPackage'"
+            },
+        )
     }
 
     val allManifestAttributes = manifestDocument.getElementsByTagName("*")
         .elements()
         .flatMap { element -> element.attributes.asSequence().map { attribute -> element to attribute } }
         .toList()
+    val doublePrefixes = buildDoublePrefixMarkers(targetPackage)
     val doublePrefixedValue = allManifestAttributes.firstOrNull { (_, attribute) ->
-        attribute.nodeValue.contains(DOUBLE_PREFIX)
+        doublePrefixes.any { marker -> attribute.nodeValue.contains(marker) }
     }
     check(doublePrefixedValue == null) {
         val (element, attribute) = checkNotNull(doublePrefixedValue)
@@ -312,7 +355,8 @@ internal fun applyGboardPackageRename(
             "${attribute.nodeName}: ${attribute.nodeValue}"
     }
 
-    val selectedAttributes = GBOARD_PACKAGE_RENAME_MAPPINGS.map { mapping ->
+    val mappings = gboardPackageRenameMappings(targetPackage)
+    val selectedAttributes = mappings.map { mapping ->
         val matchingElements = manifestDocument.getElementsByTagName("*")
             .elements()
             .filter { element -> element.localElementName() == mapping.elementName }
@@ -321,33 +365,47 @@ internal fun applyGboardPackageRename(
                 attribute.value == mapping.originalValue
             }
         }.toList()
-        val renamedMatches = matchingElements.mapNotNull { element ->
-            element.attribute(mapping)?.takeIf { attribute ->
-                attribute.value == mapping.renamedValue
-            }
-        }.toList()
 
-        val expectedMatches = when (state) {
-            PackageState.ORIGINAL -> originalMatches
-            PackageState.RENAMED -> renamedMatches
+        if (keepOriginalPackage) {
+            check(originalMatches.size == 1) {
+                "Expected exactly one original ${mapping.elementName} " +
+                    "${mapping.qualifiedAttributeName} value '${mapping.originalValue}', " +
+                    "found original=${originalMatches.size}"
+            }
+            originalMatches.single()
+        } else {
+            val renamedMatches = matchingElements.mapNotNull { element ->
+                element.attribute(mapping)?.takeIf { attribute ->
+                    attribute.value == mapping.renamedValue
+                }
+            }.toList()
+
+            val expectedMatches = when (state) {
+                PackageState.ORIGINAL -> originalMatches
+                PackageState.RENAMED -> renamedMatches
+            }
+            val oppositeMatches = when (state) {
+                PackageState.ORIGINAL -> renamedMatches
+                PackageState.RENAMED -> originalMatches
+            }
+            check(expectedMatches.size == 1 && oppositeMatches.isEmpty()) {
+                "Expected exactly one ${state.label} ${mapping.elementName} " +
+                    "${mapping.qualifiedAttributeName} mapping from '${mapping.originalValue}' " +
+                    "to '${mapping.renamedValue}', found original=${originalMatches.size}, " +
+                    "renamed=${renamedMatches.size}"
+            }
+            expectedMatches.single()
         }
-        val oppositeMatches = when (state) {
-            PackageState.ORIGINAL -> renamedMatches
-            PackageState.RENAMED -> originalMatches
-        }
-        check(expectedMatches.size == 1 && oppositeMatches.isEmpty()) {
-            "Expected exactly one ${state.label} ${mapping.elementName} " +
-                "${mapping.qualifiedAttributeName} mapping from '${mapping.originalValue}' " +
-                "to '${mapping.renamedValue}', found original=${originalMatches.size}, " +
-                "renamed=${renamedMatches.size}"
-        }
-        expectedMatches.single()
     }
 
+    val expectedPackage = when (state) {
+        PackageState.ORIGINAL -> GBOARD_PACKAGE_NAME
+        PackageState.RENAMED -> targetPackage
+    }
     val settingsIdentity = validateSettingsIdentity(
         manifestDocument = manifestDocument,
         settingsDocuments = settingsDocuments,
-        state = state,
+        expectedPackage = expectedPackage,
     )
     val allowedPackageAttributes = selectedAttributes + listOfNotNull(
         settingsIdentity.providerAuthority,
@@ -362,20 +420,37 @@ internal fun applyGboardPackageRename(
             "${attribute.nodeName}: ${attribute.nodeValue}"
     }
 
+    if (keepOriginalPackage) {
+        return GboardPackageRenameResult.UNCHANGED
+    }
     if (state == PackageState.RENAMED) {
         return GboardPackageRenameResult.ALREADY_RENAMED
     }
 
     sanitizeStandaloneSplitManifest(manifestDocument)
-    selectedAttributes.zip(GBOARD_PACKAGE_RENAME_MAPPINGS).forEach { (attribute, mapping) ->
+    selectedAttributes.zip(mappings).forEach { (attribute, mapping) ->
         attribute.value = mapping.renamedValue
     }
     settingsIdentity.providerAuthority?.value =
-        GBOARD_PATCHED_PACKAGE_NAME + GBOARD_PATCHES_SETTINGS_PROVIDER_AUTHORITY_SUFFIX
+        targetPackage + GBOARD_PATCHES_SETTINGS_PROVIDER_AUTHORITY_SUFFIX
     settingsIdentity.targetPackages.forEach { attribute ->
-        attribute.value = GBOARD_PATCHED_PACKAGE_NAME
+        attribute.value = targetPackage
     }
     return GboardPackageRenameResult.RENAMED
+}
+
+private fun buildDoublePrefixMarkers(targetPackage: String): List<String> = buildList {
+    add(DOUBLE_PREFIX)
+    if (targetPackage != GBOARD_PACKAGE_NAME) {
+        if (targetPackage.endsWith(".$GBOARD_PACKAGE_NAME")) {
+            val prefix = targetPackage.removeSuffix(GBOARD_PACKAGE_NAME)
+            val repeated = prefix + prefix + GBOARD_PACKAGE_NAME
+            if (repeated != DOUBLE_PREFIX) {
+                add(repeated)
+            }
+        }
+        add("$targetPackage.$targetPackage")
+    }
 }
 
 private fun sanitizeStandaloneSplitManifest(manifestDocument: Document) {
@@ -396,7 +471,7 @@ private fun sanitizeStandaloneSplitManifest(manifestDocument: Document) {
 private fun validateSettingsIdentity(
     manifestDocument: Document,
     settingsDocuments: List<Document>,
-    state: PackageState,
+    expectedPackage: String,
 ): SettingsIdentity {
     val settingsProviders = manifestDocument.getElementsByTagName("*")
         .elements()
@@ -413,7 +488,6 @@ private fun validateSettingsIdentity(
         "Gboard patches settings provider is missing android:authorities"
     }
 
-    val expectedPackage = state.packageName
     if (providerAuthority != null) {
         val expectedAuthority =
             expectedPackage + GBOARD_PATCHES_SETTINGS_PROVIDER_AUTHORITY_SUFFIX
@@ -520,11 +594,10 @@ private fun org.w3c.dom.NamedNodeMap.asSequence(): Sequence<org.w3c.dom.Node> =
     (0 until length).asSequence().map(::item)
 
 private enum class PackageState(
-    val packageName: String,
     val label: String,
 ) {
-    ORIGINAL(GBOARD_PACKAGE_NAME, "original"),
-    RENAMED(GBOARD_PATCHED_PACKAGE_NAME, "renamed"),
+    ORIGINAL("original"),
+    RENAMED("renamed"),
 }
 
 private data class SettingsIdentity(

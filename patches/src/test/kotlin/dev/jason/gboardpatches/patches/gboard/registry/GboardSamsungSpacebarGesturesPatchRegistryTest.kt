@@ -2,7 +2,6 @@ package dev.jason.gboardpatches.patches.gboard.registry
 
 import dev.jason.gboardpatches.patches.gboard.features.spacebargesture.gboardSpacebarGestureBytecodePatch
 import dev.jason.gboardpatches.patches.gboard.features.spacebargesture.gboardSpacebarGestureResourcePatch
-import dev.jason.gboardpatches.patches.gboard.features.spacebargesture.gboardSpacebarGestureSoftKeyPatch
 import dev.jason.gboardpatches.patches.gboard.features.swipedismiss.gboardSwipeDismissBytecodePatch
 import dev.jason.gboardpatches.patches.gboard.features.swipedismiss.gboardSwipeDismissFeatureMarkerPatch
 import dev.jason.gboardpatches.patches.gboard.shared.GboardKeyboardViewHolderTouchFeature
@@ -31,10 +30,7 @@ class GboardSamsungSpacebarGesturesPatchRegistryTest {
             },
         )
         assertEquals(
-            setOf(
-                "samsung_spacebar_gestures.dispatch",
-                "samsung_spacebar_gestures.soft_key",
-            ),
+            setOf("samsung_spacebar_gestures.dispatch"),
             GboardTargetAdmission.admittedContributionIdsByFeature["samsung_spacebar_gestures"],
         )
     }
@@ -44,7 +40,6 @@ class GboardSamsungSpacebarGesturesPatchRegistryTest {
         val deps = gboardSamsungSpacebarGesturesPatch.dependencies
         assertTrue(deps.any { it === gboardSpacebarGestureBytecodePatch })
         assertTrue(deps.any { it === gboardSpacebarGestureResourcePatch })
-        assertTrue(deps.any { it === gboardSpacebarGestureSoftKeyPatch })
         assertFalse(deps.any { it === gboardSwipeDismissPatch })
         assertFalse(deps.any { it === gboardSwipeDismissBytecodePatch })
         assertFalse(deps.any { it === gboardSwipeDismissFeatureMarkerPatch })

@@ -53,9 +53,11 @@ import dev.jason.gboardpatches.patches.gboard.features.longpressquickactions.gbo
 import dev.jason.gboardpatches.patches.gboard.features.manualincognito.gboardManualIncognitoFeatureMarkerPatch
 import dev.jason.gboardpatches.patches.gboard.features.manualincognito.gboardManualIncognitoLifecyclePatch
 import dev.jason.gboardpatches.patches.gboard.features.manualincognito.gboardManualIncognitoPolicyPatch
+import dev.jason.gboardpatches.patches.gboard.features.packagerename.GboardPackageRenameTarget
 import dev.jason.gboardpatches.patches.gboard.features.packagerename.applyGboardApplicationDisplayName
 import dev.jason.gboardpatches.patches.gboard.features.packagerename.gboardPackageRenameResourcePatch
 import dev.jason.gboardpatches.patches.gboard.features.packagerename.isValidGboardAppDisplayName
+import dev.jason.gboardpatches.patches.gboard.features.packagerename.isValidGboardTargetPackageName
 import dev.jason.gboardpatches.patches.gboard.features.quickinsert.gboardQuickInsertFeatureMarkerPatch
 import dev.jason.gboardpatches.patches.gboard.features.quickinsert.gboardQuickInsertFlagValuePatch
 import dev.jason.gboardpatches.patches.gboard.features.roundedkeyboard.gboardRoundedKeyboardFeatureMarkerPatch
@@ -80,6 +82,8 @@ import dev.jason.gboardpatches.patches.gboard.shared.gboardPatchesSettingsPatch
 import dev.jason.gboardpatches.patches.gboard.shared.accesspoint.gboardAccessPointContributions1803Patch
 import dev.jason.gboardpatches.patches.gboard.shared.generated.GboardTargetAdmission
 import dev.jason.gboardpatches.patches.shared.Constants.COMPATIBILITY_GBOARD
+import dev.jason.gboardpatches.patches.shared.Constants.GBOARD_DEFAULT_PATCHED_PACKAGE_NAME
+import dev.jason.gboardpatches.patches.shared.Constants.GBOARD_PACKAGE_NAME
 
 @Suppress("unused")
 val gboardLanguageModelVersionsPatch = gboardPublicResourcePatch(
@@ -648,12 +652,30 @@ val gboardSettingsHomepagePatch = gboardPublicResourcePatch(
 val gboardPackageRenamePatch = gboardPublicResourcePatch(
     featureId = "package_rename",
     name = "Package Rename",
-    description = "Rename the package to dev.jason.com.google.android.inputmethod.latin and allow " +
-        "a custom app name so it can be installed alongside the official Gboard.\n" +
-        "Переименовывает пакет в dev.jason.com.google.android.inputmethod.latin и позволяет задать название приложения для установки рядом с официальным Gboard.",
+    description = "Configure the Android package name (default dev.jason.com.google.android.inputmethod.latin, " +
+        "official com.google.android.inputmethod.latin, or a custom package ID) and allow a custom app name.\n" +
+        "Позволяет задать имя Android-пакета (по умолчанию dev.jason.com.google.android.inputmethod.latin, " +
+        "официальный com.google.android.inputmethod.latin или собственный ID пакета) и пользовательское название приложения.",
     default = true,
 ) {
     compatibleWith(COMPATIBILITY_GBOARD)
+
+    val packageName = stringOption(
+        key = "package_name",
+        default = GBOARD_DEFAULT_PATCHED_PACKAGE_NAME,
+        values = linkedMapOf(
+            GBOARD_DEFAULT_PATCHED_PACKAGE_NAME to GBOARD_DEFAULT_PATCHED_PACKAGE_NAME,
+            GBOARD_PACKAGE_NAME to GBOARD_PACKAGE_NAME,
+        ),
+        title = "Package name / Имя пакета",
+        description = "Android package ID for the patched app: keep the default side-by-side ID, " +
+            "use com.google.android.inputmethod.latin, or enter any valid custom Android package name.\n" +
+            "ID Android-пакета пропатченного приложения: оставьте значение по умолчанию для установки рядом, " +
+            "выберите com.google.android.inputmethod.latin или введите собственное корректное имя пакета.",
+        required = true,
+    ) { value ->
+        isValidGboardTargetPackageName(value)
+    }
 
     val appDisplayName = stringOption(
         key = "app_display_name",
@@ -675,6 +697,14 @@ val gboardPackageRenamePatch = gboardPublicResourcePatch(
     dependsOn(
         gboardPackageRenameResourcePatch
     )
+
+    execute {
+        val resolvedPackageName = checkNotNull(packageName.value)
+        require(isValidGboardTargetPackageName(resolvedPackageName)) {
+            "Invalid Gboard target package name '$resolvedPackageName'"
+        }
+        GboardPackageRenameTarget.packageName = resolvedPackageName
+    }
 
     finalize {
         applyGboardApplicationDisplayName(displayName = checkNotNull(appDisplayName.value))

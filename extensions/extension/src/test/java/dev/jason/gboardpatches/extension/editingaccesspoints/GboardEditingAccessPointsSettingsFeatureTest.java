@@ -82,13 +82,13 @@ public class GboardEditingAccessPointsSettingsFeatureTest {
         assertFalse(feature.buildScreen(host).getRows().get(5).isEnabled());
     }
 
-    @Test public void russianCopyAndRenderFailureAreSafe() {
-        preferences.edit().putString("pref_settings_ui_language", "ru").commit();
+    @Test public void traditionalChineseCopyAndRenderFailureAreSafe() {
+        preferences.edit().putString("pref_settings_ui_language", "zh-Hant").commit();
         GboardPatchesSettingsContract.Screen screen = feature.buildScreen(host);
-        assertEquals("Функция", screen.getSections().get(0).getTitle());
-        assertEquals("Добавляет «Выбрать всё», «Копировать», «Вырезать» и «Вставить» в меню.", screen.getHeaderSummary());
-        assertEquals("Изменения вступят в силу после принудительной остановки и перезапуска Gboard.", screen.getRows().get(0).getSummary());
-        assertEquals("Выделять всё, если ничего не выделено", screen.getRows().get(5).getTitle());
+        assertEquals("功能", screen.getSections().get(0).getTitle());
+        assertEquals("將全選、複製、剪下與貼上加入選單。", screen.getHeaderSummary());
+        assertEquals("強制停止並重新啟動 Gboard 後生效", screen.getRows().get(0).getSummary());
+        assertEquals("未選取時自動全選", screen.getRows().get(5).getTitle());
         assertEquals(1, feature.buildScreen(null).getStatusBlocks().size());
     }
 }
