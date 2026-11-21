@@ -1,3 +1,9 @@
+## [4.4.1](https://github.com/vortexnode/GboardSamsung/compare/v4.4.0...v4.4.1) (2026-11-21)
+
+### 🐛 Bug Fixes
+
+* restore project integrity after package rename import ([8df756d](https://github.com/vortexnode/GboardSamsung/commit/8df756d6aea1960bfaa8cadda4ba6f75bd4a9e22))
+
 ## [4.4.0](https://github.com/vortexnode/GboardSamsung/compare/v4.3.0...v4.4.0) (2026-11-21)
 
 ### ✨ New Features
