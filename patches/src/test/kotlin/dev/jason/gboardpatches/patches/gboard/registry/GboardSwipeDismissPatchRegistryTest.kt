@@ -17,7 +17,7 @@ class GboardSwipeDismissPatchRegistryTest {
         assertTrue(gboardSwipeDismissPatch.default)
         assertTrue(
             gboardSwipeDismissPatch.description.orEmpty().contains(
-                "從建議列或工具列向下滑動以關閉鍵盤。",
+                "Свайп вниз от строки подсказок или панели инструментов для закрытия клавиатуры.",
             ),
         )
         assertTrue(
