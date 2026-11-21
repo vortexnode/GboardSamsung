@@ -18,6 +18,7 @@ import dev.jason.gboardpatches.patches.gboard.features.featureflags.gboardKeySha
 import dev.jason.gboardpatches.patches.gboard.features.languagemodels.gboardLanguageModelFlagValuePatch
 import dev.jason.gboardpatches.patches.gboard.features.quickinsert.gboardQuickInsertFlagValuePatch
 import dev.jason.gboardpatches.patches.gboard.features.longpressquickactions.gboardLongPressQuickActionsSoftKeyPatch
+import dev.jason.gboardpatches.patches.gboard.features.spacebargesture.gboardSpacebarGestureSoftKeyPatch
 import dev.jason.gboardpatches.patches.gboard.features.writingtools.gboardAiWritingToolsFlagValuePatch
 import dev.jason.gboardpatches.patches.gboard.shared.GboardFlagFamilyFeature
 import dev.jason.gboardpatches.patches.gboard.shared.GboardSoftKeyFamilyFeature
@@ -326,9 +327,9 @@ class GboardPortProductCatalogContractTest {
         val byFeatureId = features().associateBy { feature -> feature["feature_id"].asString }
         val registrations = GboardPublishedPatchCatalog.morpheRegistrations
 
-        assertEquals(2, SOFT_KEY_FEATURE_CONTRACTS.size)
+        assertEquals(3, SOFT_KEY_FEATURE_CONTRACTS.size)
         assertEquals(
-            2,
+            3,
             features().sumOf { feature ->
                 feature.getAsJsonArray("contributions").count { contribution ->
                     contribution.asJsonObject["anchor_family_id"].asString == "soft_key_bind"
@@ -745,6 +746,14 @@ class GboardPortProductCatalogContractTest {
                 "gboardLongPressQuickActionsSoftKeyPatch",
                 FEATURE_ROOT +
                     "longpressquickactions/GboardLongPressQuickActionsSoftKeyPatch.kt",
+            ),
+            SoftKeyFeatureContract(
+                "samsung_spacebar_gestures",
+                GboardSoftKeyFamilyFeature.SAMSUNG_SPACEBAR_GESTURES,
+                gboardSpacebarGestureSoftKeyPatch,
+                "gboardSpacebarGestureSoftKeyPatch",
+                FEATURE_ROOT +
+                    "spacebargesture/GboardSpacebarGestureSoftKeyPatch.kt",
             ),
         )
     }
