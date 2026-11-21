@@ -1,3 +1,9 @@
+## [4.4.2](https://github.com/vortexnode/GboardSamsung/compare/v4.4.1...v4.4.2) (2026-11-21)
+
+### 🐛 Bug Fixes
+
+* **release:** publish docs-classified source updates ([ff68fcf](https://github.com/vortexnode/GboardSamsung/commit/ff68fcf7a1ff04ab0a2c38f403e6a671f2102008))
+
 ## [4.4.1](https://github.com/vortexnode/GboardSamsung/compare/v4.4.0...v4.4.1) (2026-11-21)
 
 ### 🐛 Bug Fixes

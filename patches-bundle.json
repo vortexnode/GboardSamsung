@@ -1,7 +1,7 @@
 {
-  "created_at": "2026-11-21T13:04:35",
-  "description": "## [4.4.1](https://github.com/vortexnode/GboardSamsung/compare/v4.4.0...v4.4.1) (2026-11-21)\n\n### 🐛 Bug Fixes\n\n* restore project integrity after package rename import ([8df756d](https://github.com/vortexnode/GboardSamsung/commit/8df756d6aea1960bfaa8cadda4ba6f75bd4a9e22))",
-  "download_url": "https://github.com/vortexnode/GboardSamsung/releases/download/v4.4.1/patches-4.4.1.mpp",
+  "created_at": "2026-11-21T15:43:22",
+  "description": "## [4.4.2](https://github.com/vortexnode/GboardSamsung/compare/v4.4.1...v4.4.2) (2026-11-21)\n\n### 🐛 Bug Fixes\n\n* **release:** publish docs-classified source updates ([ff68fcf](https://github.com/vortexnode/GboardSamsung/commit/ff68fcf7a1ff04ab0a2c38f403e6a671f2102008))",
+  "download_url": "https://github.com/vortexnode/GboardSamsung/releases/download/v4.4.2/patches-4.4.2.mpp",
   "signature_download_url": "",
-  "version": "4.4.1"
+  "version": "4.4.2"
 }
