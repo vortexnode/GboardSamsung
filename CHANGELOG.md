@@ -1,3 +1,5 @@
+## [4.4.4](https://github.com/vortexnode/GboardSamsung/compare/v4.4.3...v4.4.4) (2026-11-21)
+
 ## [4.4.3](https://github.com/vortexnode/GboardSamsung/compare/v4.4.2...v4.4.3) (2026-11-21)
 
 ## [4.4.2](https://github.com/vortexnode/GboardSamsung/compare/v4.4.1...v4.4.2) (2026-11-21)
