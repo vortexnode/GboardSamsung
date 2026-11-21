@@ -31,7 +31,7 @@ public final class GboardFlagStoreSettingsFeatureTest {
 
         assertTrue(strings.contains(
                 "cannot be determined which format Gboard will ultimately read"));
-        assertTrue(strings.contains("無法確認 Gboard 最後會讀取哪一種格式"));
+        assertTrue(strings.contains("Невозможно точно определить, какой из них выберет Gboard."));
         assertTrue(feature.contains("getProtoStoreLastModified()"));
         assertTrue(feature.contains("getLegacyOverrideLastModified()"));
         assertTrue(feature.contains("getLegacyValueLastModified()"));
