@@ -71,6 +71,10 @@ jobs:
         with:
           node-version: lts/*
 
+      - name: Make Gradle wrapper executable
+        if: steps.source.outputs.skip != 'true'
+        run: chmod +x ./gradlew
+
       - name: Install release tooling
         if: steps.source.outputs.skip != 'true'
         run: npm install --no-audit --no-fund
