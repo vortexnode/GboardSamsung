@@ -109,12 +109,12 @@ class GboardPackageRenamePatchContractTest {
     private companion object {
         const val TARGET_VERSION = "18.5.4.993608717-release-arm64-v8a"
         const val PACKAGE_RENAME_DESCRIPTION =
-            "將套件名稱改成 dev.jason.com.google.android.inputmethod.latin，並可自訂 App 名稱，以便共存安裝\n" +
-                "Rename the package to dev.jason.com.google.android.inputmethod.latin " +
-                "and allow a custom app name so it can be installed alongside " +
-                "the official Gboard."
+            "Rename the package to dev.jason.com.google.android.inputmethod.latin and allow " +
+                "a custom app name so it can be installed alongside the official Gboard.\n" +
+                "Переименовывает пакет в dev.jason.com.google.android.inputmethod.latin " +
+                "и позволяет задать название приложения для установки рядом с официальным Gboard."
         const val APP_DISPLAY_NAME_OPTION_KEY = "app_display_name"
-        const val APP_DISPLAY_NAME_OPTION_TITLE = "App 名稱 / App name"
+        const val APP_DISPLAY_NAME_OPTION_TITLE = "App name / Название приложения"
         const val APP_DISPLAY_NAME_OPTION_DESCRIPTION = ""
         const val APP_DISPLAY_NAME_DEFAULT = "GboardSamsung"
         val APP_DISPLAY_NAME_PRESETS = linkedMapOf(
