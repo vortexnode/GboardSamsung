@@ -1,3 +1,15 @@
+## [4.4.0](https://github.com/vortexnode/GboardSamsung/compare/v4.3.0...v4.4.0) (2026-11-21)
+
+### ✨ New Features
+
+* add Russian language support and spacebar gestures ([3302b4b](https://github.com/vortexnode/GboardSamsung/commit/3302b4be3f4c1e46d3d95f8c78c519dc9a44cd6b))
+* localize symbols and improve spacebar cursor ([153ff5f](https://github.com/vortexnode/GboardSamsung/commit/153ff5f9e1a58994b57181fa7fb346e5479066f6))
+
+### 🐛 Bug Fixes
+
+* **morphe-source:** make Gradle wrapper executable in release workflow ([8b026f3](https://github.com/vortexnode/GboardSamsung/commit/8b026f3272ee224811641e4cec50b6e5441ab89d))
+* **release:** retarget repair workflow to corrected release commit ([84d117b](https://github.com/vortexnode/GboardSamsung/commit/84d117be61e420c5da71a9c5755b9d100f7304f9))
+
 ## [4.3.0](https://github.com/jasonwu1994/Gboard-patches/compare/v4.2.0...v4.3.0) (2026-11-12)
 
 ### ✨ New Features
