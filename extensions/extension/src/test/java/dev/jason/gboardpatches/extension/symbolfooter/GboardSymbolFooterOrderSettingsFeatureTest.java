@@ -21,9 +21,9 @@ import dev.jason.gboardpatches.extension.settings.GboardPatchesSettingsContract;
 
 public final class GboardSymbolFooterOrderSettingsFeatureTest {
     @Test
-    public void screenUsesStableTraditionalChineseMorpheCopy() {
+    public void screenUsesStableRussianMorpheCopy() {
         Locale originalLocale = Locale.getDefault();
-        Locale.setDefault(Locale.forLanguageTag("zh-Hant-TW"));
+        Locale.setDefault(Locale.forLanguageTag("ru-RU"));
         try {
             InMemorySharedPreferences preferences = new InMemorySharedPreferences();
             GboardSymbolFooterOrderSettings.ensureDefaults(preferences);
@@ -32,15 +32,15 @@ public final class GboardSymbolFooterOrderSettingsFeatureTest {
             GboardSymbolFooterOrderSettingsFeature feature =
                     new GboardSymbolFooterOrderSettingsFeature(null);
 
-            Assert.assertEquals("表情符號、貼圖與 GIF 分頁順序", feature.getEntryTitle());
+            Assert.assertEquals("Порядок вкладок эмодзи, стикеров и GIF", feature.getEntryTitle());
             Assert.assertEquals(
-                    "重新排序 Gboard「表情符號、貼圖與 GIF」面板底部的分頁。",
+                    "Изменение порядка нижних вкладок в панели эмодзи, стикеров и GIF.",
                     feature.getEntrySummary());
 
             GboardPatchesSettingsContract.Screen screen = feature.buildScreen(host);
 
             Assert.assertEquals(
-                    Arrays.asList("目前設定", "行為", "進階"),
+                    Arrays.asList("Текущая конфигурация", "Поведение", "Дополнительно"),
                     sectionTitles(screen.getSections()));
             Assert.assertEquals("DetailRow",
                     screen.getSections().get(0).getItems().get(0).getClass().getSimpleName());
@@ -49,10 +49,10 @@ public final class GboardSymbolFooterOrderSettingsFeatureTest {
             Assert.assertEquals("DangerRow",
                     screen.getSections().get(2).getItems().get(0).getClass().getSimpleName());
             Assert.assertEquals(
-                    "目前順序",
+                    "Текущий порядок",
                     screen.getSections().get(0).getItems().get(0).getTitle().toString());
             Assert.assertTrue(
-                    screen.getSections().get(0).getItems().get(0).getSummary().contains("貼圖"));
+                    screen.getSections().get(0).getItems().get(0).getSummary().contains("Стикеры"));
         } finally {
             Locale.setDefault(originalLocale);
         }
