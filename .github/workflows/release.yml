@@ -1,10 +1,9 @@
-name: Release from tag
+name: Manual release from tag
 
 on:
+  # Automatic Morphe releases are handled by publish-morphe-source.yml.
+  # Keep this workflow available for an explicitly requested legacy/manual release.
   workflow_dispatch:
-  push:
-    tags:
-      - 'v*'
 
 jobs:
   release:
@@ -32,7 +31,7 @@ jobs:
 
           $expectedVersion = $tag.Substring(1)
           $gradleText = Get-Content -LiteralPath "gradle.properties" -Raw
-          $match = [regex]::Match($gradleText, '(?m)^\s*version\s*=\s*([^\r\n#]+?)\s*$')
+          $match = [regex]::Match($gradleText, '(?m)^\\s*version\\s*=\\s*([^\\r\\n#]+?)\\s*$')
           if (-not $match.Success) {
               throw "Unable to resolve version from gradle.properties."
           }
@@ -70,8 +69,8 @@ jobs:
           set -euo pipefail
 
           artifact_name="GboardSamsung-MPP-${VERSION}"
-          runs="$(gh api -X GET "repos/${GH_REPO}/actions/workflows/ci.yml/runs" \
-            -f head_sha="${COMMIT_SHA}" \
+          runs="$(gh api -X GET "repos/${GH_REPO}/actions/workflows/ci.yml/runs" \\
+            -f head_sha="${COMMIT_SHA}" \\
             -f per_page=100)"
 
           run_id="$(jq -r --arg sha "${COMMIT_SHA}" '
@@ -111,9 +110,9 @@ jobs:
         run: |
           set -euo pipefail
 
-          gh run download "${CI_RUN_ID}" \
-            --repo "${GITHUB_REPOSITORY}" \
-            --name "${ARTIFACT_NAME}" \
+          gh run download "${CI_RUN_ID}" \\
+            --repo "${GITHUB_REPOSITORY}" \\
+            --name "${ARTIFACT_NAME}" \\
             --dir release-artifact
 
           bundle="release-artifact/patches-${VERSION}.mpp"
