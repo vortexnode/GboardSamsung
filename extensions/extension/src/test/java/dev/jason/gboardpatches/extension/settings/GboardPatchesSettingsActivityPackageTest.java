@@ -8,6 +8,8 @@ import static org.junit.Assert.assertTrue;
 public final class GboardPatchesSettingsActivityPackageTest {
     private static final String OFFICIAL_PACKAGE = "com.google.android.inputmethod.latin";
     private static final String DEFAULT_PATCHED_PACKAGE =
+            "gboardsamsung.com.google.android.inputmethod.latin";
+    private static final String LEGACY_REVERSED_DEV_PACKAGE =
             "dev.jason.com.google.android.inputmethod.latin";
     private static final String LEGACY_DEV_PACKAGE =
             "com.google.android.inputmethod.latin.jason.dev";
@@ -29,6 +31,8 @@ public final class GboardPatchesSettingsActivityPackageTest {
                 DEFAULT_PATCHED_PACKAGE, DEFAULT_PATCHED_PACKAGE));
         assertTrue(GboardPatchesSettingsActivity.isSupportedTargetPackage(
                 DEFAULT_PATCHED_PACKAGE, CUSTOM_PACKAGE));
+        assertTrue(GboardPatchesSettingsActivity.isSupportedTargetPackage(
+                LEGACY_REVERSED_DEV_PACKAGE, CUSTOM_PACKAGE));
         assertTrue(GboardPatchesSettingsActivity.isSupportedTargetPackage(
                 LEGACY_DEV_PACKAGE, CUSTOM_PACKAGE));
     }

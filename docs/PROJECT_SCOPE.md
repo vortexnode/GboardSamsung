@@ -24,7 +24,7 @@
 
 - Work only in this downstream repository. Never modify upstream `jasonwu1994/Gboard-patches` or `vortexnode/GbSu`.
 - Retain upstream attribution, `LICENSE`, `NOTICE`, `UPSTREAM_COMMIT.txt`, and `UPSTREAM_README.md`.
-- Keep technical namespaces (`dev.jason.gboardpatches`, `dev.jason.com.google.android.inputmethod.latin`, `extensions/gboard-patches.rve`) stable to avoid breaking extension/runtime ABI compatibility.
+- Keep technical extension namespaces (`dev.jason.gboardpatches`, `extensions/gboard-patches.rve`) stable to avoid breaking extension/runtime ABI compatibility. The default `Package Rename` Android package ID is `gboardsamsung.com.google.android.inputmethod.latin` (with official `com.google.android.inputmethod.latin` and custom package IDs supported, plus legacy `dev.jason.com.google.android.inputmethod.latin` runtime compatibility).
 - Keep `gboard-port-product-catalog.json`, `gboard-port-product-catalog.sha256`, `gboard-version-bindings.json`, `RuntimeAbi.kt`, `GboardPatchRegistry.kt`, `patches-list.json`, and `patches-bundle.json` strictly synchronized.
 - Validate against an explicitly supported Gboard version (`18.5.4`). Do not claim compatibility with arbitrary versions or unproven font/layout capabilities.
 - Do not download, commit, or redistribute Google's proprietary Gboard APK, extracted proprietary assets, or private user data.

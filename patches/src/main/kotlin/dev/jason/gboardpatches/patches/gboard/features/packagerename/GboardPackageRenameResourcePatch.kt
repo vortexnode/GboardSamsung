@@ -8,6 +8,7 @@ import dev.jason.gboardpatches.patches.gboard.shared.GBOARD_PATCHES_SETTINGS_ACT
 import dev.jason.gboardpatches.patches.gboard.shared.GBOARD_PATCHES_SETTINGS_PROVIDER_AUTHORITY_SUFFIX
 import dev.jason.gboardpatches.patches.gboard.shared.GBOARD_PATCHES_SETTINGS_PROVIDER_CLASS
 import dev.jason.gboardpatches.patches.gboard.shared.GBOARD_SETTINGS_XML_PATHS
+import dev.jason.gboardpatches.patches.gboard.shared.applyGboardSpellCheckerLabel
 import dev.jason.gboardpatches.patches.gboard.shared.childElements
 import dev.jason.gboardpatches.patches.gboard.shared.elements
 import dev.jason.gboardpatches.patches.shared.Constants.GBOARD_DEFAULT_PATCHED_PACKAGE_NAME
@@ -34,6 +35,7 @@ internal val gboardPackageRenameResourcePatch = resourcePatch(
 ) {
     finalize {
         applyManifestPackageOverride(targetPackage = GboardPackageRenameTarget.packageName)
+        applyGboardSpellCheckerLabel()
     }
 }
 
@@ -440,12 +442,13 @@ internal fun applyGboardPackageRename(
 }
 
 private fun buildDoublePrefixMarkers(targetPackage: String): List<String> = buildList {
-    add(DOUBLE_PREFIX)
+    add(DEFAULT_DOUBLE_PREFIX)
+    add(LEGACY_DOUBLE_PREFIX)
     if (targetPackage != GBOARD_PACKAGE_NAME) {
         if (targetPackage.endsWith(".$GBOARD_PACKAGE_NAME")) {
             val prefix = targetPackage.removeSuffix(GBOARD_PACKAGE_NAME)
             val repeated = prefix + prefix + GBOARD_PACKAGE_NAME
-            if (repeated != DOUBLE_PREFIX) {
+            if (repeated != DEFAULT_DOUBLE_PREFIX && repeated != LEGACY_DOUBLE_PREFIX) {
                 add(repeated)
             }
         }
@@ -605,7 +608,9 @@ private data class SettingsIdentity(
     val targetPackages: List<Attr>,
 )
 
-private const val DOUBLE_PREFIX =
+private const val DEFAULT_DOUBLE_PREFIX =
+    "gboardsamsung.gboardsamsung.com.google.android.inputmethod.latin"
+private const val LEGACY_DOUBLE_PREFIX =
     "dev.jason.dev.jason.com.google.android.inputmethod.latin"
 
 private const val REQUIRED_SPLITS_METADATA = "com.android.vending.splits.required"

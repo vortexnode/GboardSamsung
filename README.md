@@ -6,8 +6,8 @@
 
 ## Upstream attribution & provenance
 
-- **Maintainer (downstream):** Vortex Node (`https://github.com/vortexnode/GboardSamsung`)
-- **Upstream project:** Jason Wu — [jasonwu1994/Gboard-patches](https://github.com/jasonwu1994/Gboard-patches)
+- **Original author (upstream):** Jason Wu (`jasonwu1994`) — [jasonwu1994/Gboard-patches](https://github.com/jasonwu1994/Gboard-patches)
+- **Modified and adapted by (downstream):** `vortexnode` (Vortex Node) — [vortexnode/GboardSamsung](https://github.com/vortexnode/GboardSamsung)
 - **Imported upstream baseline:** `463269a0f315ef9cee749e10d155af1aedaa49ad` (`2026-11-12`, recorded in `UPSTREAM_COMMIT.txt`; original upstream README archived in `UPSTREAM_README.md`)
 - **Patch framework:** Morphe (`app.morphe.patches`)
 - **License:** GNU General Public License v3.0 (`LICENSE`, `NOTICE`)
@@ -30,7 +30,7 @@ GboardSamsung includes **34** public Morphe patches (33 curated upstream feature
 - **Language, AI, suggestions & voice (7):**
   - `AI Writing Tools`, `Advanced Voice Typing`, `Grammar Checker`, `Inline Suggestions`, `Enable Inline Autofill Suggestions`, `Use Bluetooth Microphone`, `Dictionaries & Predictions`.
 - **Packaging, security & utilities (4):**
-  - `Package Rename` (default display name: `GboardSamsung`), `Add Gboard Signature Bypass`, `Backup & Restore`, `Developer options`.
+  - `Package Rename` (default package ID: `gboardsamsung.com.google.android.inputmethod.latin`, default app & spell checker display name: `GboardSamsung`, also supports official `com.google.android.inputmethod.latin` and custom package IDs), `Add Gboard Signature Bypass`, `Backup & Restore`, `Developer options`.
 
 ### Upstream features removed in GboardSamsung (12)
 

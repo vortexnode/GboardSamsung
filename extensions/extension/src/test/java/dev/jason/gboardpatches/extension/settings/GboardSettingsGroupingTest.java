@@ -200,22 +200,41 @@ public final class GboardSettingsGroupingTest {
                 "This build does not include any keyboard settings features.",
                 Collections.singletonList(symbolFooterFeature));
 
+        final boolean[] clicked = new boolean[3];
         GboardPatchesSettingsContract.Screen rootScreen =
                 GboardPatchesSettingsActivity.createRootScreen(
                         host,
                         Collections.singletonList(keyboardGroup),
-                        "author",
-                        "version",
-                        () -> {
-                        },
-                        () -> {
-                        });
+                        "Jason Wu (jasonwu1994)",
+                        "vortexnode",
+                        "4.4.1",
+                        () -> clicked[0] = true,
+                        () -> clicked[1] = true,
+                        () -> clicked[2] = true);
 
         List<?> rootSections = reflectList(rootScreen, "getSections");
         Assert.assertEquals(3, rootSections.size());
         Assert.assertEquals("Features", reflectString(rootSections.get(0), "getTitle"));
         Assert.assertEquals("Preferences", reflectString(rootSections.get(1), "getTitle"));
         Assert.assertEquals("About", reflectString(rootSections.get(2), "getTitle"));
+
+        List<?> aboutItems = reflectList(rootSections.get(2), "getItems");
+        Assert.assertEquals(3, aboutItems.size());
+        Assert.assertEquals("Author", reflectCharSequence(aboutItems.get(0), "getTitle"));
+        Assert.assertEquals("Jason Wu (jasonwu1994)",
+                reflectCharSequence(aboutItems.get(0), "getSummary"));
+        Assert.assertEquals("Modified and adapted by",
+                reflectCharSequence(aboutItems.get(1), "getTitle"));
+        Assert.assertEquals("vortexnode",
+                reflectCharSequence(aboutItems.get(1), "getSummary"));
+        Assert.assertEquals("Patch Version", reflectCharSequence(aboutItems.get(2), "getTitle"));
+        Assert.assertEquals("4.4.1", reflectCharSequence(aboutItems.get(2), "getSummary"));
+        reflectRunnable(aboutItems.get(0), "getAction").run();
+        reflectRunnable(aboutItems.get(1), "getAction").run();
+        reflectRunnable(aboutItems.get(2), "getAction").run();
+        Assert.assertTrue(clicked[0]);
+        Assert.assertTrue(clicked[1]);
+        Assert.assertTrue(clicked[2]);
 
         Object keyboardRow = findItem(rootScreen, "Keyboard");
         Assert.assertEquals("NavigationRow", keyboardRow.getClass().getSimpleName());

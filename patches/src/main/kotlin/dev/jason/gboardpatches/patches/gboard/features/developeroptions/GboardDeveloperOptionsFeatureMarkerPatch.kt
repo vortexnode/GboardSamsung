@@ -60,6 +60,7 @@ private const val DEVELOPER_OPTIONS_FEATURE_MARKER_NAME =
     "dev.jason.gboardpatches.feature.developer_options"
 private val SUPPORTED_GBOARD_PACKAGES = listOf(
     "com.google.android.inputmethod.latin",
+    "gboardsamsung.com.google.android.inputmethod.latin",
     "com.google.android.inputmethod.latin.jason.dev",
     "dev.jason.com.google.android.inputmethod.latin"
 )

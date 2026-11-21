@@ -196,7 +196,7 @@ patches {
         name = "GboardSamsung"
         description = "Samsung-style Morphe patches for Gboard."
         source = "https://github.com/vortexnode/GboardSamsung"
-        author = "Vortex Node"
+        author = "Jason Wu (jasonwu1994), modified by vortexnode"
         contact = "https://github.com/vortexnode/GboardSamsung/issues"
         website = "https://github.com/vortexnode/GboardSamsung"
         license = "GPLv3"

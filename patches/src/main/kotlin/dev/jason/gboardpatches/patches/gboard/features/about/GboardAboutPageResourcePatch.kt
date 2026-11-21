@@ -5,6 +5,8 @@ import app.morphe.patcher.patch.resourcePatch
 import dev.jason.gboardpatches.patches.gboard.shared.ANDROID_NS
 import dev.jason.gboardpatches.patches.gboard.shared.childElements
 import dev.jason.gboardpatches.patches.gboard.shared.insertAfter
+import dev.jason.gboardpatches.patches.shared.Constants.GBOARD_PATCH_ADAPTER
+import dev.jason.gboardpatches.patches.shared.Constants.GBOARD_PATCH_ADAPTER_URL
 import dev.jason.gboardpatches.patches.shared.Constants.GBOARD_PATCH_AUTHOR
 import dev.jason.gboardpatches.patches.shared.Constants.GBOARD_PATCH_AUTHOR_URL
 import dev.jason.gboardpatches.patches.shared.Constants.GBOARD_PATCH_REPOSITORY_URL
@@ -73,6 +75,15 @@ internal fun applyGboardAboutPagePatch(aboutDocument: Document) {
     )
     screen.insertAfter(authorPreference, versionPreference)
 
+    val adaptedByPreference = ensureAboutPreference(
+        document = aboutDocument,
+        key = "gboard_about_adapted_by",
+        title = "Modified and adapted by",
+        summary = GBOARD_PATCH_ADAPTER,
+        intentUrl = GBOARD_PATCH_ADAPTER_URL
+    )
+    screen.insertAfter(adaptedByPreference, authorPreference)
+
     val patchVersionPreference = ensureAboutPreference(
         document = aboutDocument,
         key = "gboard_about_patch_version",
@@ -80,7 +91,7 @@ internal fun applyGboardAboutPagePatch(aboutDocument: Document) {
         summary = GBOARD_PATCH_VERSION,
         intentUrl = GBOARD_PATCH_REPOSITORY_URL
     )
-    screen.insertAfter(patchVersionPreference, authorPreference)
+    screen.insertAfter(patchVersionPreference, adaptedByPreference)
 }
 
 private fun ensureAboutPreference(

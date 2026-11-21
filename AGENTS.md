@@ -4,7 +4,7 @@
 - Read `README.md`, `docs/PROJECT_SCOPE.md`, and `docs/UPSTREAM.md` before making architectural changes.
 - Do not touch upstream repositories (`jasonwu1994/Gboard-patches`) or `vortexnode/GbSu`; this repository is the only write target.
 - Preserve all kept GboardSamsung features, GPL-3.0 notices (`LICENSE`, `NOTICE`), and Jason Wu upstream attribution (`UPSTREAM_COMMIT.txt`, `UPSTREAM_README.md`).
-- Keep technical package namespaces (`dev.jason.gboardpatches`, `dev.jason.com.google.android.inputmethod.latin`, `extensions/gboard-patches.rve`) intact unless a deliberate compatibility migration is requested.
+- Keep technical extension namespaces (`dev.jason.gboardpatches`, `extensions/gboard-patches.rve`) intact unless a deliberate compatibility migration is requested. The default `Package Rename` Android package ID is `gboardsamsung.com.google.android.inputmethod.latin` (with official `com.google.android.inputmethod.latin` and custom package IDs supported, and legacy `dev.jason.com.google.android.inputmethod.latin` kept compatible in runtime helpers).
 - Do not commit proprietary Gboard APKs, extracted proprietary assets, secrets, API keys, or tokens.
 - Do not invent support for fonts, Samsung layout details, or Gboard versions; verify against source, bindings, and tests.
 - Spacebar gesture work (`samsung_spacebar_gestures`) must preserve tap-to-space, bidirectional language switching, and long-press cursor control, and remain independent of `swipe_down_to_dismiss_keyboard`.

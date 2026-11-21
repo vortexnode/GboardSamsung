@@ -84,8 +84,10 @@ android {
 
     defaultConfig {
         minSdk = 26
-        buildConfigField("String", "PATCH_AUTHOR", "\"Vortex Node\"")
-        buildConfigField("String", "PATCH_AUTHOR_URL", "\"https://github.com/vortexnode\"")
+        buildConfigField("String", "PATCH_AUTHOR", "\"Jason Wu (jasonwu1994)\"")
+        buildConfigField("String", "PATCH_AUTHOR_URL", "\"https://github.com/jasonwu1994\"")
+        buildConfigField("String", "PATCH_ADAPTER", "\"vortexnode\"")
+        buildConfigField("String", "PATCH_ADAPTER_URL", "\"https://github.com/vortexnode\"")
         buildConfigField(
             "String",
             "PATCH_REPOSITORY_URL",

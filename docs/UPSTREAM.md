@@ -16,7 +16,7 @@
 
 Both historical upstream Gboard Patches and downstream GboardSamsung are Morphe patch sources. Neither contains Google's proprietary Gboard application source code. They build patch bundles (`.mpp`) and catalog metadata that Morphe applies to a user-provided compatible Gboard APK (`18.5.4.993608717-release-arm64-v8a`).
 
-Upstream previously used `GboardWu` as the default Package Rename display name; GboardSamsung uses `GboardSamsung` as its default display name and `rootProject.name = "GboardSamsung"` in Gradle while preserving technical namespaces (`dev.jason.gboardpatches`, `dev.jason.com.google.android.inputmethod.latin`, `extensions/gboard-patches.rve`) for binary/runtime compatibility.
+Upstream previously used `GboardWu` as the default Package Rename display name and `dev.jason.com.google.android.inputmethod.latin` as the default patched package ID; GboardSamsung uses `GboardSamsung` as its default app and spell checker display name, `gboardsamsung.com.google.android.inputmethod.latin` as its default side-by-side package ID (keeping official `com.google.android.inputmethod.latin`, custom IDs, and legacy runtime compatibility), and `rootProject.name = "GboardSamsung"` in Gradle while preserving technical extension namespaces (`dev.jason.gboardpatches`, `extensions/gboard-patches.rve`) for binary/runtime compatibility.
 
 ## Downstream divergence summary
 

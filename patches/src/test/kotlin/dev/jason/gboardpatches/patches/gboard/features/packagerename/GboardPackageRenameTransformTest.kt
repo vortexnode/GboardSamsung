@@ -1192,10 +1192,10 @@ class GboardPackageRenameTransformTest {
 
     private companion object {
         const val SOURCE_PACKAGE = "com.google.android.inputmethod.latin"
-        const val FINAL_PACKAGE = "dev.jason.com.google.android.inputmethod.latin"
+        const val FINAL_PACKAGE = "gboardsamsung.com.google.android.inputmethod.latin"
         const val CUSTOM_PACKAGE = "com.example.gboardsamsung"
         const val PREFIXED_CUSTOM_PACKAGE = "com.vortex.com.google.android.inputmethod.latin"
-        const val DOUBLE_PREFIX = "dev.jason.dev.jason.com.google.android.inputmethod.latin"
+        const val DOUBLE_PREFIX = "gboardsamsung.gboardsamsung.com.google.android.inputmethod.latin"
         const val SETTINGS_ACTIVITY_CLASS =
             "dev.jason.gboardpatches.extension.settings.GboardPatchesSettingsActivity"
         const val SETTINGS_PROVIDER_CLASS =

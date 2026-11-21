@@ -175,6 +175,7 @@ class GboardDeveloperOptionsPatchContractSourceTest {
                 "GboardPatchesSettingsOrchestrator.java"
         val SUPPORTED_PACKAGES = listOf(
             "com.google.android.inputmethod.latin",
+            "gboardsamsung.com.google.android.inputmethod.latin",
             "com.google.android.inputmethod.latin.jason.dev",
             "dev.jason.com.google.android.inputmethod.latin",
         )

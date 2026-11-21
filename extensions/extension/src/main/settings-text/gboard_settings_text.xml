@@ -196,6 +196,10 @@
         <translation locale="en">Author</translation>
         <translation locale="ru">Автор</translation>
     </string>
+    <string name="gboard_patches_about_adapted_by_title">
+        <translation locale="en">Modified and adapted by</translation>
+        <translation locale="ru">Переработал и адаптировал</translation>
+    </string>
     <string name="gboard_patches_about_patch_version_title">
         <translation locale="en">Patch Version</translation>
         <translation locale="ru">Версия патчей</translation>

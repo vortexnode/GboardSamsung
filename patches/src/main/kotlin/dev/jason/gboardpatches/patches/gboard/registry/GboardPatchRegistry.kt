@@ -652,9 +652,9 @@ val gboardSettingsHomepagePatch = gboardPublicResourcePatch(
 val gboardPackageRenamePatch = gboardPublicResourcePatch(
     featureId = "package_rename",
     name = "Package Rename",
-    description = "Configure the Android package name (default dev.jason.com.google.android.inputmethod.latin, " +
+    description = "Configure the Android package name (default gboardsamsung.com.google.android.inputmethod.latin, " +
         "official com.google.android.inputmethod.latin, or a custom package ID) and allow a custom app name.\n" +
-        "Позволяет задать имя Android-пакета (по умолчанию dev.jason.com.google.android.inputmethod.latin, " +
+        "Позволяет задать имя Android-пакета (по умолчанию gboardsamsung.com.google.android.inputmethod.latin, " +
         "официальный com.google.android.inputmethod.latin или собственный ID пакета) и пользовательское название приложения.",
     default = true,
 ) {

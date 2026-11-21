@@ -18,6 +18,7 @@ internal val gboardPatchesSettingsPatch = resourcePatch(
 
     finalize {
         applyPatchesSettingsPatch()
+        applyGboardSpellCheckerLabel()
     }
 }
 

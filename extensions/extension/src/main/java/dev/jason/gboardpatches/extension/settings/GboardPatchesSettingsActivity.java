@@ -112,6 +112,8 @@ public final class GboardPatchesSettingsActivity extends Activity
             "18.5.4.993608717-release-arm64-v8a";
     private static final String GBOARD_PACKAGE_STABLE =
             "com.google.android.inputmethod.latin";
+    private static final String GBOARD_PACKAGE_SAMSUNG_DEFAULT =
+            "gboardsamsung.com.google.android.inputmethod.latin";
     private static final String GBOARD_PACKAGE_JASON_DEV =
             "com.google.android.inputmethod.latin.jason.dev";
     private static final String GBOARD_PACKAGE_REVERSED_DEV =
@@ -165,9 +167,9 @@ public final class GboardPatchesSettingsActivity extends Activity
     private static final float ROW_SUMMARY_SP = 13.5f;
     private static final int NO_SCROLL_POSITION_REQUESTED = -1;
     private static final String TOOLBAR_TITLE_PATCHES = "Patches";
-    private static final String ABOUT_AUTHOR_URL = "https://github.com/vortexnode";
-    private static final String ABOUT_PATCH_REPOSITORY_URL =
-            "https://github.com/vortexnode/GboardSamsung";
+    private static final String ABOUT_AUTHOR_URL = BuildConfig.PATCH_AUTHOR_URL;
+    private static final String ABOUT_ADAPTER_URL = BuildConfig.PATCH_ADAPTER_URL;
+    private static final String ABOUT_PATCH_REPOSITORY_URL = BuildConfig.PATCH_REPOSITORY_URL;
     private static final String DOCUMENT_TYPE_FALLBACK = "text/plain";
     private static final String DOCUMENT_PICKER_FAILED = "Unable to open file picker.";
     private static final String DOCUMENT_WRITE_FAILED = "Failed to export file.";
@@ -507,6 +509,7 @@ public final class GboardPatchesSettingsActivity extends Activity
             packageNames.add(currentPackage);
         }
         packageNames.add(GBOARD_PACKAGE_STABLE);
+        packageNames.add(GBOARD_PACKAGE_SAMSUNG_DEFAULT);
         packageNames.add(GBOARD_PACKAGE_JASON_DEV);
         packageNames.add(GBOARD_PACKAGE_REVERSED_DEV);
         return new ArrayList<String>(packageNames);
@@ -524,6 +527,7 @@ public final class GboardPatchesSettingsActivity extends Activity
             return true;
         }
         return GBOARD_PACKAGE_STABLE.equals(packageName)
+                || GBOARD_PACKAGE_SAMSUNG_DEFAULT.equals(packageName)
                 || GBOARD_PACKAGE_JASON_DEV.equals(packageName)
                 || GBOARD_PACKAGE_REVERSED_DEV.equals(packageName);
     }
@@ -4045,8 +4049,10 @@ public final class GboardPatchesSettingsActivity extends Activity
                 this,
                 features,
                 BuildConfig.PATCH_AUTHOR,
+                BuildConfig.PATCH_ADAPTER,
                 BuildConfig.PATCH_VERSION,
                 () -> openExternalUrl(ABOUT_AUTHOR_URL),
+                () -> openExternalUrl(ABOUT_ADAPTER_URL),
                 () -> openExternalUrl(ABOUT_PATCH_REPOSITORY_URL));
     }
 
@@ -4054,8 +4060,10 @@ public final class GboardPatchesSettingsActivity extends Activity
             GboardPatchesSettingsContract.FeatureHost host,
             List<? extends GboardPatchesSettingsContract.Feature> rootFeatures,
             String aboutAuthor,
+            String aboutAdapter,
             String patchVersion,
             Runnable authorAction,
+            Runnable adapterAction,
             Runnable patchRepositoryAction) {
         List<GboardPatchesSettingsContract.Row> featureRows =
                 new ArrayList<GboardPatchesSettingsContract.Row>();
@@ -4092,6 +4100,16 @@ public final class GboardPatchesSettingsActivity extends Activity
                 authorAction)
                 .setDecoration(new GboardPatchesSettingsContract.RowDecoration()
                         .leadingIcon(GboardPatchesIcons.PERSON, "slate")));
+        if (aboutAdapter != null && !aboutAdapter.isEmpty()) {
+            aboutRows.add(new GboardPatchesSettingsContract.CommandRow(
+                    GboardSettingsText.get(context,
+                            R.string.gboard_patches_about_adapted_by_title),
+                    aboutAdapter,
+                    true,
+                    adapterAction)
+                    .setDecoration(new GboardPatchesSettingsContract.RowDecoration()
+                            .leadingIcon(GboardPatchesIcons.CODE, "slate")));
+        }
         aboutRows.add(new GboardPatchesSettingsContract.CommandRow(
                 GboardSettingsText.get(context,
                         R.string.gboard_patches_about_patch_version_title),

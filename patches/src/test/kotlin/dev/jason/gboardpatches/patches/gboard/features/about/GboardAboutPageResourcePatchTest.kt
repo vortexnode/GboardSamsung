@@ -2,6 +2,8 @@ package dev.jason.gboardpatches.patches.gboard.features.about
 
 import dev.jason.gboardpatches.patches.gboard.shared.ANDROID_NS
 import dev.jason.gboardpatches.patches.gboard.shared.childElements
+import dev.jason.gboardpatches.patches.shared.Constants.GBOARD_PATCH_ADAPTER
+import dev.jason.gboardpatches.patches.shared.Constants.GBOARD_PATCH_ADAPTER_URL
 import dev.jason.gboardpatches.patches.shared.Constants.GBOARD_PATCH_AUTHOR
 import dev.jason.gboardpatches.patches.shared.Constants.GBOARD_PATCH_AUTHOR_URL
 import dev.jason.gboardpatches.patches.shared.Constants.GBOARD_PATCH_REPOSITORY_URL
@@ -33,9 +35,13 @@ class GboardAboutPageResourcePatchTest {
         applyGboardAboutPagePatch(document)
 
         val children = document.documentElement.childElements().toList()
-        assertEquals(6, children.size)
+        assertEquals(7, children.size)
         assertEquals(ABOUT_VERSION_KEY_REF, androidAttribute(children[3], "key"))
         assertTrue(originalVersion.isEqualNode(children[3]))
+        assertEquals("Jason Wu (jasonwu1994)", GBOARD_PATCH_AUTHOR)
+        assertEquals("https://github.com/jasonwu1994", GBOARD_PATCH_AUTHOR_URL)
+        assertEquals("vortexnode", GBOARD_PATCH_ADAPTER)
+        assertEquals("https://github.com/vortexnode", GBOARD_PATCH_ADAPTER_URL)
         assertAboutRow(
             element = children[4],
             key = "gboard_about_author",
@@ -45,6 +51,13 @@ class GboardAboutPageResourcePatchTest {
         )
         assertAboutRow(
             element = children[5],
+            key = "gboard_about_adapted_by",
+            title = "Modified and adapted by",
+            summary = GBOARD_PATCH_ADAPTER,
+            intentUrl = GBOARD_PATCH_ADAPTER_URL,
+        )
+        assertAboutRow(
+            element = children[6],
             key = "gboard_about_patch_version",
             title = "Patch Version",
             summary = GBOARD_PATCH_VERSION,
@@ -60,9 +73,12 @@ class GboardAboutPageResourcePatchTest {
         applyGboardAboutPagePatch(document)
 
         val children = document.documentElement.childElements().toList()
-        assertEquals(6, children.size)
+        assertEquals(7, children.size)
         assertEquals(1, children.count {
             androidAttribute(it, "key") == "gboard_about_author"
+        })
+        assertEquals(1, children.count {
+            androidAttribute(it, "key") == "gboard_about_adapted_by"
         })
         assertEquals(1, children.count {
             androidAttribute(it, "key") == "gboard_about_patch_version"
@@ -71,9 +87,10 @@ class GboardAboutPageResourcePatchTest {
             listOf(
                 ABOUT_VERSION_KEY_REF,
                 "gboard_about_author",
+                "gboard_about_adapted_by",
                 "gboard_about_patch_version",
             ),
-            children.takeLast(3).map { androidAttribute(it, "key") },
+            children.takeLast(4).map { androidAttribute(it, "key") },
         )
     }
 
@@ -86,10 +103,11 @@ class GboardAboutPageResourcePatchTest {
         applyGboardAboutPagePatch(document)
 
         val children = document.documentElement.childElements().toList()
-        assertEquals(6, children.size)
+        assertEquals(7, children.size)
         assertEquals(ABOUT_VERSION_SANITIZED_KEY_REF, androidAttribute(children[3], "key"))
         assertEquals("gboard_about_author", androidAttribute(children[4], "key"))
-        assertEquals("gboard_about_patch_version", androidAttribute(children[5], "key"))
+        assertEquals("gboard_about_adapted_by", androidAttribute(children[5], "key"))
+        assertEquals("gboard_about_patch_version", androidAttribute(children[6], "key"))
     }
 
     @Test
@@ -102,10 +120,11 @@ class GboardAboutPageResourcePatchTest {
         applyGboardAboutPagePatch(document)
 
         val children = document.documentElement.childElements().toList()
-        assertEquals(6, children.size)
+        assertEquals(7, children.size)
         assertEquals(ABOUT_VERSION_KEY_REF, androidAttribute(children[3], "key"))
         assertEquals("gboard_about_author", androidAttribute(children[4], "key"))
-        assertEquals("gboard_about_patch_version", androidAttribute(children[5], "key"))
+        assertEquals("gboard_about_adapted_by", androidAttribute(children[5], "key"))
+        assertEquals("gboard_about_patch_version", androidAttribute(children[6], "key"))
     }
 
     @Test
@@ -127,12 +146,13 @@ class GboardAboutPageResourcePatchTest {
         applyGboardAboutPagePatch(document)
 
         val children = screen.childElements().toList()
-        assertEquals(8, children.size)
+        assertEquals(9, children.size)
         assertTrue(children[3].isSameNode(titleDecoy))
         assertTrue(children[4].isSameNode(oldKeyDecoy))
         assertTrue(children[5].isSameNode(stockVersion))
         assertEquals("gboard_about_author", androidAttribute(children[6], "key"))
-        assertEquals("gboard_about_patch_version", androidAttribute(children[7], "key"))
+        assertEquals("gboard_about_adapted_by", androidAttribute(children[7], "key"))
+        assertEquals("gboard_about_patch_version", androidAttribute(children[8], "key"))
     }
 
     @Test

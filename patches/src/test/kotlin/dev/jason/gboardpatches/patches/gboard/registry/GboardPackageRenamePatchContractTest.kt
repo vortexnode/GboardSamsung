@@ -57,7 +57,10 @@ class GboardPackageRenamePatchContractTest {
         assertEquals(1, patch.dependencies.size)
         assertSame(gboardPackageRenameResourcePatch, patch.dependencies.single())
         assertEquals("com.google.android.inputmethod.latin", GBOARD_PACKAGE_NAME)
-        assertEquals("dev.jason.com.google.android.inputmethod.latin", GBOARD_DEFAULT_PATCHED_PACKAGE_NAME)
+        assertEquals(
+            "gboardsamsung.com.google.android.inputmethod.latin",
+            GBOARD_DEFAULT_PATCHED_PACKAGE_NAME,
+        )
         assertEquals(GBOARD_DEFAULT_PATCHED_PACKAGE_NAME, GBOARD_PATCHED_PACKAGE_NAME)
 
         val compatibilities = checkNotNull(patch.compatibility)
@@ -148,9 +151,9 @@ class GboardPackageRenamePatchContractTest {
     private companion object {
         const val TARGET_VERSION = "18.5.4.993608717-release-arm64-v8a"
         const val PACKAGE_RENAME_DESCRIPTION =
-            "Configure the Android package name (default dev.jason.com.google.android.inputmethod.latin, " +
+            "Configure the Android package name (default gboardsamsung.com.google.android.inputmethod.latin, " +
                 "official com.google.android.inputmethod.latin, or a custom package ID) and allow a custom app name.\n" +
-                "Позволяет задать имя Android-пакета (по умолчанию dev.jason.com.google.android.inputmethod.latin, " +
+                "Позволяет задать имя Android-пакета (по умолчанию gboardsamsung.com.google.android.inputmethod.latin, " +
                 "официальный com.google.android.inputmethod.latin или собственный ID пакета) и пользовательское название приложения."
         const val PACKAGE_NAME_OPTION_KEY = "package_name"
         const val PACKAGE_NAME_OPTION_TITLE = "Package name / Имя пакета"
