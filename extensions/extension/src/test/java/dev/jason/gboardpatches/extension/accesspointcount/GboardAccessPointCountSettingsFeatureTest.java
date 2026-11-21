@@ -68,7 +68,7 @@ public final class GboardAccessPointCountSettingsFeatureTest {
     }
 
     @Test
-    public void settingsTextMatchesTheRequestedEnglishAndTraditionalChineseCopy()
+    public void settingsTextMatchesTheRequestedEnglishAndRussianCopy()
             throws Exception {
         String source = new String(
                 Files.readAllBytes(
@@ -76,12 +76,12 @@ public final class GboardAccessPointCountSettingsFeatureTest {
                 StandardCharsets.UTF_8);
 
         Assert.assertTrue(source.contains(
-                "<translation locale=\"zh-Hant\">頂端工具列項目數量</translation>"));
+                "<translation locale=\"ru\">Количество значков на верхней панели</translation>"));
         Assert.assertTrue(source.contains(
-                "<translation locale=\"zh-Hant\">"
-                        + "需要強制停止並重新啟動 Gboard 才會生效。</translation>"));
+                "<translation locale=\"ru\">"
+                        + "Принудительно остановите и перезапустите Gboard, чтобы изменение вступило в силу.</translation>"));
         Assert.assertTrue(source.contains(
-                "<translation locale=\"zh-Hant\">數量</translation>"));
+                "<translation locale=\"ru\">Количество</translation>"));
         Assert.assertTrue(source.contains(
                 "<translation locale=\"en\">Top Toolbar Item Count</translation>"));
         Assert.assertTrue(source.contains(
