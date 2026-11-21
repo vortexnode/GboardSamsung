@@ -3,14 +3,20 @@ package dev.jason.gboardpatches.extension.spacebargesture;
 /**
  * Pure JVM state machine for Samsung-style spacebar gestures:
  * tap (space), horizontal swipe before long-press (NEXT/PREVIOUS language),
- * and hold (~300 ms) + horizontal drag (DPAD_LEFT/DPAD_RIGHT cursor control).
+ * and hold (~300 ms) + horizontal drag (cursor control).
  */
 public final class GboardSpacebarGestureState {
     public enum State {
         IDLE,
         SPACE_TRACKING,
         LANGUAGE_SWIPE_CONSUMED,
-        CURSOR_MODE
+        CURSOR_MODE,
+        /**
+         * Gesture was aborted after a synthetic {@code ACTION_CANCEL} was already dispatched to
+         * {@code SoftKeyboardView}. Continues consuming remaining events until {@code ACTION_UP}
+         * or {@code ACTION_CANCEL} so orphaned touch events never leak into the keyboard.
+         */
+        CONSUMED_DRAIN
     }
 
     public enum LanguageDirection {
@@ -85,7 +91,9 @@ public final class GboardSpacebarGestureState {
     }
 
     public boolean isConsumingStream() {
-        return state == State.LANGUAGE_SWIPE_CONSUMED || state == State.CURSOR_MODE;
+        return state == State.LANGUAGE_SWIPE_CONSUMED
+                || state == State.CURSOR_MODE
+                || state == State.CONSUMED_DRAIN;
     }
 
     public void beginSpaceTracking(int pointerId, float rawX, float rawY, long downTime) {
@@ -112,7 +120,18 @@ public final class GboardSpacebarGestureState {
         if (state == State.IDLE) {
             return MoveResult.NOT_CONSUMED;
         }
+        if (state == State.CONSUMED_DRAIN) {
+            lastX = rawX;
+            lastY = rawY;
+            lastEventTime = eventTime;
+            return MoveResult.CONSUMED_NO_OP;
+        }
         if (pointerId != activePointerId) {
+            if (isConsumingStream()) {
+                state = State.CONSUMED_DRAIN;
+                cursorAccumulatorDp = 0f;
+                return MoveResult.CONSUMED_NO_OP;
+            }
             reset();
             return MoveResult.NOT_CONSUMED;
         }
@@ -157,7 +176,7 @@ public final class GboardSpacebarGestureState {
             return MoveResult.NOT_CONSUMED;
         }
 
-        // state == State.CURSOR_MODE: strictly horizontal DPAD translation.
+        // state == State.CURSOR_MODE: strictly horizontal cursor step translation.
         float deltaX = rawX - lastX;
         long dtMs = eventTime > lastEventTime ? (eventTime - lastEventTime) : 0L;
         lastX = rawX;
@@ -204,9 +223,32 @@ public final class GboardSpacebarGestureState {
     }
 
     /**
-     * Multi-touch immediately aborts the single-pointer spacebar gesture and hands control back.
+     * Multi-touch aborts single-pointer gesture recognition:
+     * <ul>
+     *   <li>Before synthetic {@code ACTION_CANCEL} ({@code SPACE_TRACKING}/{@code IDLE}):
+     *       resets to {@code IDLE} and returns {@code false} so normal multi-touch typing continues.</li>
+     *   <li>After synthetic {@code ACTION_CANCEL} ({@code CURSOR_MODE}/{@code LANGUAGE_SWIPE_CONSUMED}):
+     *       transitions to {@code CONSUMED_DRAIN} and returns {@code true} so orphaned tail events
+     *       do not leak into {@code SoftKeyboardView}.</li>
+     * </ul>
      */
     public boolean onPointerDown() {
+        return abortConsumedStream();
+    }
+
+    /**
+     * Stops active gesture actions without leaking orphaned touch events if this gesture already
+     * owns the cancelled stream.
+     *
+     * @return {@code true} if the current event must stay consumed in {@code CONSUMED_DRAIN},
+     *         {@code false} if the gesture had not cancelled the underlying view and reset to {@code IDLE}.
+     */
+    public boolean abortConsumedStream() {
+        if (isConsumingStream()) {
+            state = State.CONSUMED_DRAIN;
+            cursorAccumulatorDp = 0f;
+            return true;
+        }
         reset();
         return false;
     }
@@ -214,7 +256,7 @@ public final class GboardSpacebarGestureState {
     /**
      * Finalizes the active gesture on ACTION_UP or ACTION_CANCEL.
      *
-     * @return {@code true} if the terminal event must be consumed (swipe or cursor mode),
+     * @return {@code true} if the terminal event must be consumed (swipe, cursor mode, or drain),
      *         {@code false} for a normal space tap or idle state.
      */
     public boolean onUpOrCancel() {

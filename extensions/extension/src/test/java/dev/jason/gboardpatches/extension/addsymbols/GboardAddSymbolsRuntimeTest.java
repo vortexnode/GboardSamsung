@@ -83,17 +83,22 @@ public final class GboardAddSymbolsRuntimeTest {
     }
 
     @Test
-    public void resolvesChineseLabelsOnlyForZhLocalesAndEnglishOtherwise() throws Exception {
+    public void resolvesRussianLabelsOnlyForRuLocalesAndEnglishOtherwise() throws Exception {
         Assert.assertEquals(
-                "常用",
+                "Частые",
                 localeAwareCategoryLabel(
                         GboardAddSymbolsDataset.KEY_COMMON,
-                        Locale.forLanguageTag("zh-Hant-TW")));
+                        Locale.forLanguageTag("ru-RU")));
         Assert.assertEquals(
                 "Common",
                 localeAwareCategoryLabel(
                         GboardAddSymbolsDataset.KEY_COMMON,
                         Locale.US));
+        Assert.assertEquals(
+                "Common",
+                localeAwareCategoryLabel(
+                        GboardAddSymbolsDataset.KEY_COMMON,
+                        Locale.forLanguageTag("zh-Hant-TW")));
         Assert.assertEquals(
                 "Common",
                 localeAwareCategoryLabel(
@@ -114,10 +119,10 @@ public final class GboardAddSymbolsRuntimeTest {
                         GboardAddSymbolsDataset.KEY_TYPOGRAPHY,
                         Locale.CANADA_FRENCH));
         Assert.assertEquals(
-                "箭頭",
+                "Стрелки",
                 localeAwareCategoryLabel(
                         GboardAddSymbolsDataset.KEY_ARROWS,
-                        Locale.forLanguageTag("zh-TW")));
+                        Locale.forLanguageTag("ru")));
         Assert.assertEquals(
                 "Currency",
                 localeAwareCategoryLabel(
@@ -126,6 +131,9 @@ public final class GboardAddSymbolsRuntimeTest {
         Assert.assertEquals(
                 "Recents",
                 localeAwareCategoryLabel("RECENTS", Locale.GERMANY));
+        Assert.assertEquals(
+                "Недавние",
+                localeAwareCategoryLabel("RECENTS", Locale.forLanguageTag("ru-RU")));
     }
 
     @Test

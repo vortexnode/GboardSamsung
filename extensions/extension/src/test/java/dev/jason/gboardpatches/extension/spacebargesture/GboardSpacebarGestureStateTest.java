@@ -82,6 +82,30 @@ public final class GboardSpacebarGestureStateTest {
     }
 
     @Test
+    public void disablingLanguageSwipeDoesNotAffectLongPressCursorControl() {
+        GboardSpacebarGestureState state = new GboardSpacebarGestureState();
+
+        // Horizontal swipe with languageSwipeEnabled = false must NOT switch language or consume.
+        state.beginSpaceTracking(0, 500f, 1800f, 1000L);
+        GboardSpacebarGestureState.MoveResult swipeDisabled =
+                state.onMove(0, 580f, 1800f, DENSITY, TOUCH_SLOP, 1080L, false);
+        Assert.assertFalse(swipeDisabled.consumed);
+        Assert.assertEquals(GboardSpacebarGestureState.LanguageDirection.NONE,
+                swipeDisabled.languageDirection);
+        Assert.assertEquals(GboardSpacebarGestureState.State.IDLE, state.getState());
+
+        // Long-press cursor control must STILL work cleanly when languageSwipeEnabled = false.
+        state.beginSpaceTracking(0, 500f, 1800f, 2000L);
+        Assert.assertTrue(state.onLongPressTimeout().activated);
+        GboardSpacebarGestureState.MoveResult cursorMove =
+                state.onMove(0, 530f, 1800f, DENSITY, TOUCH_SLOP, 2400L, false);
+        Assert.assertTrue(cursorMove.consumed);
+        Assert.assertEquals(1, cursorMove.dpadSteps);
+        Assert.assertTrue(state.onUpOrCancel());
+        Assert.assertEquals(GboardSpacebarGestureState.State.IDLE, state.getState());
+    }
+
+    @Test
     public void longPressActivatesCursorModeAndSuppressesSpaceWithoutMovement() {
         GboardSpacebarGestureState state = new GboardSpacebarGestureState();
         state.beginSpaceTracking(0, 500f, 1800f, 1000L);
@@ -167,17 +191,58 @@ public final class GboardSpacebarGestureStateTest {
     }
 
     @Test
-    public void secondPointerAbortsTrackingAndCursorMode() {
+    public void secondPointerAbortsTrackingAndDrainsAlreadyCancelledCursorStream() {
         GboardSpacebarGestureState state = new GboardSpacebarGestureState();
+        // Before ACTION_CANCEL (SPACE_TRACKING): reset to IDLE and pass multi-touch to Gboard.
         state.beginSpaceTracking(0, 500f, 1800f, 1000L);
         Assert.assertFalse(state.onPointerDown());
         Assert.assertEquals(GboardSpacebarGestureState.State.IDLE, state.getState());
 
+        // After ACTION_CANCEL (CURSOR_MODE): transition to CONSUMED_DRAIN so orphan events do not
+        // leak into SoftKeyboardView, stop emitting steps, then reset cleanly on UP/CANCEL.
         state.beginSpaceTracking(0, 500f, 1800f, 2000L);
         state.onLongPressTimeout();
         Assert.assertEquals(GboardSpacebarGestureState.State.CURSOR_MODE, state.getState());
-        Assert.assertFalse(state.onPointerDown());
+        Assert.assertTrue(state.onPointerDown());
+        Assert.assertEquals(GboardSpacebarGestureState.State.CONSUMED_DRAIN, state.getState());
+
+        GboardSpacebarGestureState.MoveResult drainedMove =
+                state.onMove(0, 620f, 1800f, DENSITY, TOUCH_SLOP, 2400L);
+        Assert.assertTrue(drainedMove.consumed);
+        Assert.assertEquals(0, drainedMove.dpadSteps);
+        Assert.assertEquals(GboardSpacebarGestureState.LanguageDirection.NONE,
+                drainedMove.languageDirection);
+
+        Assert.assertTrue(state.onUpOrCancel());
         Assert.assertEquals(GboardSpacebarGestureState.State.IDLE, state.getState());
+    }
+
+    @Test
+    public void repeatedSequentialSwipesRecoverCleanlyAfterInterruptions() {
+        GboardSpacebarGestureState state = new GboardSpacebarGestureState();
+        long time = 1000L;
+        for (int cycle = 0; cycle < 10; cycle++) {
+            state.beginSpaceTracking(0, 500f, 1800f, time);
+            boolean forward = (cycle % 2 == 0);
+            float targetX = forward ? 570f : 430f;
+            GboardSpacebarGestureState.MoveResult move =
+                    state.onMove(0, targetX, 1802f, DENSITY, TOUCH_SLOP, time + 50L);
+            Assert.assertTrue(move.consumed);
+            Assert.assertEquals(
+                    forward
+                            ? GboardSpacebarGestureState.LanguageDirection.NEXT
+                            : GboardSpacebarGestureState.LanguageDirection.PREVIOUS,
+                    move.languageDirection);
+            if (cycle == 4) {
+                // Simulate accidental multi-touch interruption mid-tail.
+                Assert.assertTrue(state.onPointerDown());
+                Assert.assertEquals(GboardSpacebarGestureState.State.CONSUMED_DRAIN,
+                        state.getState());
+            }
+            Assert.assertTrue(state.onUpOrCancel());
+            Assert.assertEquals(GboardSpacebarGestureState.State.IDLE, state.getState());
+            time += 400L;
+        }
     }
 
     @Test
@@ -194,13 +259,24 @@ public final class GboardSpacebarGestureStateTest {
     }
 
     @Test
-    public void mismatchedPointerIdResetsState() {
+    public void mismatchedPointerIdResetsTrackingAndDrainsConsumedStream() {
         GboardSpacebarGestureState state = new GboardSpacebarGestureState();
         state.beginSpaceTracking(0, 500f, 1800f, 1000L);
 
         GboardSpacebarGestureState.MoveResult wrongPointer =
                 state.onMove(1, 600f, 1800f, DENSITY, TOUCH_SLOP, 1050L);
         Assert.assertFalse(wrongPointer.consumed);
+        Assert.assertEquals(GboardSpacebarGestureState.State.IDLE, state.getState());
+
+        // In CURSOR_MODE, mismatched pointer transitions to CONSUMED_DRAIN instead of leaking.
+        state.beginSpaceTracking(0, 500f, 1800f, 2000L);
+        state.onLongPressTimeout();
+        GboardSpacebarGestureState.MoveResult wrongDuringCursor =
+                state.onMove(1, 600f, 1800f, DENSITY, TOUCH_SLOP, 2400L);
+        Assert.assertTrue(wrongDuringCursor.consumed);
+        Assert.assertEquals(0, wrongDuringCursor.dpadSteps);
+        Assert.assertEquals(GboardSpacebarGestureState.State.CONSUMED_DRAIN, state.getState());
+        Assert.assertTrue(state.onUpOrCancel());
         Assert.assertEquals(GboardSpacebarGestureState.State.IDLE, state.getState());
     }
 }

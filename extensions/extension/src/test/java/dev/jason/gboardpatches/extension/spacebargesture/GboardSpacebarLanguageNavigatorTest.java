@@ -57,6 +57,119 @@ public final class GboardSpacebarLanguageNavigatorTest {
     }
 
     @Test
+    public void twentyConsecutiveRuEnSwitchesStayInSyncViaPrimaryImsPath() {
+        FakeRotationBackend backend = FakeRotationBackend.forGboard("ru", "en");
+        backend.imsSwitchSucceeds = true;
+        backend.inProcessSucceeds = true;
+        backend.windowTokenPresent = false; // Must succeed even without window token (app switch).
+
+        for (int i = 0; i < 20; i++) {
+            int step = (i % 3 == 0) ? -1 : +1;
+            String expected = (i % 2 == 0) ? "en" : "ru";
+            Assert.assertTrue("Switch #" + i + " failed",
+                    GboardSpacebarLanguageNavigator.switchWithBackend(backend, step, "SWIPE"));
+            Assert.assertEquals(expected, backend.currentEntry);
+            Assert.assertEquals("sub:" + expected, backend.immCurrentSubtype);
+        }
+
+        Assert.assertEquals(20, backend.imsSwitchCalls);
+        Assert.assertEquals("In-process Lpga.l must NOT bypass IMMS when IMMS is in sync",
+                0, backend.inProcessCalls);
+    }
+
+    @Test
+    public void immDivergenceResyncsGboardInternalManagerWithoutStalling() {
+        FakeRotationBackend backend = FakeRotationBackend.forGboard("ru", "en");
+        backend.imsSwitchSucceeds = true;
+        backend.inProcessSucceeds = true;
+        // Simulate IMMS already pointing at "en" while Gboard's Lpga.C() is stuck on "ru".
+        backend.currentEntry = "ru";
+        backend.immCurrentSubtype = "sub:en";
+
+        Assert.assertTrue(GboardSpacebarLanguageNavigator.switchWithBackend(backend, +1, "NEXT"));
+        Assert.assertEquals("en", backend.currentEntry);
+        Assert.assertEquals(1, backend.inProcessCalls);
+        Assert.assertEquals(0, backend.imsSwitchCalls);
+
+        // Next switch is now back in sync and uses official IMMS switchInputMethod!
+        Assert.assertTrue(GboardSpacebarLanguageNavigator.switchWithBackend(backend, +1, "NEXT"));
+        Assert.assertEquals("ru", backend.currentEntry);
+        Assert.assertEquals("sub:ru", backend.immCurrentSubtype);
+        Assert.assertEquals(1, backend.imsSwitchCalls);
+    }
+
+    @Test
+    public void rapidConsecutiveSwipesAdvancePastInFlightAsyncImsSwitch() {
+        FakeRotationBackend backend = FakeRotationBackend.forGboard("en", "ru", "uk");
+        backend.imsSwitchSucceeds = true;
+        backend.applyImsSwitchImmediately = false; // Simulate async IMMS IPC latency.
+        backend.clockMs = 10_000L;
+
+        GboardSpacebarLanguageNavigator.InFlightTracker tracker =
+                new GboardSpacebarLanguageNavigator.InFlightTracker();
+
+        // First swipe: en -> ru (async, so backend.currentEntry is still "en").
+        Assert.assertTrue(GboardSpacebarLanguageNavigator.switchWithBackend(
+                backend, +1, "NEXT", tracker));
+        Assert.assertEquals(Collections.singletonList("sub:ru"), backend.switchedSubtypes);
+
+        // Rapid follow-up swipe 120ms later while "en" is still reported: must advance to "uk"!
+        backend.clockMs = 10_120L;
+        Assert.assertTrue(GboardSpacebarLanguageNavigator.switchWithBackend(
+                backend, +1, "NEXT", tracker));
+        Assert.assertEquals(Arrays.asList("sub:ru", "sub:uk"), backend.switchedSubtypes);
+
+        // Once live subtype settles to "uk", next swipe advances from "uk" -> "en".
+        backend.currentEntry = "uk";
+        backend.immCurrentSubtype = "sub:uk";
+        backend.clockMs = 10_250L;
+        Assert.assertTrue(GboardSpacebarLanguageNavigator.switchWithBackend(
+                backend, +1, "NEXT", tracker));
+        Assert.assertEquals(Arrays.asList("sub:ru", "sub:uk", "sub:en"), backend.switchedSubtypes);
+
+        // If window expires (>350ms) and live subtype never moved, tracker resets cleanly.
+        backend.clockMs = 11_000L;
+        Assert.assertTrue(GboardSpacebarLanguageNavigator.switchWithBackend(
+                backend, +1, "NEXT", tracker));
+        Assert.assertEquals("sub:en", backend.switchedSubtypes.get(3));
+    }
+
+    @Test
+    public void skipsDuplicateSubtypeEntriesToReachNextDistinctLanguage() {
+        FakeRotationBackend backend = FakeRotationBackend.forGboard("en", "en_dup", "ru");
+        backend.entryToSubtype.put("en_dup", "sub:en"); // Duplicate subtype entry in Lrek.b
+        backend.imsSwitchSucceeds = true;
+
+        Assert.assertTrue(GboardSpacebarLanguageNavigator.switchWithBackend(backend, +1, "NEXT"));
+        Assert.assertEquals("ru", backend.currentEntry);
+        Assert.assertEquals(Collections.singletonList("sub:ru"), backend.switchedSubtypes);
+    }
+
+    @Test
+    public void fallsBackToInProcessOnlyWhenAllImmsPathsAreUnavailable() {
+        FakeRotationBackend backend = FakeRotationBackend.forGboard("en", "ru");
+        backend.imsSwitchSucceeds = false;
+        backend.helperSucceeds = false;
+        backend.windowTokenPresent = false;
+        backend.inProcessSucceeds = true;
+
+        Assert.assertTrue(GboardSpacebarLanguageNavigator.switchWithBackend(backend, +1, "NEXT"));
+        Assert.assertEquals("ru", backend.currentEntry);
+        Assert.assertEquals(1, backend.inProcessCalls);
+        Assert.assertEquals(0, backend.immFallbackCalls);
+    }
+
+    @Test
+    public void findEntryIndexByIdentityMatchesReinstantiatedEntriesAcrossAppSwitches() {
+        List<String> entries = Arrays.asList("en_v1", "ru_v1");
+        int found = GboardSpacebarLanguageNavigator.findEntryIndexByIdentity(
+                entries,
+                "ru_v2",
+                (candidate, target) -> candidate.substring(0, 2).equals(target.substring(0, 2)));
+        Assert.assertEquals(1, found);
+    }
+
+    @Test
     public void threeLanguagesSwitchSequentiallyInBothDirectionsWithExactInverseOrder() {
         FakeRotationBackend backend = FakeRotationBackend.forGboard("en", "ru", "uk");
 
@@ -204,8 +317,16 @@ public final class GboardSpacebarLanguageNavigatorTest {
         final List<String> switchedSubtypes = new ArrayList<>();
         final List<String> immFallbackImeIds = new ArrayList<>();
         String currentEntry;
+        String immCurrentSubtype;
         Integer forcedIndex;
+        boolean imsSwitchSucceeds = false;
+        boolean applyImsSwitchImmediately = true;
+        boolean inProcessSucceeds = false;
         boolean helperSucceeds = true;
+        boolean windowTokenPresent = true;
+        long clockMs = 1_000L;
+        int imsSwitchCalls;
+        int inProcessCalls;
         int helperAttempts;
         int immFallbackCalls;
 
@@ -218,6 +339,7 @@ public final class GboardSpacebarLanguageNavigatorTest {
                 subtypeToEntry.put(subtype, entry);
                 enabledSubtypes.add(subtype);
             }
+            this.immCurrentSubtype = currentEntry == null ? null : entryToSubtype.get(currentEntry);
         }
 
         static FakeRotationBackend forGboard(String... languages) {
@@ -268,14 +390,55 @@ public final class GboardSpacebarLanguageNavigatorTest {
         }
 
         @Override
+        public String getCurrentImmSubtype() {
+            return immCurrentSubtype;
+        }
+
+        @Override
+        public long nowMs() {
+            return clockMs;
+        }
+
+        @Override
+        public boolean trySwitchInProcess(String targetEntry, String previousEntry) {
+            inProcessCalls++;
+            if (!inProcessSucceeds) {
+                return false;
+            }
+            currentEntry = targetEntry;
+            switchedSubtypes.add(entryToSubtype.get(targetEntry));
+            return true;
+        }
+
+        @Override
+        public boolean trySwitchViaInputMethodService(String gboardImeId, String verifiedSubtype) {
+            if (!imsSwitchSucceeds) {
+                return false;
+            }
+            imsSwitchCalls++;
+            switchedSubtypes.add(verifiedSubtype);
+            if (applyImsSwitchImmediately) {
+                immCurrentSubtype = verifiedSubtype;
+                currentEntry = subtypeToEntry.get(verifiedSubtype);
+            }
+            return true;
+        }
+
+        @Override
         public boolean trySwitchViaGboardHelper(String verifiedSubtype) {
             helperAttempts++;
             if (!helperSucceeds) {
                 return false;
             }
             switchedSubtypes.add(verifiedSubtype);
+            immCurrentSubtype = verifiedSubtype;
             currentEntry = subtypeToEntry.get(verifiedSubtype);
             return true;
+        }
+
+        @Override
+        public boolean hasWindowToken() {
+            return windowTokenPresent;
         }
 
         @Override
@@ -283,6 +446,7 @@ public final class GboardSpacebarLanguageNavigatorTest {
             immFallbackCalls++;
             immFallbackImeIds.add(gboardImeId);
             switchedSubtypes.add(verifiedSubtype);
+            immCurrentSubtype = verifiedSubtype;
             currentEntry = subtypeToEntry.get(verifiedSubtype);
         }
     }

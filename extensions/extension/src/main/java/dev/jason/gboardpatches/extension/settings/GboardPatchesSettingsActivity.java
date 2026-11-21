@@ -3737,14 +3737,12 @@ public final class GboardPatchesSettingsActivity extends Activity
         TextView titleView = new TextView(this);
         String title = rowModel.getTitle() == null ? "" : rowModel.getTitle().toString();
         String screenName = screenTitle == null ? "" : screenTitle;
-        if (title.equals("啟用") || title.length() <= 2) {
-            title = "使用" + screenName;
-        } else if (title.startsWith("啟用")) {
-            title = "使用" + title.substring(2);
-        } else if (title.equalsIgnoreCase("Enable")) {
+        if (title.equalsIgnoreCase("Enable") && !screenName.isEmpty()) {
             title = "Use " + screenName;
         } else if (title.startsWith("Enable ")) {
             title = "Use " + title.substring(7);
+        } else if (title.equalsIgnoreCase("Включить") && !screenName.isEmpty()) {
+            title = "Включить «" + screenName + "»";
         }
         titleView.setText(title);
         titleView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 18f);

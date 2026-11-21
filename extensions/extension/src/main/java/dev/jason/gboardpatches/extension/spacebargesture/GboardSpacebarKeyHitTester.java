@@ -38,7 +38,7 @@ public final class GboardSpacebarKeyHitTester {
             return false;
         }
         int[] location = new int[2];
-        View softKeyView = findSoftKeyViewAt(holder, rawX, rawY, location);
+        View softKeyView = findSoftKeyViewAt(holder, true, rawX, rawY, location);
         if (softKeyView == null) {
             return false;
         }
@@ -74,19 +74,22 @@ public final class GboardSpacebarKeyHitTester {
         }
     }
 
-    private static View findSoftKeyViewAt(View root, float rawX, float rawY, int[] location) {
+    private static View findSoftKeyViewAt(
+            View root, boolean isRootHolder, float rawX, float rawY, int[] location) {
         if (root == null || root.getVisibility() != View.VISIBLE || !root.isShown()) {
             return null;
         }
-        if (!containsRawPoint(root, rawX, rawY, location)) {
-            return null;
-        }
         if (isSoftKeyViewInstance(root)) {
-            return root;
+            return containsRawPoint(root, rawX, rawY, location) ? root : null;
         }
         if (root instanceof ViewGroup group) {
+            if (!isRootHolder && group.getClipChildren()
+                    && !containsRawPoint(root, rawX, rawY, location)) {
+                return null;
+            }
             for (int index = group.getChildCount() - 1; index >= 0; index--) {
-                View match = findSoftKeyViewAt(group.getChildAt(index), rawX, rawY, location);
+                View match = findSoftKeyViewAt(
+                        group.getChildAt(index), false, rawX, rawY, location);
                 if (match != null) {
                     return match;
                 }
@@ -101,10 +104,17 @@ public final class GboardSpacebarKeyHitTester {
         if (width <= 0 || height <= 0) {
             return false;
         }
+        float scaleX = Math.abs(view.getScaleX());
+        float scaleY = Math.abs(view.getScaleY());
+        float visualWidth = scaleX > 0f ? width * scaleX : width;
+        float visualHeight = scaleY > 0f ? height * scaleY : height;
         view.getLocationOnScreen(location);
-        int left = location[0];
-        int top = location[1];
-        return rawX >= left && rawX < left + width && rawY >= top && rawY < top + height;
+        float left = location[0];
+        float top = location[1];
+        return rawX >= left
+                && rawX < left + visualWidth
+                && rawY >= top
+                && rawY < top + visualHeight;
     }
 
     private static boolean isSoftKeyViewInstance(View view) {

@@ -42,19 +42,19 @@ public final class GboardAddSymbolsRuntime {
 
     private static final String CUSTOM_CATEGORY_RECENTS = "RECENTS";
     private static final String[] CUSTOM_EMOTICON_CATEGORY_KEYS = buildCustomCategoryKeys();
-    private static final String[] CUSTOM_EMOTICON_CATEGORY_LABELS_ZH = {
-            "最近",
-            "熱門",
-            "常用",
-            "排版",
-            "人物",
-            "動物",
-            "星號",
-            "箭頭",
-            "圖形",
-            "數學",
-            "語言",
-            "貨幣"
+    private static final String[] CUSTOM_EMOTICON_CATEGORY_LABELS_RU = {
+            "Недавние",
+            "Популярные",
+            "Частые",
+            "Типографика",
+            "Люди",
+            "Животные",
+            "Звёзды",
+            "Стрелки",
+            "Фигуры",
+            "Математика",
+            "Языки",
+            "Валюты"
     };
     private static final String[] CUSTOM_EMOTICON_CATEGORY_LABELS_EN = {
             "Recents",
@@ -1403,8 +1403,8 @@ public final class GboardAddSymbolsRuntime {
 
     private static String resolveCustomEmoticonCategoryLabel(String categoryKey, Locale locale) {
         try {
-            String[] labels = shouldUseChineseCategoryLabels(locale)
-                    ? CUSTOM_EMOTICON_CATEGORY_LABELS_ZH
+            String[] labels = shouldUseRussianCategoryLabels(locale)
+                    ? CUSTOM_EMOTICON_CATEGORY_LABELS_RU
                     : CUSTOM_EMOTICON_CATEGORY_LABELS_EN;
             if (CUSTOM_CATEGORY_RECENTS.equals(categoryKey)) {
                 return labels[0];
@@ -1430,7 +1430,7 @@ public final class GboardAddSymbolsRuntime {
         return CUSTOM_EMOTICON_CATEGORY_LABELS_EN[datasetIndex + 1];
     }
 
-    private static boolean shouldUseChineseCategoryLabels(Locale locale) {
+    private static boolean shouldUseRussianCategoryLabels(Locale locale) {
         if (locale == null) {
             return false;
         }
@@ -1442,7 +1442,7 @@ public final class GboardAddSymbolsRuntime {
             return false;
         }
         String normalized = languageTag.replace('_', '-').trim().toLowerCase(Locale.ROOT);
-        return normalized.startsWith("zh") || normalized.startsWith("cmn");
+        return normalized.startsWith("ru");
     }
 
     private static void storeCustomRecentSymbol(Context context, String symbol) {

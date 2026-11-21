@@ -3,6 +3,10 @@ package dev.jason.gboardpatches.extension.websearch;
 import android.content.Context;
 import android.widget.Toast;
 
+import java.util.Locale;
+
+import dev.jason.gboardpatches.extension.settings.GboardSettingsText;
+
 public final class GboardFloatingWebSearchRuntime {
     private GboardFloatingWebSearchRuntime() {
     }
@@ -32,7 +36,7 @@ public final class GboardFloatingWebSearchRuntime {
             }
             if (!GboardCustomTabsProviderResolver.hasBrowsableActivity(
                     context, settings.getStartPageUrl())) {
-                showToast(context, "沒有可用的瀏覽器", "No available browser");
+                showToast(context, "Нет доступного браузера", "No available browser");
                 return;
             }
             if (!GboardFloatingWebSearchLauncher.open(context, settings)) {
@@ -53,17 +57,30 @@ public final class GboardFloatingWebSearchRuntime {
     }
 
     static void showUnavailable(Context context) {
-        showToast(context, "目前無法開啟懸浮網頁搜尋",
+        showToast(context, "Не удалось открыть плавающий веб-поиск",
                 "Unable to open Floating Web Search");
     }
 
-    private static void showToast(Context context, String chinese, String english) {
+    static String resolveToastMessage(Context context, String russian, String english) {
+        try {
+            if ("ru".equalsIgnoreCase(GboardSettingsText.languageTag(context))) {
+                return russian;
+            }
+            return english;
+        } catch (Throwable ignored) {
+            String language = Locale.getDefault().getLanguage();
+            return "ru".equalsIgnoreCase(language) ? russian : english;
+        }
+    }
+
+    private static void showToast(Context context, String russian, String english) {
         try {
             if (context == null) {
                 return;
             }
-            String language = java.util.Locale.getDefault().getLanguage();
-            Toast.makeText(context, "zh".equalsIgnoreCase(language) ? chinese : english,
+            Toast.makeText(
+                    context,
+                    resolveToastMessage(context, russian, english),
                     Toast.LENGTH_SHORT).show();
         } catch (Throwable ignored) {
             // User feedback cannot affect the Gboard click path.
