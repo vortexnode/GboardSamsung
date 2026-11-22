@@ -1,3 +1,9 @@
+## [4.10.0](https://github.com/vortexnode/GboardSamsung/compare/v4.9.2...v4.10.0) (2026-11-22)
+
+### ✨ New Features
+
+* добавить отдельный переключатель фиксированной круглой подложки для кнопки меню ⊞ ([#19](https://github.com/vortexnode/GboardSamsung/issues/19)) ([7517a20](https://github.com/vortexnode/GboardSamsung/commit/7517a20f8ebd862181e7fc93a84815c09fd088ea))
+
 ## [4.9.2](https://github.com/vortexnode/GboardSamsung/compare/v4.9.1...v4.9.2) (2026-11-22)
 
 ### 🐛 Bug Fixes
