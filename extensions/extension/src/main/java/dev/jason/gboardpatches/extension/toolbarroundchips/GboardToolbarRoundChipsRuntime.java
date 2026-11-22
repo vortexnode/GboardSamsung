@@ -1,5 +1,6 @@
 package dev.jason.gboardpatches.extension.toolbarroundchips;
 
+import android.content.Context;
 import android.content.res.ColorStateList;
 import android.content.res.Configuration;
 import android.content.res.Resources;
@@ -9,6 +10,7 @@ import android.graphics.ColorFilter;
 import android.graphics.Paint;
 import android.graphics.PixelFormat;
 import android.graphics.drawable.Drawable;
+import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
 import android.view.View;
@@ -18,11 +20,14 @@ import android.view.ViewParent;
 import android.widget.ImageView;
 import android.widget.TextView;
 
+import dev.jason.gboardpatches.extension.settings.GboardPatchesSettings;
+
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.WeakHashMap;
+import java.util.function.Function;
 import java.util.function.Predicate;
 
 /**
@@ -38,6 +43,9 @@ import java.util.function.Predicate;
  *   <li>Attaching a {@link ViewOverlay} drawable to that background {@link View} draws the circle
  *       behind the stock Google icon without mutating stock {@code background}/ripple drawables,
  *       touch listeners, drag-and-drop, or layout bounds.</li>
+ *   <li>Color adapts to Gboard's active theme: Material You dynamic palette ({@code system:} /
+ *       {@code dynamic_color_spec:}) matches functional keys, while standard light/dark/system
+ *       themes match the Rambler microphone circle (crisp white in light, subtle surface in dark).</li>
  *   <li>Rambler voice button ({@code .background-icon.for-action-key}), the {@code ⊞} menu button
  *       ({@code .access-point-entry-menu-icon} / {@code .access-point-menu-icon}), expanded menu
  *       items, candidate suggestions, and text/clipboard chips are strictly excluded.</li>
@@ -46,6 +54,7 @@ import java.util.function.Predicate;
 public final class GboardToolbarRoundChipsRuntime {
     static final String ACCESS_POINT_BAR_BG_TAG = ".access-point-bar-item-ripple-background";
     static final String ACCESS_POINT_ICON_TAG = ".icon.for-access-point-icon";
+    static final String GBOARD_THEME_PREF_KEY = "additional_keyboard_theme";
 
     private static final String ACTION_KEY_BG_TAG = ".background-icon.for-action-key";
     private static final String MENU_ENTRY_ICON_TAG = ".access-point-entry-menu-icon";
@@ -53,14 +62,20 @@ public final class GboardToolbarRoundChipsRuntime {
     private static final String CANDIDATES_AREA_TAG = ".candidates-area";
     private static final String CANDIDATE_KEY_TAG = ".for-candidate-key";
 
+    private static final String DYNAMIC_THEME_PREFIX_SYSTEM = "system:";
+    private static final String DYNAMIC_THEME_PREFIX_SPEC = "dynamic_color_spec:";
+
     private static final float MIN_SLOT_DP = 24.0f;
     private static final float MIN_DIAMETER_DP = 24.0f;
     private static final float MAX_DIAMETER_DP = 40.0f;
     private static final float VERTICAL_INSET_DP = 0.5f;
     private static final float HORIZONTAL_INSET_DP = 4.0f;
+    private static final float LIGHT_STROKE_DP = 0.75f;
 
-    private static final int LIGHT_THEME_CHIP_ALPHA = 28;
     private static final int DARK_THEME_CHIP_ALPHA = 38;
+    private static final int DYNAMIC_DARK_CHIP_ALPHA = 220;
+    private static final int STANDARD_LIGHT_CHIP_COLOR = Color.WHITE;
+    private static final int STANDARD_LIGHT_STROKE_COLOR = 0x14000000;
     private static final int FALLBACK_LIGHT_ICON_COLOR = 0xFF1C1C1E;
     private static final int FALLBACK_DARK_ICON_COLOR = 0xFFFFFFFF;
 
@@ -69,6 +84,8 @@ public final class GboardToolbarRoundChipsRuntime {
 
     private static volatile Predicate<View> settingEnabledPredicate =
             view -> GboardToolbarRoundChipsSettings.isEnabled(view.getContext());
+    private static volatile Function<Context, String> activeThemeSpecProvider =
+            GboardToolbarRoundChipsRuntime::readActiveThemeSpec;
 
     private GboardToolbarRoundChipsRuntime() {}
 
@@ -247,18 +264,78 @@ public final class GboardToolbarRoundChipsRuntime {
             diameter = minDim;
         }
 
-        int chipColor = resolveAdaptiveChipColor(softKeyView);
-        return new ChipGeometry(width * 0.5f, height * 0.5f, diameter * 0.5f, chipColor);
+        ChipAppearance appearance = resolveChipAppearance(softKeyView, density);
+        return new ChipGeometry(
+                width * 0.5f,
+                height * 0.5f,
+                diameter * 0.5f,
+                appearance.fillColor,
+                appearance.strokeColor,
+                appearance.strokeWidth);
     }
 
     static int resolveAdaptiveChipColor(View softKeyView) {
+        return resolveChipAppearance(softKeyView, resolveDensity(softKeyView)).fillColor;
+    }
+
+    static boolean isDynamicColorThemeSelected(Context context) {
+        if (context == null) return false;
+        try {
+            String spec = activeThemeSpecProvider.apply(context);
+            if (spec == null || spec.isEmpty()) return false;
+            return spec.startsWith(DYNAMIC_THEME_PREFIX_SYSTEM)
+                    || spec.startsWith(DYNAMIC_THEME_PREFIX_SPEC);
+        } catch (Throwable ignored) {
+            return false;
+        }
+    }
+
+    private static ChipAppearance resolveChipAppearance(View softKeyView, float density) {
         int iconColor = resolveIconColor(softKeyView);
         int r = Color.red(iconColor);
         int g = Color.green(iconColor);
         int b = Color.blue(iconColor);
         double luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255.0;
-        int alpha = luminance >= 0.5 ? DARK_THEME_CHIP_ALPHA : LIGHT_THEME_CHIP_ALPHA;
-        return Color.argb(alpha, r, g, b);
+        boolean darkSurface = luminance >= 0.5;
+
+        Context context = softKeyView.getContext();
+        if (isDynamicColorThemeSelected(context)) {
+            Integer dynamicColor = resolveMaterialYouChipColor(context, darkSurface);
+            if (dynamicColor != null) {
+                return new ChipAppearance(dynamicColor, 0, 0f);
+            }
+        }
+
+        if (darkSurface) {
+            return new ChipAppearance(Color.argb(DARK_THEME_CHIP_ALPHA, r, g, b), 0, 0f);
+        }
+        return new ChipAppearance(
+                STANDARD_LIGHT_CHIP_COLOR,
+                STANDARD_LIGHT_STROKE_COLOR,
+                LIGHT_STROKE_DP * density);
+    }
+
+    private static Integer resolveMaterialYouChipColor(Context context, boolean darkSurface) {
+        if (context == null || Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
+            return null;
+        }
+        try {
+            Resources resources = context.getResources();
+            if (resources == null) return null;
+            int colorRes = darkSurface
+                    ? android.R.color.system_accent2_700
+                    : android.R.color.system_accent1_100;
+            int rawColor = resources.getColor(colorRes, context.getTheme());
+            int alpha = darkSurface ? DYNAMIC_DARK_CHIP_ALPHA : 255;
+            return Color.argb(alpha, Color.red(rawColor), Color.green(rawColor), Color.blue(rawColor));
+        } catch (Throwable ignored) {
+            return null;
+        }
+    }
+
+    private static String readActiveThemeSpec(Context context) {
+        return GboardPatchesSettings.readGboardPreferenceString(
+                context, GBOARD_THEME_PREF_KEY, null);
     }
 
     private static int resolveIconColor(View softKeyView) {
@@ -404,6 +481,12 @@ public final class GboardToolbarRoundChipsRuntime {
                 : view -> GboardToolbarRoundChipsSettings.isEnabled(view.getContext());
     }
 
+    static void setActiveThemeSpecProviderForTesting(Function<Context, String> provider) {
+        activeThemeSpecProvider = provider != null
+                ? provider
+                : GboardToolbarRoundChipsRuntime::readActiveThemeSpec;
+    }
+
     static void resetForTesting() {
         List<View> hosts;
         synchronized (ATTACHED_CHIPS) {
@@ -416,6 +499,7 @@ public final class GboardToolbarRoundChipsRuntime {
             KNOWN_TOOLBAR_ITEMS.clear();
         }
         setSettingEnabledPredicateForTesting(null);
+        setActiveThemeSpecProviderForTesting(null);
     }
 
     private static final class AttachedChip {
@@ -433,29 +517,53 @@ public final class GboardToolbarRoundChipsRuntime {
         }
     }
 
+    private static final class ChipAppearance {
+        final int fillColor;
+        final int strokeColor;
+        final float strokeWidth;
+
+        ChipAppearance(int fillColor, int strokeColor, float strokeWidth) {
+            this.fillColor = fillColor;
+            this.strokeColor = strokeColor;
+            this.strokeWidth = strokeWidth;
+        }
+    }
+
     static final class ChipGeometry {
         final float centerX;
         final float centerY;
         final float radius;
         final int color;
+        final int strokeColor;
+        final float strokeWidth;
 
-        ChipGeometry(float centerX, float centerY, float radius, int color) {
+        ChipGeometry(
+                float centerX,
+                float centerY,
+                float radius,
+                int color,
+                int strokeColor,
+                float strokeWidth) {
             this.centerX = centerX;
             this.centerY = centerY;
             this.radius = radius;
             this.color = color;
+            this.strokeColor = strokeColor;
+            this.strokeWidth = strokeWidth;
         }
     }
 
     static final class RoundChipOverlayDrawable extends Drawable {
         private final WeakReference<View> hostRef;
         private final WeakReference<View> bgTargetRef;
-        private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Paint fillPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Paint strokePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
 
         RoundChipOverlayDrawable(View host, View bgTarget) {
             this.hostRef = new WeakReference<>(host);
             this.bgTargetRef = new WeakReference<>(bgTarget);
-            paint.setStyle(Paint.Style.FILL);
+            fillPaint.setStyle(Paint.Style.FILL);
+            strokePaint.setStyle(Paint.Style.STROKE);
         }
 
         @Override
@@ -465,12 +573,18 @@ public final class GboardToolbarRoundChipsRuntime {
             if (host == null || bgTarget == null) return;
             ChipGeometry geometry = computeGeometry(host, bgTarget);
             if (geometry == null) return;
-            paint.setColor(geometry.color);
-            canvas.drawCircle(geometry.centerX, geometry.centerY, geometry.radius, paint);
+            fillPaint.setColor(geometry.color);
+            canvas.drawCircle(geometry.centerX, geometry.centerY, geometry.radius, fillPaint);
+            if (geometry.strokeColor != 0 && geometry.strokeWidth > 0f) {
+                strokePaint.setColor(geometry.strokeColor);
+                strokePaint.setStrokeWidth(geometry.strokeWidth);
+                float strokeRadius = Math.max(0f, geometry.radius - geometry.strokeWidth * 0.5f);
+                canvas.drawCircle(geometry.centerX, geometry.centerY, strokeRadius, strokePaint);
+            }
         }
 
-        @Override public void setAlpha(int alpha) { paint.setAlpha(alpha); }
-        @Override public void setColorFilter(ColorFilter colorFilter) { paint.setColorFilter(colorFilter); }
+        @Override public void setAlpha(int alpha) { fillPaint.setAlpha(alpha); }
+        @Override public void setColorFilter(ColorFilter colorFilter) { fillPaint.setColorFilter(colorFilter); }
         @Override public int getOpacity() { return PixelFormat.TRANSLUCENT; }
     }
 }

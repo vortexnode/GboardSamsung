@@ -88,6 +88,29 @@ public final class GboardPatchesSettings {
         }
     }
 
+
+    /** Direct-Boot-safe read of Gboard's own default preferences (e.g. active theme spec). */
+    public static String readGboardPreferenceString(Context context, String key, String fallback) {
+        if (context == null || key == null) return fallback;
+        String prefsName = context.getPackageName() + "_preferences";
+        try {
+            Context storage = context.createDeviceProtectedStorageContext();
+            SharedPreferences prefs = storage.getSharedPreferences(prefsName, Context.MODE_PRIVATE);
+            String value = prefs.getString(key, null);
+            if (value != null) return value;
+        } catch (Throwable ignored) {
+            // Fall through to credential-protected storage when user is unlocked.
+        }
+        if (!isUserUnlocked(context)) return fallback;
+        try {
+            SharedPreferences prefs = context.getSharedPreferences(prefsName, Context.MODE_PRIVATE);
+            String value = prefs.getString(key, null);
+            return value != null ? value : fallback;
+        } catch (Throwable ignored) {
+            return fallback;
+        }
+    }
+
     public static void ensureDefaults(SharedPreferences preferences) {
         if (preferences == null) {
             return;
