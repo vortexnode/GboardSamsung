@@ -76,7 +76,7 @@ After the remote source has been added, Morphe Manager can check the repository 
 
 Compatibility with other Gboard versions or device configurations is not guaranteed unless separately verified.
 
-## Patch catalog
+### Active patch catalog (34 patches)
 
 GboardSamsung currently contains **34 active Morphe patches**: 33 selected upstream patches and one downstream patch maintained for the Samsung-style spacebar experience.
 
