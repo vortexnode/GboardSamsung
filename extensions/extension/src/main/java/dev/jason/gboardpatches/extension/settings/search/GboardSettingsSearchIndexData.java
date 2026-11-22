@@ -156,6 +156,7 @@ final class GboardSettingsSearchIndexData {
             {23, R.string.gboard_patches_access_point_count_value_title, R.string.gboard_patches_access_point_count_value_summary, 0},
             {24, R.string.gboard_patches_toolbar_round_chips_title, R.string.gboard_patches_toolbar_round_chips_summary, 1},
             {24, R.string.gboard_patches_toolbar_round_chips_enabled_title, R.string.gboard_patches_toolbar_round_chips_enabled_summary, 0},
+            {24, R.string.gboard_patches_toolbar_round_chips_menu_grid_title, R.string.gboard_patches_toolbar_round_chips_menu_grid_summary, 0},
             {25, R.string.gboard_patches_custom_theme_title, R.string.gboard_patches_custom_theme_summary, 1},
             {25, R.string.gboard_patches_custom_theme_enabled_title, R.string.gboard_patches_custom_theme_enabled_summary, 0},
             {25, R.string.gboard_patches_custom_theme_browse_title, R.string.gboard_patches_custom_theme_browse_summary, 0},

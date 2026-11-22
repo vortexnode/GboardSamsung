@@ -3,6 +3,7 @@ package dev.jason.gboardpatches.extension.toolbarroundchips;
 import android.content.Context;
 import android.util.Log;
 
+import java.util.Arrays;
 import java.util.Collections;
 
 import dev.jason.gboardpatches.extension.R;
@@ -11,7 +12,8 @@ import dev.jason.gboardpatches.extension.settings.GboardPatchesSettingsContract;
 import dev.jason.gboardpatches.extension.settings.GboardSettingsText;
 
 /**
- * Settings screen for adaptive Samsung-style circular icon chips on Gboard's top toolbar.
+ * Settings screen for adaptive Samsung-style circular icon chips on Gboard's top toolbar
+ * and the optional fixed Rambler-style circular background behind the {@code ⊞} menu button.
  */
 public final class GboardToolbarRoundChipsSettingsFeature
         implements GboardPatchesSettingsContract.Feature {
@@ -23,6 +25,8 @@ public final class GboardToolbarRoundChipsSettingsFeature
     private final String sectionTitle;
     private final String enabledTitle;
     private final String enabledSummary;
+    private final String menuGridTitle;
+    private final String menuGridSummary;
 
     public GboardToolbarRoundChipsSettingsFeature(Context context) {
         title = text(context, R.string.gboard_patches_toolbar_round_chips_title);
@@ -31,6 +35,8 @@ public final class GboardToolbarRoundChipsSettingsFeature
         sectionTitle = text(context, R.string.gboard_patches_toolbar_round_chips_section);
         enabledTitle = text(context, R.string.gboard_patches_toolbar_round_chips_enabled_title);
         enabledSummary = text(context, R.string.gboard_patches_toolbar_round_chips_enabled_summary);
+        menuGridTitle = text(context, R.string.gboard_patches_toolbar_round_chips_menu_grid_title);
+        menuGridSummary = text(context, R.string.gboard_patches_toolbar_round_chips_menu_grid_summary);
     }
 
     @Override
@@ -58,9 +64,12 @@ public final class GboardToolbarRoundChipsSettingsFeature
             }
             Context context = host.getContext();
             boolean enabled = GboardToolbarRoundChipsSettings.readEnabled(context);
+            boolean menuGridEnabled = GboardToolbarRoundChipsSettings.readMenuGridEnabled(context);
             return buildScreenForState(
                     enabled,
-                    value -> GboardToolbarRoundChipsSettings.writeEnabled(context, value));
+                    value -> GboardToolbarRoundChipsSettings.writeEnabled(context, value),
+                    menuGridEnabled,
+                    value -> GboardToolbarRoundChipsSettings.writeMenuGridEnabled(context, value));
         } catch (Throwable failure) {
             Log.w(TAG, "Failed to render toolbar round chips settings", failure);
             return errorScreen();
@@ -69,7 +78,9 @@ public final class GboardToolbarRoundChipsSettingsFeature
 
     GboardPatchesSettingsContract.Screen buildScreenForState(
             boolean enabled,
-            GboardPatchesSettingsContract.ToggleAction toggleAction) {
+            GboardPatchesSettingsContract.ToggleAction toggleAction,
+            boolean menuGridEnabled,
+            GboardPatchesSettingsContract.ToggleAction menuGridToggleAction) {
         return new GboardPatchesSettingsContract.Screen(
                 title,
                 badge,
@@ -78,13 +89,19 @@ public final class GboardToolbarRoundChipsSettingsFeature
                 Collections.emptyList(),
                 Collections.singletonList(new GboardPatchesSettingsContract.Section(
                         sectionTitle,
-                        Collections.singletonList(
+                        Arrays.asList(
                                 new GboardPatchesSettingsContract.ToggleRow(
                                         enabledTitle,
                                         enabledSummary,
                                         true,
                                         enabled,
-                                        toggleAction)))));
+                                        toggleAction),
+                                new GboardPatchesSettingsContract.ToggleRow(
+                                        menuGridTitle,
+                                        menuGridSummary,
+                                        true,
+                                        menuGridEnabled,
+                                        menuGridToggleAction)))));
     }
 
     private GboardPatchesSettingsContract.Screen errorScreen() {

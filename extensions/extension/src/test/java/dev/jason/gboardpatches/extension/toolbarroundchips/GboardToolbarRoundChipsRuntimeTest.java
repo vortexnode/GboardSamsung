@@ -307,4 +307,51 @@ public final class GboardToolbarRoundChipsRuntimeTest {
             this.bgView = bgView;
         }
     }
+
+    @Test
+    public void menuGridChipWrapsAndUnwrapsCleanlyWithFixedRamblerStyleAndSkipsExpandedState() {
+        Drawable stockRipple = new ColorDrawable(Color.TRANSPARENT);
+        FrameLayout softKey = new FrameLayout(context);
+        FrameLayout menuFrame = new FrameLayout(context);
+        menuFrame.setTag(".access-point-entry-menu-icon.item-ripple");
+        menuFrame.setBackground(stockRipple);
+        ImageView icon = new ImageView(context);
+        icon.setTag(".icon.for-access-point-icon.entry.non-linear-scale");
+        icon.setImageTintList(ColorStateList.valueOf(Color.BLACK));
+        menuFrame.addView(icon);
+        softKey.addView(menuFrame, new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        layoutView(softKey, 44, 44);
+
+        // Off by default via real afterSoftKeyBind.
+        GboardToolbarRoundChipsRuntime.afterSoftKeyBind(softKey);
+        Assert.assertFalse(GboardToolbarRoundChipsRuntime.isMenuChipAttachedForTesting(softKey));
+        Assert.assertSame(stockRipple, menuFrame.getBackground());
+
+        // Enable menu grid chip independently (even in Dynamic Color theme, color stays fixed white!).
+        GboardToolbarRoundChipsRuntime.setMenuGridEnabledPredicateForTesting(v -> true);
+        GboardToolbarRoundChipsRuntime.setActiveThemeSpecProviderForTesting(c -> null);
+        GboardToolbarRoundChipsRuntime.afterSoftKeyBind(softKey);
+
+        Assert.assertTrue(GboardToolbarRoundChipsRuntime.isMenuChipAttachedForTesting(softKey));
+        Assert.assertTrue(menuFrame.getBackground() instanceof GboardToolbarRoundChipsRuntime.MenuChipLayerDrawable);
+        Assert.assertEquals(1, menuFrame.getChildCount());
+        Assert.assertSame(icon, menuFrame.getChildAt(0));
+
+        GboardToolbarRoundChipsRuntime.ChipGeometry lightGeom =
+                GboardToolbarRoundChipsRuntime.computeMenuGridGeometry(softKey, menuFrame);
+        Assert.assertNotNull(lightGeom);
+        Assert.assertEquals(Color.WHITE, lightGeom.color);
+        Assert.assertTrue(lightGeom.radius * 2f <= 38.01f);
+
+        // Expanded (✕) selected/activated state skips drawing our layer so native circle stays clean.
+        softKey.setSelected(true);
+        Assert.assertNull(GboardToolbarRoundChipsRuntime.computeMenuGridGeometry(softKey, menuFrame));
+        softKey.setSelected(false);
+
+        // Disable unwraps exact stockBackground cleanly.
+        GboardToolbarRoundChipsRuntime.onMenuGridPreferenceChanged(false);
+        Assert.assertFalse(GboardToolbarRoundChipsRuntime.isMenuChipAttachedForTesting(softKey));
+        Assert.assertSame(stockRipple, menuFrame.getBackground());
+    }
 }

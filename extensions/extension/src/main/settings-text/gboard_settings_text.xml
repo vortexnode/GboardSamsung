@@ -486,6 +486,14 @@
         <translation locale="en">Adapts diameter for 3–8 icons and follows light, dark, and dynamic themes. Does not affect Rambler voice button or menu grid.</translation>
         <translation locale="ru">Адаптирует размер под 3–8 значков и подстраивается под светлую, тёмную и динамическую темы. Не затрагивает кнопку Rambler и сетку меню.</translation>
     </string>
+    <string name="gboard_patches_toolbar_round_chips_menu_grid_title">
+        <translation locale="en">Menu grid ⊞ circular background</translation>
+        <translation locale="ru">Круглая подложка кнопки меню ⊞</translation>
+    </string>
+    <string name="gboard_patches_toolbar_round_chips_menu_grid_summary">
+        <translation locale="en">Draws a fixed Rambler-style circular background behind the ⊞ menu button when closed, preserving the native circle when expanded.</translation>
+        <translation locale="ru">Рисует фиксированную круглую подложку в стиле микрофона Rambler под кнопкой меню ⊞ в закрытом состоянии, сохраняя родной круг при раскрытии меню.</translation>
+    </string>
     <string name="gboard_patches_developer_options_title">
         <translation locale="en">Developer options</translation>
         <translation locale="ru">Для разработчиков</translation>

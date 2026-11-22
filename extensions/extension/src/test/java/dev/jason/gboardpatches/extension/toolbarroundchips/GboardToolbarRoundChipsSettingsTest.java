@@ -24,6 +24,8 @@ public final class GboardToolbarRoundChipsSettingsTest {
         GboardToolbarRoundChipsSettings.invalidateCache();
         GboardToolbarRoundChipsSettings.writeEnabled(
                 context, GboardToolbarRoundChipsSettings.DEFAULT_TOOLBAR_ROUND_CHIPS_ENABLED);
+        GboardToolbarRoundChipsSettings.writeMenuGridEnabled(
+                context, GboardToolbarRoundChipsSettings.DEFAULT_MENU_GRID_CHIP_ENABLED);
     }
 
     @After
@@ -44,5 +46,21 @@ public final class GboardToolbarRoundChipsSettingsTest {
         Assert.assertTrue(GboardToolbarRoundChipsSettings.writeEnabled(context, false));
         Assert.assertFalse(GboardToolbarRoundChipsSettings.readEnabled(context));
         Assert.assertFalse(GboardToolbarRoundChipsSettings.isEnabled(context));
+    }
+
+    @Test
+    public void menuGridDefaultIsFalseAndPersistsIndependently() {
+        Assert.assertFalse(GboardToolbarRoundChipsSettings.DEFAULT_MENU_GRID_CHIP_ENABLED);
+        Assert.assertFalse(GboardToolbarRoundChipsSettings.readMenuGridEnabled(context));
+        Assert.assertFalse(GboardToolbarRoundChipsSettings.isMenuGridEnabled(context));
+
+        Assert.assertTrue(GboardToolbarRoundChipsSettings.writeMenuGridEnabled(context, true));
+        Assert.assertTrue(GboardToolbarRoundChipsSettings.readMenuGridEnabled(context));
+        Assert.assertTrue(GboardToolbarRoundChipsSettings.isMenuGridEnabled(context));
+        Assert.assertFalse(GboardToolbarRoundChipsSettings.readEnabled(context));
+
+        Assert.assertTrue(GboardToolbarRoundChipsSettings.writeMenuGridEnabled(context, false));
+        Assert.assertFalse(GboardToolbarRoundChipsSettings.readMenuGridEnabled(context));
+        Assert.assertFalse(GboardToolbarRoundChipsSettings.isMenuGridEnabled(context));
     }
 }
