@@ -1,3 +1,9 @@
+## [4.9.1](https://github.com/vortexnode/GboardSamsung/compare/v4.9.0...v4.9.1) (2026-11-22)
+
+### 🐛 Bug Fixes
+
+* распознавать префикс silk: для динамической темы подложек тулбара ([#17](https://github.com/vortexnode/GboardSamsung/issues/17)) ([9e90f85](https://github.com/vortexnode/GboardSamsung/commit/9e90f856f35a199928778a7f27903df4a21827e7))
+
 ## [4.9.0](https://github.com/vortexnode/GboardSamsung/compare/v4.8.1...v4.9.0) (2026-11-22)
 
 ### ✨ New Features
