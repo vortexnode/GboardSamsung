@@ -55,6 +55,28 @@ public final class GboardSpacebarChevronRuntimeTest {
                 ((GboardSpacebarChevronRuntime.ChevronDrawable) drawables[2]).getColor());
     }
 
+    @Test public void wrapContentLabelUsesKeycapWidthAndRestoresCompoundDrawablePadding() {
+        KeycapPair pair = createWrapContentKeycap("Русский", 480, 80, Color.BLACK);
+        pair.label.setCompoundDrawablePadding(3);
+        Assert.assertTrue(pair.label.getWidth() > 0);
+        Assert.assertTrue(pair.label.getWidth() < pair.container.getWidth());
+
+        GboardSpacebarChevronRuntime.applyToSoftKeyView(pair.container, true, true);
+        Drawable[] decorated = pair.label.getCompoundDrawables();
+        Assert.assertTrue(decorated[0]
+                instanceof GboardSpacebarChevronRuntime.ChevronDrawable);
+        Assert.assertTrue(decorated[2]
+                instanceof GboardSpacebarChevronRuntime.ChevronDrawable);
+        Assert.assertEquals(Math.round(
+                        10.0f * pair.label.getResources().getDisplayMetrics().density),
+                pair.label.getCompoundDrawablePadding());
+
+        GboardSpacebarChevronRuntime.applyToSoftKeyView(pair.container, false, true);
+        Assert.assertEquals(3, pair.label.getCompoundDrawablePadding());
+        Assert.assertNull(pair.label.getCompoundDrawables()[0]);
+        Assert.assertNull(pair.label.getCompoundDrawables()[2]);
+    }
+
     @Test public void emptyLabelDoesNotShowChevrons() {
         KeycapPair pair = createKeycap("   ", 480, 80, Color.BLACK);
         GboardSpacebarChevronRuntime.applyToSoftKeyView(pair.container, true, true);
@@ -117,12 +139,25 @@ public final class GboardSpacebarChevronRuntimeTest {
     }
 
     private KeycapPair createKeycap(String text, int width, int height, int textColor) {
+        return createKeycap(text, width, height, textColor,
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
+    }
+
+    private KeycapPair createWrapContentKeycap(
+            String text, int width, int height, int textColor) {
+        return createKeycap(text, width, height, textColor,
+                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+    }
+
+    private KeycapPair createKeycap(
+            String text, int width, int height, int textColor,
+            int labelWidth, int labelHeight) {
         FrameLayout container = new FrameLayout(context);
         TextView label = new TextView(context);
         label.setText(text);
         label.setTextColor(textColor);
-        container.addView(label, new FrameLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        label.setPadding(0, 0, 0, 0);
+        container.addView(label, new FrameLayout.LayoutParams(labelWidth, labelHeight));
         int widthSpec = View.MeasureSpec.makeMeasureSpec(width, View.MeasureSpec.EXACTLY);
         int heightSpec = View.MeasureSpec.makeMeasureSpec(height, View.MeasureSpec.EXACTLY);
         container.measure(widthSpec, heightSpec);

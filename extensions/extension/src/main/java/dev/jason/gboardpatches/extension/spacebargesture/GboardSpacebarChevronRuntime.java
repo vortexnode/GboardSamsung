@@ -26,6 +26,7 @@ public final class GboardSpacebarChevronRuntime {
     private static final float STROKE_WIDTH_DP = 1.65f;
     private static final float MIN_SIDE_GAP_DP = 4.0f;
     private static final float MIN_EDGE_INSET_DP = 4.0f;
+    private static final float COMPOUND_DRAWABLE_PADDING_DP = 10.0f;
     private static final Map<TextView, SavedDrawables> TRACKED_LABELS = new WeakHashMap<>();
     private static final Map<View, Boolean> LAYOUT_RETRY_REQUESTED = new WeakHashMap<>();
 
@@ -112,8 +113,11 @@ public final class GboardSpacebarChevronRuntime {
         float density = resolveDensity(labelView);
         int chevronWidthPx = Math.max(1, Math.round(CHEVRON_WIDTH_DP * density));
         int chevronHeightPx = Math.max(1, Math.round(CHEVRON_HEIGHT_DP * density));
+        int compoundDrawablePaddingPx = Math.max(
+                0, Math.round(COMPOUND_DRAWABLE_PADDING_DP * density));
         if (!hasEnoughHorizontalSpace(
-                softKeyView, labelView, text, chevronWidthPx, density)) {
+                softKeyView, labelView, text, chevronWidthPx,
+                compoundDrawablePaddingPx, density)) {
             restoreIfTracked(labelView);
             return;
         }
@@ -122,14 +126,18 @@ public final class GboardSpacebarChevronRuntime {
         if (currentLeft instanceof ChevronDrawable left
                 && currentRight instanceof ChevronDrawable right
                 && left.matches(color, chevronWidthPx, chevronHeightPx)
-                && right.matches(color, chevronWidthPx, chevronHeightPx)) {
+                && right.matches(color, chevronWidthPx, chevronHeightPx)
+                && labelView.getCompoundDrawablePadding() == compoundDrawablePaddingPx) {
             return;
         }
 
         synchronized (TRACKED_LABELS) {
             TRACKED_LABELS.putIfAbsent(
-                    labelView, new SavedDrawables(current[0], current[1], current[2], current[3]));
+                    labelView, new SavedDrawables(
+                            current[0], current[1], current[2], current[3],
+                            labelView.getCompoundDrawablePadding()));
         }
+        labelView.setCompoundDrawablePadding(compoundDrawablePaddingPx);
         labelView.setCompoundDrawables(
                 new ChevronDrawable(true, color, chevronWidthPx, chevronHeightPx, density),
                 current[1],
@@ -140,17 +148,22 @@ public final class GboardSpacebarChevronRuntime {
     /** Uses actual keycap and label content widths; unknown dimensions fail closed. */
     static boolean hasEnoughHorizontalSpace(
             View keycapView, TextView labelView, CharSequence text,
-            int chevronWidthPx, float density) {
-        int keycapWidth = measuredWidth(keycapView)
+            int chevronWidthPx, int compoundDrawablePaddingPx, float density) {
+        int availableWidth = measuredWidth(keycapView)
                 - keycapView.getPaddingLeft() - keycapView.getPaddingRight();
-        int labelWidth = measuredWidth(labelView)
-                - labelView.getPaddingLeft() - labelView.getPaddingRight();
-        if (keycapWidth <= 0 || labelWidth <= 0) return false;
+        if (availableWidth <= 0) return false;
 
-        int availableWidth = Math.min(keycapWidth, labelWidth);
+        // A wrap_content label is normally only as wide as its text. The keycap,
+        // not that measured label width, determines the horizontal budget.
+        int labelMaxWidth = labelView.getMaxWidth();
+        if (labelMaxWidth > 0 && labelMaxWidth < availableWidth) {
+            availableWidth = labelMaxWidth
+                    - labelView.getPaddingLeft() - labelView.getPaddingRight();
+        }
+        if (availableWidth <= 0) return false;
+
         float textWidth = labelView.getPaint().measureText(text.toString());
-        float drawableGaps = 2f * labelView.getCompoundDrawablePadding();
-        float perSideAllowance = chevronWidthPx + drawableGaps * 0.5f
+        float perSideAllowance = chevronWidthPx + compoundDrawablePaddingPx
                 + (MIN_SIDE_GAP_DP + MIN_EDGE_INSET_DP) * density;
         return availableWidth >= textWidth + 2f * perSideAllowance;
     }
@@ -172,6 +185,9 @@ public final class GboardSpacebarChevronRuntime {
                     View changedView, int left, int top, int right, int bottom,
                     int oldLeft, int oldTop, int oldRight, int oldBottom) {
                 changedView.removeOnLayoutChangeListener(this);
+                synchronized (LAYOUT_RETRY_REQUESTED) {
+                    LAYOUT_RETRY_REQUESTED.remove(changedView);
+                }
                 afterSoftKeyBind(keyView);
             }
         });
@@ -211,6 +227,7 @@ public final class GboardSpacebarChevronRuntime {
         Drawable left = current[0] instanceof ChevronDrawable ? saved.left : current[0];
         Drawable right = current[2] instanceof ChevronDrawable ? saved.right : current[2];
         labelView.setCompoundDrawables(left, current[1], right, current[3]);
+        labelView.setCompoundDrawablePadding(saved.compoundDrawablePadding);
     }
 
     private static float resolveDensity(View view) {
@@ -240,12 +257,16 @@ public final class GboardSpacebarChevronRuntime {
         final Drawable top;
         final Drawable right;
         final Drawable bottom;
+        final int compoundDrawablePadding;
 
-        SavedDrawables(Drawable left, Drawable top, Drawable right, Drawable bottom) {
+        SavedDrawables(
+                Drawable left, Drawable top, Drawable right, Drawable bottom,
+                int compoundDrawablePadding) {
             this.left = left;
             this.top = top;
             this.right = right;
             this.bottom = bottom;
+            this.compoundDrawablePadding = compoundDrawablePadding;
         }
     }
 
