@@ -1,3 +1,9 @@
+## [4.5.0](https://github.com/vortexnode/GboardSamsung/compare/v4.4.5...v4.5.0) (2026-11-22)
+
+### ✨ New Features
+
+* add spacebar language chevrons toggle ([73deea6](https://github.com/vortexnode/GboardSamsung/commit/73deea69201b816933c93ddaa4417f79e91b9ca5))
+
 ## [4.4.5](https://github.com/vortexnode/GboardSamsung/compare/v4.4.4...v4.4.5) (2026-11-21)
 
 ## [4.4.4](https://github.com/vortexnode/GboardSamsung/compare/v4.4.3...v4.4.4) (2026-11-21)
