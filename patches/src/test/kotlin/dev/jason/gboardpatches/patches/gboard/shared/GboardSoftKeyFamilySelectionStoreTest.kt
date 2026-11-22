@@ -26,13 +26,12 @@ class GboardSoftKeyFamilySelectionStoreTest {
     }
 
     @Test
-    fun spacebarAfterStockDelegateInvokesGlobeAndChevronsIndependently() {
+    fun spacebarAfterStockDelegateContainsOnlyGlobeAndChevrons() {
         val feature = GboardSoftKeyFamilyFeature.SAMSUNG_SPACEBAR_GESTURES
         assertEquals(
             listOf(
                 RuntimeCallId.SPACEBAR_GESTURE_RUNTIME_AFTER_SOFT_KEY_BIND,
                 RuntimeCallId.SPACEBAR_CHEVRON_RUNTIME_AFTER_SOFT_KEY_BIND,
-                RuntimeCallId.TOOLBAR_ROUND_CHIPS_RUNTIME_AFTER_SOFT_KEY_BIND,
             ),
             feature.afterRuntimeCalls,
         )
@@ -40,10 +39,22 @@ class GboardSoftKeyFamilySelectionStoreTest {
         val delegate = feature.afterDelegate()
         val globeCall = delegate.indexOf("GboardSpacebarGlobeKeyRuntime;->afterSoftKeyBind")
         val chevronCall = delegate.indexOf("GboardSpacebarChevronRuntime;->afterSoftKeyBind")
-        val toolbarChipsCall = delegate.indexOf("GboardToolbarRoundChipsRuntime;->afterSoftKeyBind")
         assertTrue("Globe runtime call is missing", globeCall >= 0)
         assertTrue("Chevron runtime call is missing", chevronCall > globeCall)
-        assertTrue("Toolbar round chips runtime call is missing", toolbarChipsCall > chevronCall)
-        assertEquals(3, delegate.lineSequence().count { it.contains("invoke-static") })
+        assertEquals(2, delegate.lineSequence().count { it.contains("invoke-static") })
+    }
+
+    @Test
+    fun toolbarRoundChipsHasItsOwnAfterStockDelegate() {
+        val feature = GboardSoftKeyFamilyFeature.TOOLBAR_ROUND_CHIPS
+        assertEquals(910, feature.afterOrder)
+        assertEquals(
+            listOf(RuntimeCallId.TOOLBAR_ROUND_CHIPS_RUNTIME_AFTER_SOFT_KEY_BIND),
+            feature.afterRuntimeCalls,
+        )
+
+        val delegate = feature.afterDelegate()
+        assertTrue(delegate.contains("GboardToolbarRoundChipsRuntime;->afterSoftKeyBind"))
+        assertEquals(1, delegate.lineSequence().count { it.contains("invoke-static") })
     }
 }
