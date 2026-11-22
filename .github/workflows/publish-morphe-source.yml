@@ -79,6 +79,10 @@ jobs:
         if: steps.source.outputs.skip != 'true'
         run: npm install --no-audit --no-fund
 
+      - name: Verify release notes validator and .releaserc
+        if: steps.source.outputs.skip != 'true'
+        run: node --test scripts/validate-release-notes.test.mjs
+
       - name: Analyze commits, build, and publish Morphe release
         if: steps.source.outputs.skip != 'true'
         env:
