@@ -19,6 +19,7 @@ import dev.jason.gboardpatches.patches.gboard.features.languagemodels.gboardLang
 import dev.jason.gboardpatches.patches.gboard.features.quickinsert.gboardQuickInsertFlagValuePatch
 import dev.jason.gboardpatches.patches.gboard.features.longpressquickactions.gboardLongPressQuickActionsSoftKeyPatch
 import dev.jason.gboardpatches.patches.gboard.features.spacebargesture.gboardSpacebarGestureSoftKeyPatch
+import dev.jason.gboardpatches.patches.gboard.features.toolbarroundchips.gboardToolbarRoundChipsSoftKeyPatch
 import dev.jason.gboardpatches.patches.gboard.features.writingtools.gboardAiWritingToolsFlagValuePatch
 import dev.jason.gboardpatches.patches.gboard.shared.GboardFlagFamilyFeature
 import dev.jason.gboardpatches.patches.gboard.shared.GboardSoftKeyFamilyFeature
@@ -327,9 +328,9 @@ class GboardPortProductCatalogContractTest {
         val byFeatureId = features().associateBy { feature -> feature["feature_id"].asString }
         val registrations = GboardPublishedPatchCatalog.morpheRegistrations
 
-        assertEquals(3, SOFT_KEY_FEATURE_CONTRACTS.size)
+        assertEquals(4, SOFT_KEY_FEATURE_CONTRACTS.size)
         assertEquals(
-            3,
+            4,
             features().sumOf { feature ->
                 feature.getAsJsonArray("contributions").count { contribution ->
                     contribution.asJsonObject["anchor_family_id"].asString == "soft_key_bind"
@@ -602,6 +603,7 @@ class GboardPortProductCatalogContractTest {
             "quick_insert" to "version-sensitive",
             "rounded_keyboard_panel" to "version-sensitive",
             "samsung_spacebar_gestures" to "version-sensitive",
+            "toolbar_round_chips" to "version-sensitive",
             "settings_homepage_override" to "version-sensitive",
             "simple_calculator" to "version-sensitive",
             "swipe_down_to_dismiss_keyboard" to "version-sensitive",
@@ -754,6 +756,14 @@ class GboardPortProductCatalogContractTest {
                 "gboardSpacebarGestureSoftKeyPatch",
                 FEATURE_ROOT +
                     "spacebargesture/GboardSpacebarGestureSoftKeyPatch.kt",
+            ),
+            SoftKeyFeatureContract(
+                "toolbar_round_chips",
+                GboardSoftKeyFamilyFeature.TOOLBAR_ROUND_CHIPS,
+                gboardToolbarRoundChipsSoftKeyPatch,
+                "gboardToolbarRoundChipsSoftKeyPatch",
+                FEATURE_ROOT +
+                    "toolbarroundchips/GboardToolbarRoundChipsSoftKeyPatch.kt",
             ),
         )
     }
