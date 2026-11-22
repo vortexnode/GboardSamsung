@@ -10,6 +10,7 @@ import android.graphics.ColorFilter;
 import android.graphics.Paint;
 import android.graphics.PixelFormat;
 import android.graphics.drawable.Drawable;
+import android.graphics.drawable.LayerDrawable;
 import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
@@ -70,6 +71,7 @@ public final class GboardToolbarRoundChipsRuntime {
     private static final float MIN_SLOT_DP = 24.0f;
     private static final float MIN_DIAMETER_DP = 24.0f;
     private static final float MAX_DIAMETER_DP = 40.0f;
+    private static final float MAX_MENU_DIAMETER_DP = 38.0f;
     private static final float VERTICAL_INSET_DP = 0.5f;
     private static final float HORIZONTAL_INSET_DP = 4.0f;
     private static final float LIGHT_STROKE_DP = 0.75f;
@@ -83,9 +85,13 @@ public final class GboardToolbarRoundChipsRuntime {
 
     private static final Map<View, AttachedChip> ATTACHED_CHIPS = new WeakHashMap<>();
     private static final Map<View, Boolean> KNOWN_TOOLBAR_ITEMS = new WeakHashMap<>();
+    private static final Map<View, AttachedMenuChip> ATTACHED_MENU_CHIPS = new WeakHashMap<>();
+    private static final Map<View, Boolean> KNOWN_MENU_ITEMS = new WeakHashMap<>();
 
     private static volatile Predicate<View> settingEnabledPredicate =
             view -> GboardToolbarRoundChipsSettings.isEnabled(view.getContext());
+    private static volatile Predicate<View> menuGridEnabledPredicate =
+            view -> GboardToolbarRoundChipsSettings.isMenuGridEnabled(view.getContext());
     private static volatile Function<Context, String> activeThemeSpecProvider =
             GboardToolbarRoundChipsRuntime::readActiveThemeSpec;
 
@@ -99,6 +105,12 @@ public final class GboardToolbarRoundChipsRuntime {
             applyToSoftKeyView(softKeyView, enabled);
         } catch (Throwable ignored) {
             // Decorative toolbar chips must never disrupt key binding or keyboard stability.
+        }
+        try {
+            boolean menuEnabled = menuGridEnabledPredicate.test(softKeyView);
+            applyMenuGridToSoftKeyView(softKeyView, menuEnabled);
+        } catch (Throwable ignored) {
+            // Decorative menu grid chip must never disrupt key binding or keyboard stability.
         }
     }
 
@@ -124,6 +136,44 @@ public final class GboardToolbarRoundChipsRuntime {
             for (View host : candidates) {
                 if (host != null) {
                     applyToSoftKeyView(host, true);
+                }
+            }
+        };
+
+        try {
+            Looper mainLooper = Looper.getMainLooper();
+            if (mainLooper != null && Looper.myLooper() != mainLooper) {
+                new Handler(mainLooper).post(update);
+                return;
+            }
+        } catch (Throwable ignored) {
+            // Keep synchronous fallback usable in JVM unit tests.
+        }
+        update.run();
+    }
+
+    /** Immediately removes or re-applies the fixed menu grid ({@code ⊞}) chip on toggle. */
+    public static void onMenuGridPreferenceChanged(boolean enabled) {
+        Runnable update = () -> {
+            if (!enabled) {
+                List<View> hosts;
+                synchronized (ATTACHED_MENU_CHIPS) {
+                    hosts = new ArrayList<>(ATTACHED_MENU_CHIPS.keySet());
+                }
+                for (View host : hosts) {
+                    if (host != null) {
+                        detachMenuChip(host);
+                    }
+                }
+                return;
+            }
+            List<View> candidates;
+            synchronized (KNOWN_MENU_ITEMS) {
+                candidates = new ArrayList<>(KNOWN_MENU_ITEMS.keySet());
+            }
+            for (View host : candidates) {
+                if (host != null) {
+                    applyMenuGridToSoftKeyView(host, true);
                 }
             }
         };
@@ -228,6 +278,134 @@ public final class GboardToolbarRoundChipsRuntime {
      * {@code softKeyView} is a standard icon-only Access Point bar item (excluding Rambler,
      * {@code ⊞} menu, candidate keys, text/clipboard pills, and expanded menu rows).
      */
+    static void applyMenuGridToSoftKeyView(View softKeyView, boolean enabled) {
+        if (softKeyView == null) return;
+
+        View menuTarget = findEligibleMenuGridTarget(softKeyView);
+        if (menuTarget == null) {
+            synchronized (KNOWN_MENU_ITEMS) {
+                KNOWN_MENU_ITEMS.remove(softKeyView);
+            }
+            detachMenuChip(softKeyView);
+            return;
+        }
+
+        synchronized (KNOWN_MENU_ITEMS) {
+            KNOWN_MENU_ITEMS.put(softKeyView, Boolean.TRUE);
+        }
+
+        if (!enabled) {
+            detachMenuChip(softKeyView);
+            return;
+        }
+
+        attachOrUpdateMenuChip(softKeyView, menuTarget);
+    }
+
+    private static void attachOrUpdateMenuChip(View softKeyView, View menuTarget) {
+        Drawable currentBg = menuTarget.getBackground();
+        AttachedMenuChip existing;
+        synchronized (ATTACHED_MENU_CHIPS) {
+            existing = ATTACHED_MENU_CHIPS.get(softKeyView);
+        }
+        if (existing != null) {
+            View existingTarget = existing.menuTargetRef.get();
+            if (existingTarget == menuTarget && currentBg == existing.wrapper) {
+                menuTarget.invalidate();
+                return;
+            }
+            detachMenuChip(softKeyView);
+            currentBg = menuTarget.getBackground();
+        }
+
+        Drawable stockBg = currentBg instanceof MenuChipLayerDrawable existingWrapper
+                ? existingWrapper.stockBackground
+                : currentBg;
+        FixedMenuChipDrawable chipDrawable = new FixedMenuChipDrawable(softKeyView, menuTarget);
+        MenuChipLayerDrawable wrapper = new MenuChipLayerDrawable(chipDrawable, stockBg);
+        menuTarget.setBackground(wrapper);
+        synchronized (ATTACHED_MENU_CHIPS) {
+            ATTACHED_MENU_CHIPS.put(softKeyView, new AttachedMenuChip(menuTarget, wrapper));
+        }
+        menuTarget.invalidate();
+    }
+
+    private static void detachMenuChip(View softKeyView) {
+        AttachedMenuChip attached;
+        synchronized (ATTACHED_MENU_CHIPS) {
+            attached = ATTACHED_MENU_CHIPS.remove(softKeyView);
+        }
+        if (attached == null) return;
+        View menuTarget = attached.menuTargetRef.get();
+        if (menuTarget == null) return;
+        try {
+            if (menuTarget.getBackground() == attached.wrapper) {
+                menuTarget.setBackground(attached.wrapper.stockBackground);
+            }
+        } catch (Throwable ignored) {
+            // Ignore detached view edge cases.
+        }
+        menuTarget.invalidate();
+    }
+
+    /**
+     * Returns the {@code ⊞} menu grid FrameLayout ({@code .access-point-entry-menu-icon} or
+     * {@code .access-point-menu-icon}) if eligible, excluding Rambler and candidate areas.
+     */
+    static View findEligibleMenuGridTarget(View softKeyView) {
+        if (softKeyView == null || softKeyView.getVisibility() != View.VISIBLE) return null;
+        if (hasExcludedAncestorTag(softKeyView)) return null;
+        if (containsMenuExcludedDescendantTag(softKeyView)) return null;
+        if (hasVisibleTextLabel(softKeyView)) return null;
+        View entry = findViewWithTagToken(softKeyView, MENU_ENTRY_ICON_TAG);
+        if (entry != null) return entry;
+        return findViewWithTagToken(softKeyView, MENU_ICON_TAG);
+    }
+
+    /**
+     * Computes fixed Rambler-style circular chip geometry for the {@code ⊞} menu button.
+     * Skips drawing when the menu button is selected/activated (expanded {@code ✕} state),
+     * letting Gboard's native active circle render without double-layering.
+     */
+    static ChipGeometry computeMenuGridGeometry(View softKeyView, View menuTarget) {
+        if (softKeyView == null || menuTarget == null) return null;
+        if (softKeyView.getVisibility() != View.VISIBLE || menuTarget.getVisibility() != View.VISIBLE) {
+            return null;
+        }
+        if (!menuGridEnabledPredicate.test(softKeyView)) return null;
+        if (softKeyView.isSelected() || softKeyView.isActivated()
+                || menuTarget.isSelected() || menuTarget.isActivated()) {
+            return null;
+        }
+        if (findEligibleMenuGridTarget(softKeyView) != menuTarget) return null;
+
+        int width = menuTarget.getWidth();
+        int height = menuTarget.getHeight();
+        if (width <= 0 || height <= 0) return null;
+
+        float density = resolveDensity(menuTarget);
+        float minDim = Math.min(width, height);
+        if (minDim < MIN_SLOT_DP * density) return null;
+
+        float diameter = clamp(
+                minDim - VERTICAL_INSET_DP * density,
+                MIN_DIAMETER_DP * density,
+                MAX_MENU_DIAMETER_DP * density);
+        if (diameter > minDim) {
+            diameter = minDim;
+        }
+
+        // Fixed non-dynamic Rambler-style color: pure white in light themes, neutral dark in dark.
+        ChipAppearance appearance = resolveFixedRamblerAppearance(softKeyView, density);
+        return new ChipGeometry(
+                width * 0.5f,
+                height * 0.5f,
+                diameter * 0.5f,
+                appearance.fillColor,
+                appearance.strokeColor,
+                appearance.strokeWidth);
+    }
+
     static View findEligibleBackgroundTarget(View softKeyView) {
         if (softKeyView == null || softKeyView.getVisibility() != View.VISIBLE) return null;
         if (hasExcludedAncestorTag(softKeyView)) return null;
@@ -317,6 +495,20 @@ public final class GboardToolbarRoundChipsRuntime {
             }
         }
 
+        return resolveFixedRamblerAppearanceFromIcon(r, g, b, darkSurface, density);
+    }
+
+    private static ChipAppearance resolveFixedRamblerAppearance(View softKeyView, float density) {
+        int iconColor = resolveIconColor(softKeyView);
+        int r = Color.red(iconColor);
+        int g = Color.green(iconColor);
+        int b = Color.blue(iconColor);
+        double luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255.0;
+        return resolveFixedRamblerAppearanceFromIcon(r, g, b, luminance >= 0.5, density);
+    }
+
+    private static ChipAppearance resolveFixedRamblerAppearanceFromIcon(
+            int r, int g, int b, boolean darkSurface, float density) {
         if (darkSurface) {
             return new ChipAppearance(Color.argb(DARK_THEME_CHIP_ALPHA, r, g, b), 0, 0f);
         }
@@ -411,6 +603,21 @@ public final class GboardToolbarRoundChipsRuntime {
         return false;
     }
 
+    private static boolean containsMenuExcludedDescendantTag(View root) {
+        if (root == null) return false;
+        if (hasTagToken(root, ACTION_KEY_BG_TAG) || hasTagToken(root, CANDIDATE_KEY_TAG)) {
+            return true;
+        }
+        if (root instanceof ViewGroup group) {
+            for (int i = 0; i < group.getChildCount(); i++) {
+                if (containsMenuExcludedDescendantTag(group.getChildAt(i))) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
     private static boolean containsExcludedDescendantTag(View root) {
         if (root == null) return false;
         if (hasTagToken(root, ACTION_KEY_BG_TAG)
@@ -486,10 +693,22 @@ public final class GboardToolbarRoundChipsRuntime {
         }
     }
 
+    static boolean isMenuChipAttachedForTesting(View softKeyView) {
+        synchronized (ATTACHED_MENU_CHIPS) {
+            return ATTACHED_MENU_CHIPS.containsKey(softKeyView);
+        }
+    }
+
     static void setSettingEnabledPredicateForTesting(Predicate<View> predicate) {
         settingEnabledPredicate = predicate != null
                 ? predicate
                 : view -> GboardToolbarRoundChipsSettings.isEnabled(view.getContext());
+    }
+
+    static void setMenuGridEnabledPredicateForTesting(Predicate<View> predicate) {
+        menuGridEnabledPredicate = predicate != null
+                ? predicate
+                : view -> GboardToolbarRoundChipsSettings.isMenuGridEnabled(view.getContext());
     }
 
     static void setActiveThemeSpecProviderForTesting(Function<Context, String> provider) {
@@ -509,7 +728,18 @@ public final class GboardToolbarRoundChipsRuntime {
         synchronized (KNOWN_TOOLBAR_ITEMS) {
             KNOWN_TOOLBAR_ITEMS.clear();
         }
+        List<View> menuHosts;
+        synchronized (ATTACHED_MENU_CHIPS) {
+            menuHosts = new ArrayList<>(ATTACHED_MENU_CHIPS.keySet());
+        }
+        for (View host : menuHosts) {
+            if (host != null) detachMenuChip(host);
+        }
+        synchronized (KNOWN_MENU_ITEMS) {
+            KNOWN_MENU_ITEMS.clear();
+        }
         setSettingEnabledPredicateForTesting(null);
+        setMenuGridEnabledPredicateForTesting(null);
         setActiveThemeSpecProviderForTesting(null);
     }
 
@@ -583,6 +813,62 @@ public final class GboardToolbarRoundChipsRuntime {
             View bgTarget = bgTargetRef.get();
             if (host == null || bgTarget == null) return;
             ChipGeometry geometry = computeGeometry(host, bgTarget);
+            if (geometry == null) return;
+            fillPaint.setColor(geometry.color);
+            canvas.drawCircle(geometry.centerX, geometry.centerY, geometry.radius, fillPaint);
+            if (geometry.strokeColor != 0 && geometry.strokeWidth > 0f) {
+                strokePaint.setColor(geometry.strokeColor);
+                strokePaint.setStrokeWidth(geometry.strokeWidth);
+                float strokeRadius = Math.max(0f, geometry.radius - geometry.strokeWidth * 0.5f);
+                canvas.drawCircle(geometry.centerX, geometry.centerY, strokeRadius, strokePaint);
+            }
+        }
+
+        @Override public void setAlpha(int alpha) { fillPaint.setAlpha(alpha); }
+        @Override public void setColorFilter(ColorFilter colorFilter) { fillPaint.setColorFilter(colorFilter); }
+        @Override public int getOpacity() { return PixelFormat.TRANSLUCENT; }
+    }
+
+    private static final class AttachedMenuChip {
+        final WeakReference<View> menuTargetRef;
+        final MenuChipLayerDrawable wrapper;
+
+        AttachedMenuChip(View menuTarget, MenuChipLayerDrawable wrapper) {
+            this.menuTargetRef = new WeakReference<>(menuTarget);
+            this.wrapper = wrapper;
+        }
+    }
+
+    static final class MenuChipLayerDrawable extends LayerDrawable {
+        final Drawable stockBackground;
+
+        MenuChipLayerDrawable(Drawable chipDrawable, Drawable stockBackground) {
+            super(stockBackground != null
+                    ? new Drawable[] { chipDrawable, stockBackground }
+                    : new Drawable[] { chipDrawable });
+            this.stockBackground = stockBackground;
+        }
+    }
+
+    static final class FixedMenuChipDrawable extends Drawable {
+        private final WeakReference<View> hostRef;
+        private final WeakReference<View> menuTargetRef;
+        private final Paint fillPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Paint strokePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+
+        FixedMenuChipDrawable(View host, View menuTarget) {
+            this.hostRef = new WeakReference<>(host);
+            this.menuTargetRef = new WeakReference<>(menuTarget);
+            fillPaint.setStyle(Paint.Style.FILL);
+            strokePaint.setStyle(Paint.Style.STROKE);
+        }
+
+        @Override
+        public void draw(Canvas canvas) {
+            View host = hostRef.get();
+            View menuTarget = menuTargetRef.get();
+            if (host == null || menuTarget == null) return;
+            ChipGeometry geometry = computeMenuGridGeometry(host, menuTarget);
             if (geometry == null) return;
             fillPaint.setColor(geometry.color);
             canvas.drawCircle(geometry.centerX, geometry.centerY, geometry.radius, fillPaint);
