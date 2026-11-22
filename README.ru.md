@@ -1,95 +1,215 @@
 # GboardSamsung
 
-**[English](README.md) | [Русский](README.ru.md)**
+<p align="center">
+  <strong>Возможности Samsung Keyboard на базе оригинальной Gboard</strong><br>
+  Проект Morphe-патчей от Vortex Node на основе Gboard Patches Джейсона Ву.
+</p>
 
-**GboardSamsung** — это форк-проект Morphe-патчей от **Vortex Node**, основанный на [Gboard Patches](https://github.com/jasonwu1994/Gboard-patches) Джейсона Ву (`GPL-3.0`). Цель проекта — максимально приблизить опыт использования оригинальной Gboard к клавиатуре Samsung (включая двустороннее переключение языков свайпом по пробелу с сохранением обычного нажатия и перемещения курсора удержанием), полностью сохранив движок ввода Gboard, подсказки, словари, голосовой ввод, буфер обмена и остальные ключевые функции.
+<p align="center">
+  <a href="README.md">English</a> · <a href="README.ru.md">Русский</a>
+</p>
 
-> **Важно:** В этом репозитории находятся только Morphe-патчи для вашего APK-файла Gboard. Это **не** отдельное приложение клавиатуры, и здесь **нет** закрытого исходного кода или бинарников Google Gboard.
+<p align="center">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-GPL--3.0-blue.svg" alt="GPL-3.0"></a>
+  <img src="https://img.shields.io/badge/patches-34-informational" alt="34 патча">
+  <img src="https://img.shields.io/badge/target-Gboard%2018.5.4-success" alt="Gboard 18.5.4">
+  <img src="https://img.shields.io/badge/platform-Android-orange" alt="Android">
+</p>
 
-## Поддерживаемая версия
+GboardSamsung стремится приблизить отдельные возможности и элементы взаимодействия Samsung Keyboard к **настоящему приложению Gboard**, сохранив собственный движок ввода и основные функции Gboard.
 
-- **Целевой билд Gboard:** `18.5.4.993608717-release-arm64-v8a` (`18.5.4`)
-- **Основное тестовое устройство:** Samsung Galaxy S22 5G (`SM-S901U1`), Android 16 / One UI 8
+> [!IMPORTANT]
+> В этом репозитории находятся **Morphe-патчи**, а не самостоятельное приложение клавиатуры. Здесь нет закрытого исходного кода или APK Google Gboard. Вам понадобится совместимый APK Gboard, который нужно самостоятельно пропатчить через Morphe Manager.
 
-## Установка (через Morphe Manager)
+## Установка
 
-GboardSamsung распространяется в виде патчей для Morphe, а не готового APK. Вы сами патчите оригинальный Gboard прямо на телефоне через **Morphe Manager**:
+Самый простой способ использовать GboardSamsung — добавить этот репозиторий как удалённый источник патчей в **Morphe Manager**.
 
 ### 1. Добавьте источник патчей
-- **В одно нажатие:** [Добавить GboardSamsung в Morphe Manager](https://morphe.software/add-source?github=vortexnode/GboardSamsung)
-- **Вручную:** Откройте Morphe Manager → **Patch sources → + → Remote** и вставьте ссылку:
-  ```text
-  https://github.com/vortexnode/GboardSamsung
-  ```
 
-### 2. Скачайте нужный APK Gboard
-- Скачайте чистый одиночный **arm64-v8a** APK Gboard версии **`18.5.4.993608717-release-arm64-v8a`** (например, с APKMirror — нужен именно целый `.apk`, а не split-бандл `.apkm`, если менеджер не распаковывает его автоматически).
+<p align="center">
+  <a href="https://morphe.software/add-source?github=vortexnode/GboardSamsung"><strong>＋ Добавить GboardSamsung в Morphe Manager</strong></a>
+</p>
 
-### 3. Пропатчите и установите
-1. В Morphe Manager выберите скачанный APK Gboard `18.5.4`.
-2. Отметьте нужные патчи (по умолчанию патч `Package Rename` меняет package ID на `gboardsamsung.com.google.android.inputmethod.latin` и имя на `GboardSamsung`, поэтому клавиатуру можно поставить рядом со стандартной Gboard без конфликтов).
-3. Запустите сборку и установите готовый APK.
+Или добавьте источник вручную:
 
-### 4. Включите клавиатуру в системе
-- **Samsung (One UI):** *Настройки → Общие настройки → Список клавиатур и клавиатура по умолчанию* → включите **GboardSamsung** и выберите её основной.
-- **Другие Android-устройства:** *Настройки → Система → Клавиатура → Экранная клавиатура* → включите **GboardSamsung**.
+1. Откройте **Morphe Manager**.
+2. Перейдите в **Patch sources → + → Remote**.
+3. Вставьте адрес репозитория:
 
-> **Обновления:** После добавления удалённого источника Morphe Manager будет автоматически проверять появление новых версий пакета патчей в этом репозитории.
+   `https://github.com/vortexnode/GboardSamsung`
 
-## Происхождение и лицензия
+### 2. Подготовьте совместимый APK Gboard
 
-- **Оригинальный автор (upstream):** Jason Wu (`jasonwu1994`) — [jasonwu1994/Gboard-patches](https://github.com/jasonwu1994/Gboard-patches)
-- **Модификация и адаптация (downstream):** `vortexnode` (Vortex Node) — [vortexnode/GboardSamsung](https://github.com/vortexnode/GboardSamsung)
-- **Базовый коммит upstream:** `463269a0f315ef9cee749e10d155af1aedaa49ad` (`2026-11-12`, зафиксирован в `UPSTREAM_COMMIT.txt`; оригинальный README сохранён в `UPSTREAM_README.md`)
-- **Фреймворк патчей:** Morphe (`app.morphe.patches`)
-- **Лицензия:** GNU General Public License v3.0 (`LICENSE`, `NOTICE`)
+Используйте чистый одиночный APK **arm64-v8a** следующей версии:
 
-## Каталог активных патчей (34 патча)
+`18.5.4.993608717-release-arm64-v8a`
 
-В GboardSamsung включены **34** публичных Morphe-патча (33 отобранных патча из upstream и фирменный патч `Samsung Spacebar Gestures`):
+Например, можно получить полный APK из надёжного архива. Не используйте split-пакеты `.apkm`, если ваш процесс патчинга не умеет корректно преобразовывать или устанавливать их.
 
-- **Опыт Samsung (1):**
-  - `Samsung Spacebar Gestures` — свайп влево/вправо по пробелу для циклического переключения языков с сохранением короткого нажатия для пробела и удержания (~300 мс) + перетаскивания для управления курсором (независимо от `Swipe Down to Dismiss Keyboard`).
-- **Темы, внешний вид и раскладка (12):**
-  - `Custom Theme`, `Frosted Glass`, `Rounded Keyboard Panel`, `Change emoji size`, `Top Toolbar Item Count`, `Access Points menu style`, `Enable split keyboard`, `Key Shape Selection`, `Custom Symbols`, `Emojis, stickers & GIFs Tab Order`, `Settings Homepage Override`, `Close Proactive Suggestions`.
-- **Ввод, редактирование и инструменты (10):**
-  - `Long-Press Editing Shortcuts`, `Toolbar Editing Buttons`, `Quick Insert`, `Swipe Down to Dismiss Keyboard`, `Keypress Vibration Intensity Control`, `Floating Web Search`, `Simple Calculator`, `Incognito Mode Toggle`, `Clipboard Enhancements`, `Clipboard Custom Character Limit`.
-- **Языки, ИИ, подсказки и голос (7):**
-  - `AI Writing Tools`, `Advanced Voice Typing`, `Grammar Checker`, `Inline Suggestions`, `Enable Inline Autofill Suggestions`, `Use Bluetooth Microphone`, `Dictionaries & Predictions`.
-- **Сборка, безопасность и утилиты (4):**
-  - `Package Rename` (по умолчанию package ID: `gboardsamsung.com.google.android.inputmethod.latin`, отображаемое имя: `GboardSamsung`; также поддерживаются официальный `com.google.android.inputmethod.latin` и любые свои ID), `Add Gboard Signature Bypass`, `Backup & Restore`, `Developer options`.
+### 3. Выберите патчи и выполните сборку
 
-### Удалённые функции из upstream (12)
+1. Откройте скачанный APK Gboard в Morphe Manager.
+2. Выберите нужные патчи GboardSamsung.
+3. Проверьте параметры **Package Rename**. По умолчанию используются package ID `gboardsamsung.com.google.android.inputmethod.latin` и название приложения `GboardSamsung`.
+4. Запустите патчинг и установите полученный APK.
 
-Чтобы не перегружать код и зависимости (Apache FTPServer/MINA, QuickJS, специфику Zhuyin, логотип G и т.д.), 12 патчей из оригинального репозитория были убраны:
+Package ID по умолчанию позволяет установить GboardSamsung рядом с официальной Gboard. Также поддерживаются официальный package ID и пользовательские идентификаторы.
 
-1. `Latin Globe Key Ignore Interval`
-2. `Web Clipboard` (стандартный буфер обмена Gboard, `Custom Clipboard Enhancements` и `Clipboard Custom Character Limit` сохранены)
-3. `Zhuyin Bottom Row Key Sizes`
-4. `Zhuyin Quick Traditional/Simplified Toggle`
-5. `Zhuyin Slide Input` (`Show custom symbols` сохранён)
-6. `G Logo on Spacebar` (`Samsung Spacebar Gestures` сохранён)
-7. `English QWERTY Up-Flick Uppercase`
-8. `FTP Server`
-9. `Swipeable Custom Top Row`
-10. `Enable OCR / Scan Text`
-11. `Enable accessibility layout`
-12. `Enable cursor trackpad mode` (управление курсором с пробела сохранено в `Samsung Spacebar Gestures`)
+### 4. Включите клавиатуру
 
-## Сборка для разработчиков
+- **Samsung One UI:** Настройки → Общие настройки → Список клавиатур и клавиатура по умолчанию. Включите **GboardSamsung** и выберите её основной клавиатурой.
+- **Другие Android-устройства:** Настройки → Система → Клавиатура → Экранная клавиатура. Включите **GboardSamsung** и выберите её при необходимости.
 
-Проект собирает пакет патчей Morphe (`.mpp`) и метаданные каталога (`patches-list.json`, `patches-bundle.json`), а не самостоятельный APK:
+### Обновление источника
 
-- Собрать пакет патчей: `./gradlew :patches:buildAndroid`
-- Обновить метаданные патчей: `./gradlew generatePatchesList`
-- Запустить юнит-тесты: `./gradlew test`
-- Для загрузки зависимостей Morphe из GitHub Packages требуются `gpr.user` / `gpr.key` (или `GITHUB_ACTOR` / `GITHUB_TOKEN`). Никогда не коммитьте токены, ключи и проприетарные APK.
+После добавления удалённого источника Morphe Manager может проверять репозиторий на наличие обновлённых пакетов патчей и показывать новые версии после их публикации. Доступность обновлений зависит от механизма проверки источников в менеджере — обнаружение не обязательно происходит мгновенно.
 
-Изменения, влитые в `main`, сначала проходят тесты; коммиты с префиксами `fix:`, `feat:`, `bump:`, `perf:` и `build(morphe-source):` автоматически публикуют новый релиз с `.mpp`-бандлом. Коммиты только с тестами или документацией новый релиз не создают.
+## Совместимость
+
+| Параметр | Поддерживаемая конфигурация |
+|---|---|
+| Gboard | `18.5.4.993608717-release-arm64-v8a` |
+| Архитектура | `arm64-v8a` |
+| Основное тестовое устройство | Samsung Galaxy S22 5G (`SM-S901U1`) |
+| Android / One UI | Android 16 / One UI 8 |
+
+Совместимость с другими версиями Gboard и конфигурациями устройств не гарантируется, если она не проверена отдельно.
+
+## Каталог патчей
+
+Сейчас GboardSamsung включает **34 активных Morphe-патча**: 33 выбранных upstream-патча и один собственный downstream-патч для жестов на пробеле в стиле Samsung.
+
+### Взаимодействие в стиле Samsung
+
+- **Samsung Spacebar Gestures** — свайп влево или вправо по пробелу переключает активные языки; короткое нажатие по-прежнему вводит пробел, а удержание с перетаскиванием перемещает курсор.
+
+### Темы, внешний вид и раскладка · 12
+
+- **Custom Theme** — импорт пользовательских ZIP-тем, в том числе из репозитория Rboard.
+- **Frosted Glass** — размытие фона в реальном времени и настройка прозрачности пользовательской темы.
+- **Rounded Keyboard Panel** — выбор скругляемых углов панели и настройка радиусов.
+- **Change emoji size** — изменение размера эмодзи.
+- **Top Toolbar Item Count** — настройка количества элементов верхней панели.
+- **Access Points menu style** — переключение между новым и классическим стилями меню Access Points.
+- **Enable split keyboard** — включение разделённой раскладки.
+- **Key Shape Selection** — настройка формы клавиш в параметрах темы.
+- **Custom Symbols** — отдельная вкладка специальных символов и быстрый доступ к ней долгим нажатием на запятую.
+- **Emojis, stickers & GIFs Tab Order** — изменение порядка нижних вкладок панели эмодзи, стикеров и GIF.
+- **Settings Homepage Override** — переключение между новой и классической главными страницами настроек Gboard.
+- **Close Proactive Suggestions** — кнопка закрытия панели проактивных подсказок.
+
+### Ввод, редактирование и инструменты · 10
+
+- **Long-Press Editing Shortcuts** — быстрые действия при долгом нажатии: «Выбрать всё», «Отменить», «Копировать», «Вырезать», «Вставить» и «Повторить».
+- **Toolbar Editing Buttons** — добавление команд «Выбрать всё», «Копировать», «Вырезать» и «Вставить» в меню панели инструментов.
+- **Quick Insert** — включение панели быстрой вставки и её значка на панели инструментов.
+- **Swipe Down to Dismiss Keyboard** — закрытие клавиатуры свайпом вниз от подсказок или панели инструментов.
+- **Keypress Vibration Intensity Control** — настройка интенсивности вибрации при нажатии.
+- **Floating Web Search** — открытие плавающей веб-страницы для быстрого поиска.
+- **Simple Calculator** — отображение выражения и результата в строке подсказок.
+- **Incognito Mode Toggle** — переключатель режима инкогнито и настройка доступности буфера обмена и голосового ввода в этом режиме.
+- **Clipboard Enhancements** — настройка срока хранения, лимита записей, предпросмотра, меток времени, порядка и числа столбцов буфера обмена.
+- **Clipboard Custom Character Limit** — ограничение максимального количества символов в каждой текстовой записи буфера обмена.
+
+### Языки, ИИ, подсказки и голос · 7
+
+- **AI Writing Tools** — включение инструментов ИИ для работы с текстом на поддерживаемых языках.
+- **Advanced Voice Typing** — включение расширенного голосового ввода и связанных параметров пунктуации.
+- **Grammar Checker** — включение проверки грамматики.
+- **Inline Suggestions** — включение функции Smart Compose.
+- **Enable Inline Autofill Suggestions** — включение встроенных подсказок автозаполнения.
+- **Use Bluetooth Microphone** — доступ к Bluetooth-микрофону при голосовом вводе.
+- **Dictionaries & Predictions** — выбор версий ресурсов словарей, предсказаний и исправления ввода.
+
+### Сборка, безопасность и утилиты · 4
+
+- **Package Rename** — настройка Android package ID и отображаемого имени приложения. Значения по умолчанию: `gboardsamsung.com.google.android.inputmethod.latin` и `GboardSamsung`.
+- **Add Gboard Signature Bypass** — обход проверки Gboard по списку разрешённых подписей.
+- **Backup & Restore** — экспорт и восстановление настроек патчей, резервное копирование, сравнение и восстановление PB/XML-данных Gboard.
+- **Developer options** — включение параметров разработчика Gboard и редактора флагов.
+
+### Upstream-патчи, которые не входят в проект
+
+Из downstream-проекта были удалены 12 upstream-функций, чтобы сохранить чёткие границы проекта и неиспользуемые зависимости.
+
+<details>
+<summary>Показать список 12 исключённых патчей</summary>
+
+1. Latin Globe Key Ignore Interval
+2. Web Clipboard
+3. Zhuyin Bottom Row Key Sizes
+4. Zhuyin Quick Traditional/Simplified Toggle
+5. Zhuyin Slide Input
+6. G Logo on Spacebar
+7. English QWERTY Up-Flick Uppercase
+8. FTP Server
+9. Swipeable Custom Top Row
+10. Enable OCR / Scan Text
+11. Enable accessibility layout
+12. Enable cursor trackpad mode
+
+Удаление этих патчей не затронуло общую функциональность, которая продолжает использоваться GboardSamsung. Например, стандартный буфер обмена Gboard и собственный патч Samsung Spacebar Gestures сохранены.
+
+</details>
+
+## Частые вопросы
+
+<details>
+<summary><strong>GboardSamsung — это отдельная клавиатура?</strong></summary>
+
+Нет. Это набор Morphe-патчей, применяемых к совместимому APK Gboard. Пропатченное приложение может использовать отдельный package ID и устанавливаться рядом с официальной Gboard.
+</details>
+
+<details>
+<summary><strong>Нужно ли устанавливать Morphe Manager?</strong></summary>
+
+Да. Через Morphe Manager добавляется источник патчей, выбираются нужные функции, выполняется патчинг APK Gboard и установка результата.
+</details>
+
+<details>
+<summary><strong>Подойдёт любая версия Gboard?</strong></summary>
+
+Нет, такой совместимости мы не обещаем. Документированная целевая версия — `18.5.4.993608717-release-arm64-v8a`.
+</details>
+
+<details>
+<summary><strong>После добавления источника клавиатура обновляется автоматически?</strong></summary>
+
+Нет. Morphe Manager может проверять наличие новых пакетов патчей в удалённом источнике. Чтобы обновить установленную клавиатуру, вам всё равно потребуется выбрать и применить патчи к совместимому APK Gboard.
+</details>
+
+## Сборка и проверка
+
+Репозиторий собирает **пакеты Morphe (`.mpp`)** и метаданные каталога патчей. Самостоятельный APK клавиатуры здесь не собирается.
+
+Основные команды разработчика:
+
+```bash
+./gradlew :patches:buildAndroid
+./gradlew generatePatchesList
+./gradlew test
+```
+
+CI запускает модульные тесты, проверяет актуальность `patches-list.json` и собирает Morphe Android patch bundle. После успешного CI для push в `main` workflow публикации анализирует коммиты и выпускает релиз источника Morphe.
+
+Правила классификации релизов задаются в [`.releaserc`](.releaserc). Сейчас breaking changes дают major-релиз, `feat:` — minor, а `fix:`, `bump:`, `perf:`, `build(morphe-source):` и `docs:` — patch-релиз. Документация скрыта в автоматически сформированных разделах release notes, однако **текущая конфигурация всё равно классифицирует коммиты `docs:` как основание для patch-релиза**.
+
+Для доступа к GitHub Packages Morphe требуются `gpr.user` / `gpr.key` или соответствующие учётные данные GitHub Actions. Никогда не добавляйте в репозиторий пароли, ключи подписи, токены или проприетарные APK Gboard.
+
+## Происхождение проекта
+
+- **Автор upstream:** Jason Wu (`jasonwu1994`) — [Gboard Patches](https://github.com/jasonwu1994/Gboard-patches)
+- **Downstream-разработчик:** Vortex Node (`vortexnode`) — [GboardSamsung](https://github.com/vortexnode/GboardSamsung)
+- **Импортированная базовая версия upstream:** `463269a0f315ef9cee749e10d155af1aedaa49ad` (зафиксирована в [`UPSTREAM_COMMIT.txt`](UPSTREAM_COMMIT.txt))
+- **Фреймворк патчей:** [Morphe](https://github.com/MorpheApp)
+- **Лицензия:** [GNU GPL v3.0](LICENSE); также см. [`NOTICE`](NOTICE)
+
+Upstream-репозиторий указан как исторический источник выбранных патчей. GboardSamsung развивается независимо и не зависит от действующего процесса автоматического импорта upstream.
 
 ## Документация
 
-- [docs/PROJECT_SCOPE.md](docs/PROJECT_SCOPE.md) — границы проекта, инженерные правила и критерии приёмки
-- [docs/UPSTREAM.md](docs/UPSTREAM.md) — происхождение и правила синхронизации с upstream
-- [docs/REPOSITORY_CLEANUP_REPORT.md](docs/REPOSITORY_CLEANUP_REPORT.md) — отчёт об очистке репозитория и синхронизации каталога
-- [UPSTREAM_README.md](UPSTREAM_README.md) — оригинальная документация upstream-проекта Gboard Patches
+- [Границы проекта](docs/PROJECT_SCOPE.md) — цели, ограничения и критерии приёмки.
+- [Происхождение upstream](docs/UPSTREAM.md) — история, отличия и правила синхронизации.
+- [Отчёт об очистке репозитория](docs/REPOSITORY_CLEANUP_REPORT.md) — удалённые компоненты и проверка каталога.
+- [Архивный README upstream](UPSTREAM_README.md) — оригинальная документация проекта Gboard Patches.
