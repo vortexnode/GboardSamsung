@@ -62,8 +62,10 @@ public final class GboardToolbarRoundChipsRuntime {
     private static final String CANDIDATES_AREA_TAG = ".candidates-area";
     private static final String CANDIDATE_KEY_TAG = ".for-candidate-key";
 
+    private static final String DYNAMIC_THEME_PREFIX_SILK = "silk:";
     private static final String DYNAMIC_THEME_PREFIX_SYSTEM = "system:";
     private static final String DYNAMIC_THEME_PREFIX_SPEC = "dynamic_color_spec:";
+    private static final String DYNAMIC_THEME_TOKEN = "dynamic_color";
 
     private static final float MIN_SLOT_DP = 24.0f;
     private static final float MIN_DIAMETER_DP = 24.0f;
@@ -73,7 +75,7 @@ public final class GboardToolbarRoundChipsRuntime {
     private static final float LIGHT_STROKE_DP = 0.75f;
 
     private static final int DARK_THEME_CHIP_ALPHA = 38;
-    private static final int DYNAMIC_DARK_CHIP_ALPHA = 220;
+    private static final int DYNAMIC_DARK_CHIP_ALPHA = 240;
     private static final int STANDARD_LIGHT_CHIP_COLOR = Color.WHITE;
     private static final int STANDARD_LIGHT_STROKE_COLOR = 0x14000000;
     private static final int FALLBACK_LIGHT_ICON_COLOR = 0xFF1C1C1E;
@@ -282,9 +284,12 @@ public final class GboardToolbarRoundChipsRuntime {
         if (context == null) return false;
         try {
             String spec = activeThemeSpecProvider.apply(context);
-            if (spec == null || spec.isEmpty()) return false;
-            return spec.startsWith(DYNAMIC_THEME_PREFIX_SYSTEM)
-                    || spec.startsWith(DYNAMIC_THEME_PREFIX_SPEC);
+            if (spec == null) return false;
+            if (spec.isEmpty()) return Build.VERSION.SDK_INT >= Build.VERSION_CODES.S;
+            return spec.startsWith(DYNAMIC_THEME_PREFIX_SILK)
+                    || spec.startsWith(DYNAMIC_THEME_PREFIX_SYSTEM)
+                    || spec.startsWith(DYNAMIC_THEME_PREFIX_SPEC)
+                    || spec.contains(DYNAMIC_THEME_TOKEN);
         } catch (Throwable ignored) {
             return false;
         }

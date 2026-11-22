@@ -117,7 +117,7 @@ public final class GboardToolbarRoundChipsRuntimeTest {
         Assert.assertEquals(0, stdDark.strokeColor);
 
         // 3. Dynamic Color (system: / dynamic_color_spec:) -> Material You system palette.
-        GboardToolbarRoundChipsRuntime.setActiveThemeSpecProviderForTesting(c -> "system:");
+        GboardToolbarRoundChipsRuntime.setActiveThemeSpecProviderForTesting(c -> "silk:material3_light");
         Assert.assertTrue(GboardToolbarRoundChipsRuntime.isDynamicColorThemeSelected(context));
         int expectedDynLight = context.getResources().getColor(
                 android.R.color.system_accent1_100, context.getTheme());
@@ -131,14 +131,14 @@ public final class GboardToolbarRoundChipsRuntimeTest {
         Assert.assertEquals(0, dynLight.strokeColor);
 
         GboardToolbarRoundChipsRuntime.setActiveThemeSpecProviderForTesting(
-                c -> "dynamic_color_spec:default");
+                c -> "silk:");
         Assert.assertTrue(GboardToolbarRoundChipsRuntime.isDynamicColorThemeSelected(context));
         int expectedDynDark = context.getResources().getColor(
                 android.R.color.system_accent2_700, context.getTheme());
         GboardToolbarRoundChipsRuntime.ChipGeometry dynDark =
                 GboardToolbarRoundChipsRuntime.computeGeometry(darkSlot.root, darkSlot.bgView);
         Assert.assertNotNull(dynDark);
-        Assert.assertEquals(220, Color.alpha(dynDark.color));
+        Assert.assertEquals(240, Color.alpha(dynDark.color));
         Assert.assertEquals(Color.red(expectedDynDark), Color.red(dynDark.color));
         Assert.assertEquals(Color.green(expectedDynDark), Color.green(dynDark.color));
         Assert.assertEquals(Color.blue(expectedDynDark), Color.blue(dynDark.color));
