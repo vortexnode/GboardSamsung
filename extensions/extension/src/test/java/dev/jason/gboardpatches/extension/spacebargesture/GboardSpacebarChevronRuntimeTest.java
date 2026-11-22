@@ -1,9 +1,10 @@
 package dev.jason.gboardpatches.extension.spacebargesture;
 
 import android.content.Context;
-import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
+import android.graphics.Paint;
+import android.graphics.Path;
 import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.Drawable;
 import android.view.Gravity;
@@ -78,7 +79,7 @@ public final class GboardSpacebarChevronRuntimeTest {
     }
 
     @Test
-    public void chevronOverlayDrawableDrawsOpaquePixelsOntoCanvas() {
+    public void chevronOverlayDrawableEmitsChevronPathsToCanvas() {
         KeycapPair pair = createKeycap("English (US)", 480, 80, Color.WHITE,
                 ViewGroup.LayoutParams.WRAP_CONTENT);
         GboardSpacebarChevronRuntime.setTestPredicates(v -> true, v -> true);
@@ -87,25 +88,30 @@ public final class GboardSpacebarChevronRuntimeTest {
                 new GboardSpacebarChevronRuntime.ChevronOverlayDrawable(pair.container);
         drawable.setBounds(0, 0, pair.container.getWidth(), pair.container.getHeight());
 
-        Bitmap bitmap = Bitmap.createBitmap(
-                pair.container.getWidth(), pair.container.getHeight(), Bitmap.Config.ARGB_8888);
-        try {
-            Canvas canvas = new Canvas(bitmap);
-            drawable.draw(canvas);
+        RecordingCanvas canvas = new RecordingCanvas();
+        drawable.draw(canvas);
 
-            int opaquePixels = 0;
-            for (int y = 0; y < bitmap.getHeight(); y++) {
-                for (int x = 0; x < bitmap.getWidth(); x++) {
-                    if (Color.alpha(bitmap.getPixel(x, y)) > 0) {
-                        opaquePixels++;
-                    }
-                }
-            }
-            Assert.assertTrue(
-                    "Expected ChevronOverlayDrawable to render visible chevron pixels",
-                    opaquePixels > 0);
-        } finally {
-            bitmap.recycle();
+        Assert.assertEquals("Expected both chevrons in one path", 1, canvas.drawPathCalls);
+        Assert.assertFalse("Expected a non-empty chevron path", canvas.pathWasEmpty);
+        Assert.assertEquals(Color.WHITE, canvas.color);
+        Assert.assertTrue("Expected a visible stroke width", canvas.strokeWidth > 0f);
+        Assert.assertEquals(Paint.Style.STROKE, canvas.paintStyle);
+    }
+
+    private static final class RecordingCanvas extends Canvas {
+        int drawPathCalls;
+        boolean pathWasEmpty = true;
+        int color;
+        float strokeWidth;
+        Paint.Style paintStyle;
+
+        @Override
+        public void drawPath(Path path, Paint paint) {
+            drawPathCalls++;
+            pathWasEmpty = path.isEmpty();
+            color = paint.getColor();
+            strokeWidth = paint.getStrokeWidth();
+            paintStyle = paint.getStyle();
         }
     }
 
