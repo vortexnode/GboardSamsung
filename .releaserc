@@ -117,7 +117,7 @@
     [
       "@semantic-release/exec",
       {
-        "prepareCmd": "./gradlew generatePatchesList && jq '.version=\\\"${nextRelease.version}\\\"' patches-list.json > patches-list.json.tmp && mv patches-list.json.tmp patches-list.json && node scripts/validate-release-notes.mjs patches-bundle.json"
+        "prepareCmd": "./gradlew generatePatchesList && jq --arg version \"${nextRelease.version}\" '.version = $version' patches-list.json > patches-list.json.tmp && mv patches-list.json.tmp patches-list.json && node scripts/validate-release-notes.mjs patches-bundle.json"
       }
     ],
     [
