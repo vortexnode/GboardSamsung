@@ -119,7 +119,7 @@ GboardSamsung currently contains **34 active Morphe patches**: 33 selected upstr
 - **Grammar Checker** — enable the grammar-checking setting.
 - **Inline Suggestions** — enable Smart Compose.
 - **Enable Inline Autofill Suggestions** — enable inline autofill suggestions.
-- **Use Bluetooth Microphone** — expose Bluetooth microphone support for voice typing.
+- **`Use Bluetooth Microphone`** — expose Bluetooth microphone support for voice typing.
 - **Dictionaries & Predictions** — choose resource versions for dictionaries, predictions and input correction.
 
 ### Packaging, security & utilities · 4
