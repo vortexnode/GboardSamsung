@@ -32,6 +32,7 @@ class GboardSoftKeyFamilySelectionStoreTest {
             listOf(
                 RuntimeCallId.SPACEBAR_GESTURE_RUNTIME_AFTER_SOFT_KEY_BIND,
                 RuntimeCallId.SPACEBAR_CHEVRON_RUNTIME_AFTER_SOFT_KEY_BIND,
+                RuntimeCallId.TOOLBAR_ROUND_CHIPS_RUNTIME_AFTER_SOFT_KEY_BIND,
             ),
             feature.afterRuntimeCalls,
         )
@@ -39,8 +40,10 @@ class GboardSoftKeyFamilySelectionStoreTest {
         val delegate = feature.afterDelegate()
         val globeCall = delegate.indexOf("GboardSpacebarGlobeKeyRuntime;->afterSoftKeyBind")
         val chevronCall = delegate.indexOf("GboardSpacebarChevronRuntime;->afterSoftKeyBind")
+        val toolbarChipsCall = delegate.indexOf("GboardToolbarRoundChipsRuntime;->afterSoftKeyBind")
         assertTrue("Globe runtime call is missing", globeCall >= 0)
         assertTrue("Chevron runtime call is missing", chevronCall > globeCall)
-        assertEquals(2, delegate.lineSequence().count { it.contains("invoke-static") })
+        assertTrue("Toolbar round chips runtime call is missing", toolbarChipsCall > chevronCall)
+        assertEquals(3, delegate.lineSequence().count { it.contains("invoke-static") })
     }
 }

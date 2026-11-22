@@ -44,6 +44,7 @@ internal enum class GboardSoftKeyFamilyFeature(
         afterRuntimeCalls = listOf(
             RuntimeCallId.SPACEBAR_GESTURE_RUNTIME_AFTER_SOFT_KEY_BIND,
             RuntimeCallId.SPACEBAR_CHEVRON_RUNTIME_AFTER_SOFT_KEY_BIND,
+            RuntimeCallId.TOOLBAR_ROUND_CHIPS_RUNTIME_AFTER_SOFT_KEY_BIND,
         ),
     ),
     ;

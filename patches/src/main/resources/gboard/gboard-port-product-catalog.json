@@ -1556,7 +1556,8 @@
           ],
           "runtime_calls": [
             "SPACEBAR_GESTURE_RUNTIME_AFTER_SOFT_KEY_BIND",
-            "SPACEBAR_CHEVRON_RUNTIME_AFTER_SOFT_KEY_BIND"
+            "SPACEBAR_CHEVRON_RUNTIME_AFTER_SOFT_KEY_BIND",
+            "TOOLBAR_ROUND_CHIPS_RUNTIME_AFTER_SOFT_KEY_BIND"
           ]
         }
       ]
