@@ -153,8 +153,20 @@ public final class GboardSpacebarChevronRuntime {
                 - keycapView.getPaddingLeft() - keycapView.getPaddingRight();
         if (availableWidth <= 0) return false;
 
-        // A wrap_content label is normally only as wide as its text. The keycap,
-        // not that measured label width, determines the horizontal budget.
+        // A wrap_content label is normally only as wide as its text, so use the
+        // keycap width for that case. Fixed/match-parent labels also constrain
+        // the usable width through their own measured content bounds.
+        ViewGroup.LayoutParams labelLayoutParams = labelView.getLayoutParams();
+        if (labelLayoutParams == null
+                || labelLayoutParams.width != ViewGroup.LayoutParams.WRAP_CONTENT) {
+            int labelContentWidth = measuredWidth(labelView)
+                    - labelView.getPaddingLeft() - labelView.getPaddingRight();
+            if (labelContentWidth > 0) {
+                availableWidth = Math.min(availableWidth, labelContentWidth);
+            }
+        }
+
+        // getMaxWidth() is a separate TextView constraint, including for wrap_content.
         int labelMaxWidth = labelView.getMaxWidth();
         if (labelMaxWidth > 0 && labelMaxWidth < availableWidth) {
             availableWidth = labelMaxWidth
