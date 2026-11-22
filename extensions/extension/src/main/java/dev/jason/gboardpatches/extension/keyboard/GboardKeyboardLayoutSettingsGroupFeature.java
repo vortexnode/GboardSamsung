@@ -7,6 +7,7 @@ import java.util.List;
 
 import dev.jason.gboardpatches.extension.R;
 import dev.jason.gboardpatches.extension.accesspointcount.GboardAccessPointCountSettingsFeature;
+import dev.jason.gboardpatches.extension.toolbarroundchips.GboardToolbarRoundChipsSettingsFeature;
 import dev.jason.gboardpatches.extension.accesspointsmenu.GboardAccessPointsMenuSettingsFeature;
 import dev.jason.gboardpatches.extension.closeproactivesuggestions.GboardCloseProactiveSuggestionsSettingsFeature;
 import dev.jason.gboardpatches.extension.customtheme.GboardCustomThemeSettingsFeature;
@@ -45,6 +46,7 @@ public final class GboardKeyboardLayoutSettingsGroupFeature
                         new GboardSplitKeyboardSettingsFeature(context),
                         new GboardRoundedKeyboardSettingsFeature(context),
                         new GboardAccessPointCountSettingsFeature(context),
+                        new GboardToolbarRoundChipsSettingsFeature(context),
                         new GboardCustomThemeSettingsFeature(context),
                         new GboardFrostedGlassSettingsFeature(context)));
     }

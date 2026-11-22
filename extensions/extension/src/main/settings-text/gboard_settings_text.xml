@@ -466,6 +466,26 @@
         <translation locale="en">Enter a whole number from 3 through 8.</translation>
         <translation locale="ru">Введите целое число от 3 до 8.</translation>
     </string>
+    <string name="gboard_patches_toolbar_round_chips_title">
+        <translation locale="en">Toolbar round icon backgrounds</translation>
+        <translation locale="ru">Круглые подложки значков тулбара</translation>
+    </string>
+    <string name="gboard_patches_toolbar_round_chips_summary">
+        <translation locale="en">Show adaptive Samsung-style circular backgrounds behind top toolbar icons.</translation>
+        <translation locale="ru">Показывать адаптивные круглые подложки в стиле Samsung под значками верхней панели.</translation>
+    </string>
+    <string name="gboard_patches_toolbar_round_chips_section">
+        <translation locale="en">Appearance</translation>
+        <translation locale="ru">Внешний вид</translation>
+    </string>
+    <string name="gboard_patches_toolbar_round_chips_enabled_title">
+        <translation locale="en">Enable round backgrounds</translation>
+        <translation locale="ru">Включить круглые подложки</translation>
+    </string>
+    <string name="gboard_patches_toolbar_round_chips_enabled_summary">
+        <translation locale="en">Adapts diameter for 3–8 icons and follows light, dark, and dynamic themes. Does not affect Rambler voice button or menu grid.</translation>
+        <translation locale="ru">Адаптирует размер под 3–8 значков и подстраивается под светлую, тёмную и динамическую темы. Не затрагивает кнопку Rambler и сетку меню.</translation>
+    </string>
     <string name="gboard_patches_developer_options_title">
         <translation locale="en">Developer options</translation>
         <translation locale="ru">Для разработчиков</translation>

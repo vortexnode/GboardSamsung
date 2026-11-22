@@ -71,6 +71,8 @@ import dev.jason.gboardpatches.patches.gboard.features.splitkeyboard.gboardSplit
 import dev.jason.gboardpatches.patches.gboard.features.splitkeyboard.gboardSplitKeyboardModePatch
 import dev.jason.gboardpatches.patches.gboard.features.spacebargesture.gboardSpacebarGestureFeatureMarkerPatch
 import dev.jason.gboardpatches.patches.gboard.features.spacebargesture.gboardSpacebarGestureResourcePatch
+import dev.jason.gboardpatches.patches.gboard.features.toolbarroundchips.gboardToolbarRoundChipsFeatureMarkerPatch
+import dev.jason.gboardpatches.patches.gboard.features.toolbarroundchips.gboardToolbarRoundChipsSoftKeyPatch
 import dev.jason.gboardpatches.patches.gboard.features.symbolfooter.gboardSymbolFooterOrderBytecodePatch
 import dev.jason.gboardpatches.patches.gboard.features.symbolfooter.gboardSymbolFooterOrderFeatureMarkerPatch
 import dev.jason.gboardpatches.patches.gboard.features.swipedismiss.gboardSwipeDismissBytecodePatch
@@ -251,6 +253,23 @@ val gboardSamsungSpacebarGesturesPatch = gboardPublicResourcePatch(
         gboardPatchesSettingsPatch,
         gboardSpacebarGestureFeatureMarkerPatch,
         gboardSpacebarGestureResourcePatch,
+    )
+}
+
+@Suppress("unused")
+val gboardToolbarRoundChipsPatch = gboardPublicResourcePatch(
+    featureId = "toolbar_round_chips",
+    name = "Toolbar Round Chips",
+    description = "Add adaptive circular backgrounds behind eligible icons in Gboard's top toolbar.\n" +
+        "Добавляет адаптивные круглые подложки под подходящими значками верхней панели Gboard.",
+    default = true,
+) {
+    compatibleWith(COMPATIBILITY_GBOARD)
+
+    dependsOn(
+        gboardPatchesSettingsPatch,
+        gboardToolbarRoundChipsFeatureMarkerPatch,
+        gboardToolbarRoundChipsSoftKeyPatch,
     )
 }
 
@@ -735,6 +754,7 @@ object GboardPublishedPatchCatalog {
         gboardSimpleCalculatorPatch,
         gboardSwipeDismissPatch,
         gboardSamsungSpacebarGesturesPatch,
+        gboardToolbarRoundChipsPatch,
         gboardAdvancedVoiceTypingPatch,
         gboardBluetoothMicrophonePatch,
         gboardEmojiSizePatch,

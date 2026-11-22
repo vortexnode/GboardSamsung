@@ -26,7 +26,7 @@ class GboardSoftKeyFamilySelectionStoreTest {
     }
 
     @Test
-    fun spacebarAfterStockDelegateInvokesGlobeAndChevronsIndependently() {
+    fun spacebarAfterStockDelegateContainsOnlyGlobeAndChevrons() {
         val feature = GboardSoftKeyFamilyFeature.SAMSUNG_SPACEBAR_GESTURES
         assertEquals(
             listOf(
@@ -42,5 +42,19 @@ class GboardSoftKeyFamilySelectionStoreTest {
         assertTrue("Globe runtime call is missing", globeCall >= 0)
         assertTrue("Chevron runtime call is missing", chevronCall > globeCall)
         assertEquals(2, delegate.lineSequence().count { it.contains("invoke-static") })
+    }
+
+    @Test
+    fun toolbarRoundChipsHasItsOwnAfterStockDelegate() {
+        val feature = GboardSoftKeyFamilyFeature.TOOLBAR_ROUND_CHIPS
+        assertEquals(910, feature.afterOrder)
+        assertEquals(
+            listOf(RuntimeCallId.TOOLBAR_ROUND_CHIPS_RUNTIME_AFTER_SOFT_KEY_BIND),
+            feature.afterRuntimeCalls,
+        )
+
+        val delegate = feature.afterDelegate()
+        assertTrue(delegate.contains("GboardToolbarRoundChipsRuntime;->afterSoftKeyBind"))
+        assertEquals(1, delegate.lineSequence().count { it.contains("invoke-static") })
     }
 }
