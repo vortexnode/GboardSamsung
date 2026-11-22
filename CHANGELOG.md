@@ -1,3 +1,9 @@
+## [4.8.0](https://github.com/vortexnode/GboardSamsung/compare/v4.7.0...v4.8.0) (2026-11-22)
+
+### ✨ New Features
+
+* add independent Toolbar Round Chips patch ([cf36fec](https://github.com/vortexnode/GboardSamsung/commit/cf36fecd457ce43183a15da2001b6441b32b6b76))
+
 ## [4.7.0](https://github.com/vortexnode/GboardSamsung/compare/v4.6.1...v4.7.0) (2026-11-22)
 
 ### ✨ New Features
