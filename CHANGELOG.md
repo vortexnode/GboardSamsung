@@ -1,3 +1,10 @@
+## [4.6.1](https://github.com/vortexnode/GboardSamsung/compare/v4.6.0...v4.6.1) (2026-11-22)
+
+### 🐛 Bug Fixes
+
+* respect fixed spacebar label padding ([aa36659](https://github.com/vortexnode/GboardSamsung/commit/aa3665967a1f2d840637af54625ada9f11422f24))
+* support wrap-content spacebar labels for chevrons ([6821493](https://github.com/vortexnode/GboardSamsung/commit/6821493006f21a091d7f5c286d2fb40631c0505a))
+
 ## [4.6.0](https://github.com/vortexnode/GboardSamsung/compare/v4.5.1...v4.6.0) (2026-11-22)
 
 ### ✨ New Features
