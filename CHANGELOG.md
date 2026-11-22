@@ -1,3 +1,9 @@
+## [4.8.1](https://github.com/vortexnode/GboardSamsung/compare/v4.8.0...v4.8.1) (2026-11-22)
+
+### 🐛 Bug Fixes
+
+* исправить отображение круглых подложек тулбара при 3–5 элементах и увеличить диаметр ([#15](https://github.com/vortexnode/GboardSamsung/issues/15)) ([18a8abf](https://github.com/vortexnode/GboardSamsung/commit/18a8abf06fcd9f811600668faaa79f33e8d4d514))
+
 ## [4.8.0](https://github.com/vortexnode/GboardSamsung/compare/v4.7.0...v4.8.0) (2026-11-22)
 
 ### ✨ New Features
