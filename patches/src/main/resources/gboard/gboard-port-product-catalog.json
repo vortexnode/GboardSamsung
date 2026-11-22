@@ -1529,7 +1529,8 @@
         "patches/src/main/kotlin/dev/jason/gboardpatches/patches/gboard/features/spacebargesture/GboardSpacebarGestureSoftKeyPatch.kt",
         "patches/src/main/kotlin/dev/jason/gboardpatches/patches/gboard/registry/GboardPatchRegistry.kt",
         "patches/src/main/kotlin/dev/jason/gboardpatches/patches/gboard/shared/GboardKeyboardViewHolderTouchComposer.kt",
-        "patches/src/main/kotlin/dev/jason/gboardpatches/patches/gboard/shared/GboardSoftKeyFamilyComposer.kt"
+        "patches/src/main/kotlin/dev/jason/gboardpatches/patches/gboard/shared/GboardSoftKeyFamilyComposer.kt",
+        "patches/src/main/kotlin/dev/jason/gboardpatches/patches/gboard/shared/runtimeabi/RuntimeAbi.kt"
       ],
       "contributions": [
         {
@@ -1554,7 +1555,8 @@
             "soft_key_metadata_type"
           ],
           "runtime_calls": [
-            "SPACEBAR_GESTURE_RUNTIME_AFTER_SOFT_KEY_BIND"
+            "SPACEBAR_GESTURE_RUNTIME_AFTER_SOFT_KEY_BIND",
+            "SPACEBAR_CHEVRON_RUNTIME_AFTER_SOFT_KEY_BIND"
           ]
         }
       ]

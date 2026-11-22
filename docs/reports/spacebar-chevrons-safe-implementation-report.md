@@ -16,6 +16,7 @@
 - Добавлен отдельный RuntimeCallId для GboardSpacebarChevronRuntime.afterSoftKeyBind(View).
 - Оба независимых вызова подключены через GboardSoftKeyFamilyComposer.kt в after_stock для SAMSUNG_SPACEBAR_GESTURES: сначала существующий globe runtime, затем шевроны.
 - Учёт размера after-chain обновлён для двух вызовов; добавлен тест порядка и наличия обоих вызовов.
+- Контрактный каталог Gboard обновлён: after_stock inventory содержит отдельный runtime-вызов, RuntimeAbi.kt добавлен в consumer_files, SHA-256 digest пересчитан.
 - GboardSpacebarGlobeKeyRuntime.java не изменялся.
 
 ## Границы
