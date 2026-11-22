@@ -69,6 +69,8 @@ public final class GboardPatchesFeatureAvailability {
             "dev.jason.gboardpatches.feature.swipe_dismiss";
     public static final String FEATURE_SAMSUNG_SPACEBAR_GESTURES =
             "dev.jason.gboardpatches.feature.samsung_spacebar_gestures";
+    public static final String FEATURE_TOOLBAR_ROUND_CHIPS =
+            "dev.jason.gboardpatches.feature.toolbar_round_chips";
 
     public static final String FEATURE_LANGUAGE_MODELS = "dev.jason.gboardpatches.feature.language_models";
 

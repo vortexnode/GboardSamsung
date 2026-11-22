@@ -1556,8 +1556,7 @@
           ],
           "runtime_calls": [
             "SPACEBAR_GESTURE_RUNTIME_AFTER_SOFT_KEY_BIND",
-            "SPACEBAR_CHEVRON_RUNTIME_AFTER_SOFT_KEY_BIND",
-            "TOOLBAR_ROUND_CHIPS_RUNTIME_AFTER_SOFT_KEY_BIND"
+            "SPACEBAR_CHEVRON_RUNTIME_AFTER_SOFT_KEY_BIND"
           ]
         }
       ]
@@ -1683,6 +1682,39 @@
           ],
           "runtime_calls": [
             "BLUETOOTH_MICROPHONE_RUNTIME_APPLY_OVERRIDDEN_FLAG_VALUE"
+          ]
+        }
+      ]
+    },
+    {
+      "feature_id": "toolbar_round_chips",
+      "public_patch_name": "Toolbar Round Chips",
+      "feature_marker": "dev.jason.gboardpatches.feature.toolbar_round_chips",
+      "target_family_ids": [
+        "softkey.bind"
+      ],
+      "migration_scope": "version-sensitive",
+      "consumer_files": [
+        "extensions/extension/src/main/java/dev/jason/gboardpatches/extension/settings/GboardPatchesFeatureAvailability.java",
+        "extensions/extension/src/main/java/dev/jason/gboardpatches/extension/toolbarroundchips/GboardToolbarRoundChipsSettingsFeature.java",
+        "patches/src/main/kotlin/dev/jason/gboardpatches/patches/gboard/features/toolbarroundchips/GboardToolbarRoundChipsFeatureMarkerPatch.kt",
+        "patches/src/main/kotlin/dev/jason/gboardpatches/patches/gboard/features/toolbarroundchips/GboardToolbarRoundChipsSoftKeyPatch.kt",
+        "patches/src/main/kotlin/dev/jason/gboardpatches/patches/gboard/registry/GboardPatchRegistry.kt",
+        "patches/src/main/kotlin/dev/jason/gboardpatches/patches/gboard/shared/GboardSoftKeyFamilyComposer.kt",
+        "patches/src/main/kotlin/dev/jason/gboardpatches/patches/gboard/shared/runtimeabi/RuntimeAbi.kt"
+      ],
+      "contributions": [
+        {
+          "contribution_id": "toolbar_round_chips.soft_key",
+          "anchor_family_id": "soft_key_bind",
+          "phase": "after_stock",
+          "order": 910,
+          "required_bindings": [
+            "soft_key_bind",
+            "soft_key_metadata_type"
+          ],
+          "runtime_calls": [
+            "TOOLBAR_ROUND_CHIPS_RUNTIME_AFTER_SOFT_KEY_BIND"
           ]
         }
       ]

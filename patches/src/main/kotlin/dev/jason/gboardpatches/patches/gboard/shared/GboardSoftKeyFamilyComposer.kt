@@ -44,6 +44,12 @@ internal enum class GboardSoftKeyFamilyFeature(
         afterRuntimeCalls = listOf(
             RuntimeCallId.SPACEBAR_GESTURE_RUNTIME_AFTER_SOFT_KEY_BIND,
             RuntimeCallId.SPACEBAR_CHEVRON_RUNTIME_AFTER_SOFT_KEY_BIND,
+        ),
+    ),
+    TOOLBAR_ROUND_CHIPS(
+        beforeOrder = null,
+        afterOrder = 910,
+        afterRuntimeCalls = listOf(
             RuntimeCallId.TOOLBAR_ROUND_CHIPS_RUNTIME_AFTER_SOFT_KEY_BIND,
         ),
     ),
@@ -281,12 +287,14 @@ internal fun GboardSoftKeyFamilyFeature.beforeDelegate(): String = when (this) {
         metadataTransformDelegate(beforeRuntimeCalls.single(), "p0, p1")
     GboardSoftKeyFamilyFeature.LONG_PRESS_QUICK_ACTIONS ->
         metadataTransformDelegate(beforeRuntimeCalls.single(), "p1, p0")
-    GboardSoftKeyFamilyFeature.SAMSUNG_SPACEBAR_GESTURES ->
+    GboardSoftKeyFamilyFeature.SAMSUNG_SPACEBAR_GESTURES,
+    GboardSoftKeyFamilyFeature.TOOLBAR_ROUND_CHIPS ->
         error("$this has no before-stock contribution")
 }
 
 internal fun GboardSoftKeyFamilyFeature.afterDelegate(): String = when (this) {
-    GboardSoftKeyFamilyFeature.SAMSUNG_SPACEBAR_GESTURES ->
+    GboardSoftKeyFamilyFeature.SAMSUNG_SPACEBAR_GESTURES,
+    GboardSoftKeyFamilyFeature.TOOLBAR_ROUND_CHIPS ->
         afterRuntimeCalls.joinToString("\n") { call ->
             emitSoftKeyRuntimeCall(call, "p0")
         }

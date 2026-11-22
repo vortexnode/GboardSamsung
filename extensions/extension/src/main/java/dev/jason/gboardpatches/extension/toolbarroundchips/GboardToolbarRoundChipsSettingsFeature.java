@@ -46,7 +46,7 @@ public final class GboardToolbarRoundChipsSettingsFeature
     @Override
     public boolean isAvailable(Context context) {
         return GboardPatchesFeatureAvailability.hasFeature(
-                context, GboardPatchesFeatureAvailability.FEATURE_SAMSUNG_SPACEBAR_GESTURES);
+                context, GboardPatchesFeatureAvailability.FEATURE_TOOLBAR_ROUND_CHIPS);
     }
 
     @Override
