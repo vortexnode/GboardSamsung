@@ -1,215 +1,173 @@
+<div align="center">
+
 # GboardSamsung
 
-<p align="center">
-  <strong>Samsung-inspired customization for the original Gboard</strong><br>
-  A community-maintained Morphe patch source by Vortex Node, based on Jason Wu's Gboard Patches.
-</p>
+**Samsung One UI 8-inspired UX & visual Morphe patches for Gboard**
 
-<p align="center">
-  <a href="README.md">English</a> · <a href="README.ru.md">Русский</a>
-</p>
+Keep Gboard's typing engine, predictions, clipboard, and original Google icons — with Samsung-style spacebar gestures, language chevrons, adaptive round toolbar chips, and full RU/EN settings.
 
-<p align="center">
-  <a href="LICENSE"><img src="https://img.shields.io/badge/license-GPL--3.0-blue.svg" alt="GPL-3.0"></a>
-  <img src="https://img.shields.io/badge/patches-34-informational" alt="34 patches">
-  <img src="https://img.shields.io/badge/target-Gboard%2018.5.4-success" alt="Gboard 18.5.4">
-  <img src="https://img.shields.io/badge/platform-Android-orange" alt="Android">
-</p>
+[English](README.md) · [Русский](README.ru.md)
 
-GboardSamsung aims to bring selected Samsung Keyboard-style interactions and customization to the **real Gboard app**, while keeping Gboard's own typing engine and core features.
+[![Latest Release](https://img.shields.io/github/v/release/vortexnode/GboardSamsung?style=flat-square&label=release)](https://github.com/vortexnode/GboardSamsung/releases/latest)
+[![CI](https://github.com/vortexnode/GboardSamsung/actions/workflows/ci.yml/badge.svg)](https://github.com/vortexnode/GboardSamsung/actions/workflows/ci.yml)
+![Patches](https://img.shields.io/badge/patches-35-blue?style=flat-square)
+![Target Gboard](https://img.shields.io/badge/Gboard-18.5.4-informational?style=flat-square)
+[![License: GPL-3.0](https://img.shields.io/badge/license-GPL--3.0-green?style=flat-square)](LICENSE)
 
-> [!IMPORTANT]
-> This repository provides **Morphe patches**, not a standalone keyboard app. It does not include Google's proprietary Gboard source code or APK. You need to provide a compatible Gboard APK and patch it yourself with Morphe Manager.
+</div>
 
-## Install
+## Preview
 
-The easiest way to use GboardSamsung is to add this repository as a remote patch source in **Morphe Manager**.
+<table>
+  <tr>
+    <td align="center">
+      <img src="docs/assets/preview-material-you-dark.jpg" alt="Material You Dark" width="420"/><br/>
+      <sub><b>Material You Dark</b> — dynamic toolbar chips + fixed ⊞ &amp; mic</sub>
+    </td>
+    <td align="center">
+      <img src="docs/assets/preview-material-you-light.jpg" alt="Material You Light" width="420"/><br/>
+      <sub><b>Material You Light</b> — dynamic pastel chips + white ⊞ &amp; mic</sub>
+    </td>
+  </tr>
+  <tr>
+    <td align="center">
+      <img src="docs/assets/preview-system-dark.jpg" alt="System Dark" width="420"/><br/>
+      <sub><b>System Dark</b> — unified neutral dark circular chips</sub>
+    </td>
+    <td align="center">
+      <img src="docs/assets/preview-system-light.jpg" alt="System Light" width="420"/><br/>
+      <sub><b>System Light</b> — crisp white chips matching the mic button</sub>
+    </td>
+  </tr>
+</table>
 
-### 1. Add the patch source
+## What makes GboardSamsung different
 
-<p align="center">
-  <a href="https://morphe.software/add-source?github=vortexnode/GboardSamsung"><strong>＋ Add GboardSamsung to Morphe Manager</strong></a>
-</p>
+Built as a focused downstream fork of [jasonwu1994/Gboard-patches](https://github.com/jasonwu1994/Gboard-patches), GboardSamsung adds dedicated Samsung One UI 8 UX upgrades and strips out unused Taiwan/legacy patches:
 
-Or add it manually:
+| Feature | What it does |
+| --- | --- |
+| **Samsung Spacebar Gestures** | Swipe left/right on the spacebar to switch languages, long-press to move the cursor, and show optional `< Русский >` / `< English >` language chevrons via passive `ViewOverlay`. |
+| **Toolbar Round Chips** | Adaptive circular backgrounds behind 3–8 top toolbar icons (preserving original Google icons): matches Material You functional keys in Dynamic Color, and crisp white/neutral dark in standard themes. Includes an independent toggle for a fixed `38dp` Rambler-style circle behind the `⊞` menu button (preserving the native circle when expanded to `✕`). |
+| **Full RU / EN Patches UI** | Complete Russian and English localization for the in-app Patches settings, search index, and Morphe Manager release notes. |
+| **Side-by-side Package Rename** | Installs cleanly alongside stock Gboard (`gboardsamsung.com.google.android.inputmethod.latin`) without root. |
 
-1. Open **Morphe Manager**.
-2. Go to **Patch sources → + → Remote**.
-3. Enter the repository address:
+## Quick Install (Morphe Manager)
 
-   `https://github.com/vortexnode/GboardSamsung`
+1. Open [Morphe Manager](https://github.com/MorpheApp/morphe-manager) → **Sources** → **Add source** and paste:
+   ```text
+   https://raw.githubusercontent.com/vortexnode/GboardSamsung/main/patches-bundle.json
+   ```
+2. Select a compatible stock **Gboard `18.5.4`** APK (`arm64-v8a` recommended).
+3. Choose the patches you want (enable **Package Rename** if you want to keep stock Gboard installed) and tap **Patch**.
+4. Install the patched APK and enable **GboardSamsung** in Android **Settings → System → Keyboard**.
 
-### 2. Prepare a compatible Gboard APK
-
-Use a clean, standalone **arm64-v8a** APK matching this target:
-
-`18.5.4.993608717-release-arm64-v8a`
-
-For example, obtain the full APK from a trusted APK archive. Avoid split `.apkm` packages unless your patching workflow can correctly convert or install them.
-
-### 3. Select patches and build
-
-1. Open the downloaded Gboard APK in Morphe Manager.
-2. Select the GboardSamsung patches you want.
-3. Review the **Package Rename** options. The default package ID is `gboardsamsung.com.google.android.inputmethod.latin`, and the default app name is `GboardSamsung`.
-4. Run the patch process and install the resulting APK.
-
-The default package ID allows GboardSamsung to be installed alongside the official Gboard package. The official package ID and custom package IDs are also supported.
-
-### 4. Enable the keyboard
-
-- **Samsung One UI:** Settings → General management → Keyboard list and default. Enable **GboardSamsung**, then choose it as the default keyboard.
-- **Other Android devices:** Settings → System → Keyboard → On-screen keyboard. Enable **GboardSamsung** and select it as needed.
-
-### Source updates
-
-After the remote source has been added, Morphe Manager can check the repository for updated patch bundles and make newer versions available when they are published. Update availability depends on the manager's source-checking behavior; it is not necessarily instantaneous.
+> **Tip:** To keep your learned dictionary and personal predictions intact, install new builds **as an update over the existing app** instead of uninstalling first.
 
 ## Compatibility
 
-| Item | Supported target |
-|---|---|
-| Gboard | `18.5.4.993608717-release-arm64-v8a` |
-| Architecture | `arm64-v8a` |
-| Primary test device | Samsung Galaxy S22 5G (`SM-S901U1`) |
-| Android / One UI | Android 16 / One UI 8 |
+- **Recommended target:** Gboard `18.5.4` (`arm64-v8a`, tested on Samsung Galaxy S22 / Android 16 / One UI 8).
+- **Root:** Not required.
+- **Updates:** New releases automatically publish `.mpp` bundles and update `patches-bundle.json` for Morphe Manager.
 
-Compatibility with other Gboard versions or device configurations is not guaranteed unless separately verified.
+## Active Patch Catalog (35 patches)
 
-### Active patch catalog (34 patches)
-
-GboardSamsung currently contains **34 active Morphe patches**: 33 selected upstream patches and one downstream patch maintained for the Samsung-style spacebar experience.
-
-### Samsung-style interaction
-
-- **Samsung Spacebar Gestures** — swipe left or right on the spacebar to switch enabled languages; short tap still inserts a space, and long-press plus drag moves the cursor.
-
-### Themes, appearance & layout · 12
-
-- **Custom Theme** — import custom ZIP themes, including themes from the Rboard repository.
-- **Frosted Glass** — add live background blur and adjust custom-theme opacity.
-- **Rounded Keyboard Panel** — choose which panel corners are rounded and configure their radii.
-- **Change emoji size** — adjust emoji size.
-- **Top Toolbar Item Count** — customize the number of toolbar items.
-- **Access Points menu style** — switch between new and legacy Access Points menu styles.
-- **Enable split keyboard** — enable the split keyboard layout.
-- **Key Shape Selection** — expose key-shape options in Theme details.
-- **Custom Symbols** — add a dedicated custom-symbols tab and a comma long-press shortcut.
-- **Emojis, stickers & GIFs Tab Order** — reorder the bottom tabs in the media panel.
-- **Settings Homepage Override** — switch between the new and legacy Gboard settings homepages.
-- **Close Proactive Suggestions** — add a dismiss button to the proactive suggestions bar.
-
-### Typing, editing & keyboard tools · 10
-
-- **Long-Press Editing Shortcuts** — add text-editing actions such as Select all, Undo, Copy, Cut, Paste and Redo.
-- **Toolbar Editing Buttons** — add Select All, Copy, Cut and Paste to the toolbar menu.
-- **Quick Insert** — enable the Quick Insert panel and its toolbar entry.
-- **Swipe Down to Dismiss Keyboard** — dismiss the keyboard with a downward swipe from the suggestions or toolbar.
-- **Keypress Vibration Intensity Control** — adjust vibration intensity.
-- **Floating Web Search** — open a floating web page for quick searches.
-- **Simple Calculator** — show an expression and its result in the suggestion row.
-- **Incognito Mode Toggle** — add an Incognito toggle and configure clipboard and voice-typing availability in that mode.
-- **Clipboard Enhancements** — customize clipboard retention, item limits, previews, labels, ordering and columns.
-- **Clipboard Custom Character Limit** — set the maximum character count for each text clipboard item.
-
-### Language, AI, suggestions & voice · 7
-
-- **AI Writing Tools** — enable AI writing tools for supported languages.
-- **Advanced Voice Typing** — enable Advanced Voice Typing and related punctuation options.
-- **Grammar Checker** — enable the grammar-checking setting.
-- **Inline Suggestions** — enable Smart Compose.
-- **Enable Inline Autofill Suggestions** — enable inline autofill suggestions.
-- **`Use Bluetooth Microphone`** — expose Bluetooth microphone support for voice typing.
-- **Dictionaries & Predictions** — choose resource versions for dictionaries, predictions and input correction.
-
-### Packaging, security & utilities · 4
-
-- **Package Rename** — configure the Android package ID and app display name. Defaults: `gboardsamsung.com.google.android.inputmethod.latin` and `GboardSamsung`.
-- **Add Gboard Signature Bypass** — bypass Gboard signature-whitelist checks.
-- **Backup & Restore** — export or restore patch settings and back up, compare or restore Gboard PB/XML flag data.
-- **Developer options** — enable Gboard Developer options and the Flag Editor.
-
-### Upstream patches not included
-
-Twelve upstream features were removed from this downstream project to keep its scope and dependencies focused:
+**2 GboardSamsung-exclusive patches** + **33 curated upstream patches**. Expand any category below:
 
 <details>
-<summary>Show the 12 excluded upstream patches</summary>
+<summary><b>Samsung One UI Experience (2 exclusive patches)</b></summary>
 
-1. Latin Globe Key Ignore Interval
-2. Web Clipboard
-3. Zhuyin Bottom Row Key Sizes
-4. Zhuyin Quick Traditional/Simplified Toggle
-5. Zhuyin Slide Input
-6. G Logo on Spacebar
-7. English QWERTY Up-Flick Uppercase
-8. FTP Server
-9. Swipeable Custom Top Row
-10. Enable OCR / Scan Text
-11. Enable accessibility layout
-12. Enable cursor trackpad mode
-
-Removing these patches did not remove shared functionality that GboardSamsung still uses. For example, the standard Gboard clipboard and the downstream Samsung Spacebar Gestures patch are retained.
+- **Samsung Spacebar Gestures** — Swipe spacebar to switch languages, long-press for cursor control, and optional `< Language >` chevrons.
+- **Toolbar Round Chips** — Adaptive circular backgrounds for 3–8 toolbar icons (Dynamic Material You & standard themes) + separate toggle for the `⊞` menu button.
 
 </details>
 
-## FAQ
-
 <details>
-<summary><strong>Is GboardSamsung a separate keyboard app?</strong></summary>
+<summary><b>Themes, Appearance &amp; Layout (12 patches)</b></summary>
 
-No. It is a set of Morphe patches applied to a compatible Gboard APK. The resulting patched Gboard app can use a separate package ID so it can coexist with the official installation.
+- **Access Points menu style** — Switch between new and legacy Access Points menu styles.
+- **Change emoji size** — Adjust emoji size on the keyboard.
+- **Custom Theme** — Import custom ZIP themes and themes from the Rboard repository.
+- **Emojis, stickers &amp; GIFs Tab Order** — Reorder bottom tabs with drag-and-drop.
+- **Enable split keyboard** — Enable split keyboard layout.
+- **Frosted Glass** — Live background blur and custom-theme opacity.
+- **Key Shape Selection** — Enable Key shape options (including rounded/rectangular keys) in Theme details.
+- **Keypress Vibration Intensity Control** — Control vibration intensity instead of duration.
+- **Rounded Keyboard Panel** — Customize rounded corners and radii of the keyboard panel.
+- **Settings Homepage Override** — Switch between new and legacy Gboard settings pages.
+- **Top Toolbar Item Count** — Customize the number of top toolbar Access Points (3–8).
+- **Swipe Down to Dismiss Keyboard** — Swipe down from suggestions or toolbar to close the keyboard.
+
 </details>
 
 <details>
-<summary><strong>Do I need to install Morphe Manager?</strong></summary>
+<summary><b>Typing, Editing &amp; Keyboard Tools (9 patches)</b></summary>
 
-Yes. Morphe Manager is used to add the patch source, select patches, patch your Gboard APK and install the result.
+- **Clipboard Custom Character Limit** — Customize max character count per clipboard item.
+- **Clipboard Enhancements** — Extend retention time, item limit, preview lines, and pinning/timestamps.
+- **Close Proactive Suggestions** — Show a dismiss button in proactive suggestions.
+- **Custom Symbols** — Dedicated custom symbols tab via long-press comma.
+- **Floating Web Search** — Open a floating web page directly from Gboard.
+- **Long-Press Editing Shortcuts** — Long-press Select All, Undo, Copy, Cut, Paste, and Redo shortcuts.
+- **Quick Insert** — Enable the Quick Insert panel and toolbar access point.
+- **Simple Calculator** — Evaluate typed math expressions directly in the suggestion strip.
+- **Toolbar Editing Buttons** — Add Select All, Copy, Cut, and Paste actions to the toolbar menu.
+
 </details>
 
 <details>
-<summary><strong>Will every Gboard version work?</strong></summary>
+<summary><b>Language, AI, Suggestions &amp; Voice (7 patches)</b></summary>
 
-No such guarantee is made. The currently documented target is Gboard `18.5.4.993608717-release-arm64-v8a`.
+- **AI Writing Tools** — Enable AI writing tools across all languages.
+- **Advanced Voice Typing** — Enable Advanced Voice Typing with auto-punctuation.
+- **Dictionaries &amp; Predictions** — Choose resource versions (including Pixel Delight catalogs) and inspect loaded models.
+- **Enable Inline Autofill Suggestions** — Enable inline autofill suggestions.
+- **Grammar Checker** — Enable Text correction → Grammar check.
+- **Inline Suggestions** — Enable Text correction → Smart Compose.
+- **Use Bluetooth Microphone** — Enable Voice typing → Use Bluetooth microphone.
+
 </details>
 
 <details>
-<summary><strong>Does adding the source update the keyboard automatically?</strong></summary>
+<summary><b>Packaging, Security &amp; Utilities (5 patches)</b></summary>
 
-No. Morphe Manager can check for new patch bundles from the remote source. You still need to select and apply the patches to a compatible Gboard APK when you want to update your patched app.
+- **Add Gboard Signature Bypass** — Bypass Gboard signature whitelist checks.
+- **Backup &amp; Restore** — Export/restore Patches settings and Gboard user data.
+- **Developer options** — Unlock Developer options and Flag Editor.
+- **Incognito Mode Toggle** — Toolbar Incognito toggle with clipboard privacy controls.
+- **Package Rename** — Custom Android package name (default: `gboardsamsung.com.google.android.inputmethod.latin`).
+
 </details>
 
-## Build & verification
+<details>
+<summary><b>Excluded Upstream Patches (13 removed from upstream)</b></summary>
 
-This repository builds **Morphe patch bundles (`.mpp`)** and patch-catalog metadata. It does not build a standalone keyboard APK.
+To keep the project focused, clean, and free of unused dependencies or conflicting gestures, the following 13 upstream patches from `jasonwu1994/Gboard-patches` are intentionally **not included**:
 
-Common developer commands:
+1. `Enable OCR / Scan Text`
+2. `Enable accessibility layout`
+3. `Enable cursor trackpad mode` *(replaced by Samsung Spacebar Gestures)*
+4. `English QWERTY Up-Flick Uppercase`
+5. `FTP Server`
+6. `G Logo on Spacebar`
+7. `Latin Globe Key Ignore Interval`
+8. `Shift + Backspace Forward Delete`
+9. `Swipeable Custom Top Row`
+10. `Web Clipboard`
+11. `Zhuyin Bottom Row Key Sizes` *(Taiwan-specific)*
+12. `Zhuyin Quick Traditional/Simplified Toggle` *(Taiwan-specific)*
+13. `Zhuyin Slide Input` *(Taiwan-specific)*
+
+</details>
+
+## Build & Verification
 
 ```bash
-./gradlew :patches:buildAndroid
-./gradlew generatePatchesList
-./gradlew test
+./gradlew :patches:test :extensions:extension:testDebugUnitTest :extensions:calculator:testDebugUnitTest
 ```
 
-The CI workflow runs module unit tests, verifies that `patches-list.json` is up to date, and builds the Morphe Android patch bundle. The publish workflow analyzes commits and publishes a Morphe source release after a successful CI run on `main`.
+## Provenance & License
 
-Release classification is controlled by [`.releaserc`](.releaserc). The current rules include breaking changes as major, `feat:` as minor, and `fix:`, `bump:`, `perf:`, `build(morphe-source):` and `docs:` as patch releases. Documentation commits are hidden from generated release-note sections, but **the current configuration still classifies `docs:` commits as patch releases**.
-
-Morphe GitHub Packages authentication requires `gpr.user` / `gpr.key` or the corresponding GitHub Actions credentials. Never commit credentials, signing keys, tokens or proprietary Gboard APKs.
-
-## Project provenance
-
-- **Upstream author:** Jason Wu (`jasonwu1994`) — [Gboard Patches](https://github.com/jasonwu1994/Gboard-patches)
-- **Downstream maintainer:** Vortex Node (`vortexnode`) — [GboardSamsung](https://github.com/vortexnode/GboardSamsung)
-- **Imported upstream baseline:** `463269a0f315ef9cee749e10d155af1aedaa49ad` (recorded in [`UPSTREAM_COMMIT.txt`](UPSTREAM_COMMIT.txt))
-- **Patch framework:** [Morphe](https://github.com/MorpheApp)
-- **License:** [GNU GPL v3.0](LICENSE); see also [`NOTICE`](NOTICE)
-
-The upstream repository is credited as the historical source of the selected patches. GboardSamsung is maintained independently and does not require an active upstream import workflow.
-
-## Documentation
-
-- [Project scope](docs/PROJECT_SCOPE.md) — goals, boundaries and acceptance criteria.
-- [Upstream provenance](docs/UPSTREAM.md) — origin, divergence and synchronization policy.
-- [Repository cleanup report](docs/REPOSITORY_CLEANUP_REPORT.md) — removed components and catalog verification.
-- [Archived upstream README](UPSTREAM_README.md) — original upstream project documentation.
+- **Upstream:** Based on [jasonwu1994/Gboard-patches](https://github.com/jasonwu1994/Gboard-patches) by Jason Wu (`jasonwu1994`).
+- **Downstream maintainer:** [vortexnode](https://github.com/vortexnode).
+- **License:** [GNU General Public License v3.0](LICENSE) (see also [NOTICE](NOTICE)).
