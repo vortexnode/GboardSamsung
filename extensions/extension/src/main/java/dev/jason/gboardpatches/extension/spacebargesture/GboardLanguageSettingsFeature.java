@@ -13,11 +13,10 @@ import dev.jason.gboardpatches.extension.settings.GboardPatchesSettingsContract;
 import dev.jason.gboardpatches.extension.settings.GboardSettingsText;
 
 /**
- * Dedicated top-level "Language" settings screen for Samsung Spacebar Gestures, spacebar language
- * switch chevrons, and language switch key visibility, exposing three independent toggles:
+ * Dedicated top-level "Language" settings screen for Samsung Spacebar Gestures & language switch
+ * key visibility, exposing two independent toggles:
  * <ol>
  *   <li>Switch language by swiping on spacebar (default enabled).</li>
- *   <li>Spacebar language switch chevrons (default disabled, passive visual indicator).</li>
  *   <li>Hide language switch key (default disabled, immediately reversible).</li>
  * </ol>
  */
@@ -31,8 +30,6 @@ public final class GboardLanguageSettingsFeature
     private final String sectionTitle;
     private final String spacebarSwipeTitle;
     private final String spacebarSwipeSummary;
-    private final String spacebarChevronsTitle;
-    private final String spacebarChevronsSummary;
     private final String hideGlobeKeyTitle;
     private final String hideGlobeKeySummary;
 
@@ -44,10 +41,6 @@ public final class GboardLanguageSettingsFeature
         spacebarSwipeTitle = text(context, R.string.gboard_patches_spacebar_language_swipe_title);
         spacebarSwipeSummary =
                 text(context, R.string.gboard_patches_spacebar_language_swipe_summary);
-        spacebarChevronsTitle =
-                text(context, R.string.gboard_patches_spacebar_language_chevrons_title);
-        spacebarChevronsSummary =
-                text(context, R.string.gboard_patches_spacebar_language_chevrons_summary);
         hideGlobeKeyTitle = text(context, R.string.gboard_patches_hide_language_switch_key_title);
         hideGlobeKeySummary =
                 text(context, R.string.gboard_patches_hide_language_switch_key_summary);
@@ -89,16 +82,11 @@ public final class GboardLanguageSettingsFeature
             Context context = host.getContext();
             boolean spacebarSwipeEnabled =
                     GboardSpacebarGestureSettings.readSpacebarLanguageSwipeEnabled(context);
-            boolean spacebarChevronsEnabled =
-                    GboardSpacebarGestureSettings.readSpacebarLanguageChevronsEnabled(context);
             boolean hideGlobeKeyEnabled =
                     GboardSpacebarGestureSettings.readHideLanguageSwitchKeyEnabled(context);
             return buildScreenForState(
                     spacebarSwipeEnabled,
                     value -> GboardSpacebarGestureSettings.writeSpacebarLanguageSwipeEnabled(
-                            context, value),
-                    spacebarChevronsEnabled,
-                    value -> GboardSpacebarGestureSettings.writeSpacebarLanguageChevronsEnabled(
                             context, value),
                     hideGlobeKeyEnabled,
                     value -> GboardSpacebarGestureSettings.writeHideLanguageSwitchKeyEnabled(
@@ -112,8 +100,6 @@ public final class GboardLanguageSettingsFeature
     GboardPatchesSettingsContract.Screen buildScreenForState(
             boolean spacebarSwipeEnabled,
             GboardPatchesSettingsContract.ToggleAction spacebarSwipeAction,
-            boolean spacebarChevronsEnabled,
-            GboardPatchesSettingsContract.ToggleAction spacebarChevronsAction,
             boolean hideGlobeKeyEnabled,
             GboardPatchesSettingsContract.ToggleAction hideGlobeKeyAction) {
         return new GboardPatchesSettingsContract.Screen(
@@ -131,12 +117,6 @@ public final class GboardLanguageSettingsFeature
                                         true,
                                         spacebarSwipeEnabled,
                                         spacebarSwipeAction),
-                                new GboardPatchesSettingsContract.ToggleRow(
-                                        spacebarChevronsTitle,
-                                        spacebarChevronsSummary,
-                                        true,
-                                        spacebarChevronsEnabled,
-                                        spacebarChevronsAction),
                                 new GboardPatchesSettingsContract.ToggleRow(
                                         hideGlobeKeyTitle,
                                         hideGlobeKeySummary,

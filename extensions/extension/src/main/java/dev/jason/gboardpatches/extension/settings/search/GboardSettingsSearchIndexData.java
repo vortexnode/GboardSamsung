@@ -89,7 +89,6 @@ final class GboardSettingsSearchIndexData {
             {3, R.string.gboard_patches_bluetooth_microphone_title, R.string.gboard_patches_bluetooth_microphone_summary, 1},
             {4, R.string.gboard_patches_language_settings_title, R.string.gboard_patches_language_settings_summary, 1},
             {4, R.string.gboard_patches_spacebar_language_swipe_title, R.string.gboard_patches_spacebar_language_swipe_summary, 0},
-            {4, R.string.gboard_patches_spacebar_language_chevrons_title, R.string.gboard_patches_spacebar_language_chevrons_summary, 0},
             {4, R.string.gboard_patches_hide_language_switch_key_title, R.string.gboard_patches_hide_language_switch_key_summary, 0},
             {5, R.string.language_models_entry_title, R.string.language_models_summary, 1},
             {5, R.string.language_models_title, R.string.language_models_enabled_help, 0},

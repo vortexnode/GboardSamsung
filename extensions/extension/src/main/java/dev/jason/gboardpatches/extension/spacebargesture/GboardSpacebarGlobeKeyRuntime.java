@@ -45,11 +45,6 @@ public final class GboardSpacebarGlobeKeyRuntime {
         } catch (Throwable ignored) {
             // SoftKey bind hooks must never crash keyboard inflation or layout transitions.
         }
-        try {
-            GboardSpacebarChevronRuntime.afterSoftKeyBind(softKeyView);
-        } catch (Throwable ignored) {
-            // Spacebar chevrons are purely decorative and must never disrupt key binding.
-        }
     }
 
     /**
