@@ -16,6 +16,7 @@ import android.view.ViewGroup;
 import android.view.ViewOverlay;
 import android.view.ViewParent;
 import android.widget.ImageView;
+import android.widget.TextView;
 
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
@@ -39,7 +40,7 @@ import java.util.function.Predicate;
  *       touch listeners, drag-and-drop, or layout bounds.</li>
  *   <li>Rambler voice button ({@code .background-icon.for-action-key}), the {@code ⊞} menu button
  *       ({@code .access-point-entry-menu-icon} / {@code .access-point-menu-icon}), expanded menu
- *       items, candidate suggestions, and clipboard chips are strictly excluded.</li>
+ *       items, candidate suggestions, and text/clipboard chips are strictly excluded.</li>
  * </ul>
  */
 public final class GboardToolbarRoundChipsRuntime {
@@ -54,12 +55,12 @@ public final class GboardToolbarRoundChipsRuntime {
 
     private static final float MIN_SLOT_DP = 24.0f;
     private static final float MIN_DIAMETER_DP = 24.0f;
-    private static final float MAX_DIAMETER_DP = 36.0f;
-    private static final float SLOT_INSET_DP = 4.0f;
-    private static final float MAX_ASPECT_RATIO = 1.6f;
+    private static final float MAX_DIAMETER_DP = 40.0f;
+    private static final float VERTICAL_INSET_DP = 0.5f;
+    private static final float HORIZONTAL_INSET_DP = 4.0f;
 
-    private static final int LIGHT_THEME_CHIP_ALPHA = 24;
-    private static final int DARK_THEME_CHIP_ALPHA = 34;
+    private static final int LIGHT_THEME_CHIP_ALPHA = 28;
+    private static final int DARK_THEME_CHIP_ALPHA = 38;
     private static final int FALLBACK_LIGHT_ICON_COLOR = 0xFF1C1C1E;
     private static final int FALLBACK_DARK_ICON_COLOR = 0xFFFFFFFF;
 
@@ -205,13 +206,14 @@ public final class GboardToolbarRoundChipsRuntime {
 
     /**
      * Returns the dedicated top-bar Access Point ripple background view if and only if
-     * {@code softKeyView} is a standard Access Point bar item (excluding Rambler, {@code ⊞} menu,
-     * candidate keys, and expanded menu rows).
+     * {@code softKeyView} is a standard icon-only Access Point bar item (excluding Rambler,
+     * {@code ⊞} menu, candidate keys, text/clipboard pills, and expanded menu rows).
      */
     static View findEligibleBackgroundTarget(View softKeyView) {
         if (softKeyView == null || softKeyView.getVisibility() != View.VISIBLE) return null;
         if (hasExcludedAncestorTag(softKeyView)) return null;
         if (containsExcludedDescendantTag(softKeyView)) return null;
+        if (hasVisibleTextLabel(softKeyView)) return null;
         return findViewWithTagToken(softKeyView, ACCESS_POINT_BAR_BG_TAG);
     }
 
@@ -227,16 +229,18 @@ public final class GboardToolbarRoundChipsRuntime {
         int height = bgTarget.getHeight();
         if (width <= 0 || height <= 0) return null;
 
-        // Exclude wide text/clipboard pills whose aspect ratio is not an icon slot.
-        float aspectRatio = (float) width / (float) height;
-        if (aspectRatio > MAX_ASPECT_RATIO) return null;
-
         float density = resolveDensity(bgTarget);
         float minDim = Math.min(width, height);
         if (minDim < MIN_SLOT_DP * density) return null;
 
+        // AccessPointsBar stretches slots horizontally at 3-5 items while bgTarget already carries
+        // vertical toolbar padding. Use almost full vertical height to match the Rambler mic
+        // circle size, while preserving a horizontal gap when slots get narrow (8 items / 1-hand).
+        float available = Math.min(
+                height - VERTICAL_INSET_DP * density,
+                width - HORIZONTAL_INSET_DP * density);
         float diameter = clamp(
-                minDim - SLOT_INSET_DP * density,
+                available,
                 MIN_DIAMETER_DP * density,
                 MAX_DIAMETER_DP * density);
         if (diameter > minDim) {
@@ -287,6 +291,24 @@ public final class GboardToolbarRoundChipsRuntime {
             }
         }
         return null;
+    }
+
+    private static boolean hasVisibleTextLabel(View root) {
+        if (root == null || root.getVisibility() != View.VISIBLE) return false;
+        if (root instanceof TextView textView) {
+            CharSequence text = textView.getText();
+            if (text != null && text.toString().trim().length() > 0) {
+                return true;
+            }
+        }
+        if (root instanceof ViewGroup group) {
+            for (int i = 0; i < group.getChildCount(); i++) {
+                if (hasVisibleTextLabel(group.getChildAt(i))) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     private static boolean hasExcludedAncestorTag(View view) {

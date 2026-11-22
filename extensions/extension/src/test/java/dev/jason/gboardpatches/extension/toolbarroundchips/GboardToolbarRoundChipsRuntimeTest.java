@@ -11,6 +11,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
+import android.widget.TextView;
 
 import org.junit.After;
 import org.junit.Assert;
@@ -95,13 +96,39 @@ public final class GboardToolbarRoundChipsRuntimeTest {
     }
 
     @Test
-    public void adaptsDiameterBetweenSparseAndDenseToolbarSlotsAndHidesWhenTooNarrow() {
+    public void rendersChipsForThreeToEightAccessPointsAndExcludesTextPills() {
         GboardToolbarRoundChipsRuntime.setSettingEnabledPredicateForTesting(v -> true);
 
+        // Wide icon-only Access Point slots when toolbar holds 3, 4, or 5 items (aspect > 1.6).
+        ToolbarSlot threeItemSlot = createAccessPointSlot(110, 32, Color.WHITE);
+        ToolbarSlot fourItemSlot = createAccessPointSlot(78, 32, Color.WHITE);
+        ToolbarSlot fiveItemSlot = createAccessPointSlot(62, 32, Color.WHITE);
+
+        // Hidden or empty TextView inside an Access Point slot must NOT suppress the chip.
+        TextView hiddenLabel = new TextView(context);
+        hiddenLabel.setText("Hidden");
+        hiddenLabel.setVisibility(View.GONE);
+        threeItemSlot.root.addView(hiddenLabel);
+        layoutView(threeItemSlot.root, 110, 32);
+
+        GboardToolbarRoundChipsRuntime.ChipGeometry threeGeom =
+                GboardToolbarRoundChipsRuntime.computeGeometry(threeItemSlot.root, threeItemSlot.bgView);
+        GboardToolbarRoundChipsRuntime.ChipGeometry fourGeom =
+                GboardToolbarRoundChipsRuntime.computeGeometry(fourItemSlot.root, fourItemSlot.bgView);
+        GboardToolbarRoundChipsRuntime.ChipGeometry fiveGeom =
+                GboardToolbarRoundChipsRuntime.computeGeometry(fiveItemSlot.root, fiveItemSlot.bgView);
+
+        Assert.assertNotNull("3-item wide toolbar slot must render a round chip", threeGeom);
+        Assert.assertNotNull("4-item wide toolbar slot must render a round chip", fourGeom);
+        Assert.assertNotNull("5-item wide toolbar slot must render a round chip", fiveGeom);
+        Assert.assertTrue(
+                "Chip diameter should closely fill bgTarget height to match mic circle",
+                threeGeom.radius * 2f >= 31.0f);
+
+        // Sparse vs dense/one-handed narrow slot adapts diameter cleanly.
         ToolbarSlot sparseSlot = createAccessPointSlot(64, 44, Color.BLACK);
         ToolbarSlot denseSlot = createAccessPointSlot(34, 44, Color.BLACK);
         ToolbarSlot tinySlot = createAccessPointSlot(20, 44, Color.BLACK);
-        ToolbarSlot wideClipboardChip = createAccessPointSlot(180, 40, Color.BLACK);
 
         GboardToolbarRoundChipsRuntime.ChipGeometry sparse =
                 GboardToolbarRoundChipsRuntime.computeGeometry(sparseSlot.root, sparseSlot.bgView);
@@ -111,13 +138,25 @@ public final class GboardToolbarRoundChipsRuntimeTest {
         Assert.assertNotNull(sparse);
         Assert.assertNotNull(dense);
         Assert.assertTrue(
-                "Dense 8-item slot should produce a smaller radius than sparse 3-item slot",
+                "Dense narrow slot should produce a smaller radius than sparse slot",
                 dense.radius < sparse.radius);
         Assert.assertNull(
                 GboardToolbarRoundChipsRuntime.computeGeometry(tinySlot.root, tinySlot.bgView));
+
+        // Clipboard/suggestion text pill with a visible non-empty TextView is excluded.
+        ToolbarSlot textClipboardChip = createAccessPointSlot(180, 40, Color.BLACK);
+        TextView visibleLabel = new TextView(context);
+        visibleLabel.setText("Copied snippet");
+        visibleLabel.setVisibility(View.VISIBLE);
+        textClipboardChip.root.addView(visibleLabel);
+        layoutView(textClipboardChip.root, 180, 40);
+
+        GboardToolbarRoundChipsRuntime.afterSoftKeyBind(textClipboardChip.root);
+        Assert.assertFalse(
+                GboardToolbarRoundChipsRuntime.isChipAttachedForTesting(textClipboardChip.root));
         Assert.assertNull(
                 GboardToolbarRoundChipsRuntime.computeGeometry(
-                        wideClipboardChip.root, wideClipboardChip.bgView));
+                        textClipboardChip.root, textClipboardChip.bgView));
     }
 
     @Test
