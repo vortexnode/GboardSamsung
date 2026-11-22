@@ -281,11 +281,17 @@ public final class GboardToolbarRoundChipsRuntime {
     }
 
     static boolean isDynamicColorThemeSelected(Context context) {
-        if (context == null) return false;
+        if (context == null || Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return false;
         try {
             String spec = activeThemeSpecProvider.apply(context);
-            if (spec == null) return false;
-            if (spec.isEmpty()) return Build.VERSION.SDK_INT >= Build.VERSION_CODES.S;
+            if (spec == null || spec.isEmpty() || "DEFAULT_THEME_NAME".equals(spec)) {
+                return true;
+            }
+            if (spec.startsWith("system_auto:")
+                    || spec.startsWith("assets:")
+                    || spec.startsWith("files:")) {
+                return false;
+            }
             return spec.startsWith(DYNAMIC_THEME_PREFIX_SILK)
                     || spec.startsWith(DYNAMIC_THEME_PREFIX_SYSTEM)
                     || spec.startsWith(DYNAMIC_THEME_PREFIX_SPEC)

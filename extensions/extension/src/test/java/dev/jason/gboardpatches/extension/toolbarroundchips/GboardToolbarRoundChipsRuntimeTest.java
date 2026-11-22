@@ -59,6 +59,7 @@ public final class GboardToolbarRoundChipsRuntimeTest {
         ToolbarSlot slot = createAccessPointSlot(48, 42, 0xFF8AB4F8);
         slot.bgView.setBackground(stockRipple);
         GboardToolbarRoundChipsRuntime.setSettingEnabledPredicateForTesting(v -> true);
+        GboardToolbarRoundChipsRuntime.setActiveThemeSpecProviderForTesting(c -> "system_auto:");
 
         GboardToolbarRoundChipsRuntime.afterSoftKeyBind(slot.root);
 
@@ -116,7 +117,17 @@ public final class GboardToolbarRoundChipsRuntimeTest {
         Assert.assertEquals(38, Color.alpha(stdDark.color));
         Assert.assertEquals(0, stdDark.strokeColor);
 
-        // 3. Dynamic Color (system: / dynamic_color_spec:) -> Material You system palette.
+        // Explicit static/custom themes remain non-dynamic.
+        GboardToolbarRoundChipsRuntime.setActiveThemeSpecProviderForTesting(
+                c -> "assets:theme_package_metadata_material_light.binarypb");
+        Assert.assertFalse(GboardToolbarRoundChipsRuntime.isDynamicColorThemeSelected(context));
+        GboardToolbarRoundChipsRuntime.setActiveThemeSpecProviderForTesting(
+                c -> "files:Samsung_OneUI8_Light.zip");
+        Assert.assertFalse(GboardToolbarRoundChipsRuntime.isDynamicColorThemeSelected(context));
+
+        // 3. Dynamic Color (absent default key on Android 12+ OR silk:) -> Material You palette.
+        GboardToolbarRoundChipsRuntime.setActiveThemeSpecProviderForTesting(c -> null);
+        Assert.assertTrue(GboardToolbarRoundChipsRuntime.isDynamicColorThemeSelected(context));
         GboardToolbarRoundChipsRuntime.setActiveThemeSpecProviderForTesting(c -> "silk:material3_light");
         Assert.assertTrue(GboardToolbarRoundChipsRuntime.isDynamicColorThemeSelected(context));
         int expectedDynLight = context.getResources().getColor(
