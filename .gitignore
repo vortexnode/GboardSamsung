@@ -85,7 +85,7 @@ atlassian-ide-plugin.xml
 # Cursive Clojure plugin
 .idea/replstate.xml
 
-# Crashlytics plugin (for Android Studio and IntelliJ)
+# Crashlytics plugin (for Android and IntelliJ)
 com_crashlytics_export_strings.xml
 crashlytics.properties
 crashlytics-build.properties
@@ -136,3 +136,12 @@ local.properties
 # Local Python caches
 __pycache__/
 *.py[cod]
+
+# Keystores & environment files
+*.keystore
+*.jks
+keystore.properties
+.env
+.env.*
+!.env.example
+google-services.json
