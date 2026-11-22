@@ -123,8 +123,8 @@ gradle-app.setting
 # Dependency directories
 node_modules/
 
-# gradle properties, due to Github token
-./gradle.properties
+# Keep the tracked root gradle.properties in version control.
+# Store personal Gradle credentials in ~/.gradle/gradle.properties instead.
 
 # Ignore IDEA files
 .idea/
