@@ -338,6 +338,14 @@
         <translation locale="en">Swipe left or right on the spacebar to switch Gboard languages. Short tap still inserts a space and holding moves the cursor.</translation>
         <translation locale="ru">Свайп влево или вправо по пробелу переключает языки Gboard. Короткое нажатие по-прежнему вводит пробел, а удержание перемещает курсор.</translation>
     </string>
+    <string name="gboard_patches_spacebar_language_chevrons_title">
+        <translation locale="en">Spacebar language chevrons</translation>
+        <translation locale="ru">Шевроны переключения языка на пробеле</translation>
+    </string>
+    <string name="gboard_patches_spacebar_language_chevrons_summary">
+        <translation locale="en">Show &lt; &gt; arrows on both sides of the active language on the spacebar as a visual swipe hint.</translation>
+        <translation locale="ru">Показывать стрелки &lt; &gt; по бокам от активного языка на пробеле как визуальную подсказку для свайпа.</translation>
+    </string>
     <string name="gboard_patches_hide_language_switch_key_title">
         <translation locale="en">Hide language switch key</translation>
         <translation locale="ru">Скрыть клавишу переключения языка</translation>

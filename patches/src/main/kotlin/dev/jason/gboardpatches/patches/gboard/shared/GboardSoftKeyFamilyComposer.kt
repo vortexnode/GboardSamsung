@@ -43,6 +43,7 @@ internal enum class GboardSoftKeyFamilyFeature(
         afterOrder = 900,
         afterRuntimeCalls = listOf(
             RuntimeCallId.SPACEBAR_GESTURE_RUNTIME_AFTER_SOFT_KEY_BIND,
+            RuntimeCallId.SPACEBAR_CHEVRON_RUNTIME_AFTER_SOFT_KEY_BIND,
         ),
     ),
     ;
@@ -285,7 +286,9 @@ internal fun GboardSoftKeyFamilyFeature.beforeDelegate(): String = when (this) {
 
 internal fun GboardSoftKeyFamilyFeature.afterDelegate(): String = when (this) {
     GboardSoftKeyFamilyFeature.SAMSUNG_SPACEBAR_GESTURES ->
-        emitSoftKeyRuntimeCall(afterRuntimeCalls.single(), "p0")
+        afterRuntimeCalls.joinToString("\n") { call ->
+            emitSoftKeyRuntimeCall(call, "p0")
+        }
     else -> error("$this has no after-stock contribution")
 }
 
@@ -328,7 +331,9 @@ private fun MutableMethod.stripExpectedSoftKeyFamilySlots(
     selected: Set<GboardSoftKeyFamilyFeature>,
 ) {
     val beforeInstructionCount = selected.sumOf { feature -> feature.beforeInstructionCount() }
-    val afterInstructionCount = selected.count { feature -> feature.afterOrder != null }
+    val afterInstructionCount = selected.sumOf { feature ->
+        if (feature.afterOrder != null) feature.afterRuntimeCalls.size else 0
+    }
     if (afterInstructionCount > 0) {
         returnInstructionIndices().asReversed().forEach { returnIndex ->
             check(returnIndex >= afterInstructionCount) { "Incomplete SoftKey after chain" }

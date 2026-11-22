@@ -16,6 +16,10 @@ public final class GboardSpacebarGestureSettings {
             "pref_spacebar_language_swipe_enabled";
     public static final boolean DEFAULT_SPACEBAR_LANGUAGE_SWIPE_ENABLED = true;
 
+    public static final String PREF_KEY_SPACEBAR_LANGUAGE_CHEVRONS_ENABLED =
+            "pref_spacebar_language_chevrons_enabled";
+    public static final boolean DEFAULT_SPACEBAR_LANGUAGE_CHEVRONS_ENABLED = false;
+
     public static final String PREF_KEY_HIDE_LANGUAGE_SWITCH_KEY =
             "pref_hide_language_switch_key";
     public static final boolean DEFAULT_HIDE_LANGUAGE_SWITCH_KEY = false;
@@ -24,6 +28,10 @@ public final class GboardSpacebarGestureSettings {
 
     private static volatile boolean cachedSwipeEnabled = DEFAULT_SPACEBAR_LANGUAGE_SWIPE_ENABLED;
     private static volatile long cachedSwipeTimestampMs = -1L;
+
+    private static volatile boolean cachedChevronsEnabled =
+            DEFAULT_SPACEBAR_LANGUAGE_CHEVRONS_ENABLED;
+    private static volatile long cachedChevronsTimestampMs = -1L;
 
     private static volatile boolean cachedHideGlobeKey = DEFAULT_HIDE_LANGUAGE_SWITCH_KEY;
     private static volatile long cachedHideGlobeTimestampMs = -1L;
@@ -66,6 +74,38 @@ public final class GboardSpacebarGestureSettings {
         return saved;
     }
 
+    public static boolean isSpacebarLanguageChevronsEnabled(Context context) {
+        long now = currentTimeMs();
+        long cachedAt = cachedChevronsTimestampMs;
+        if (cachedAt >= 0L && (now - cachedAt) < CACHE_TTL_MS) return cachedChevronsEnabled;
+        boolean value = readSpacebarLanguageChevronsEnabled(context);
+        cachedChevronsEnabled = value;
+        cachedChevronsTimestampMs = now;
+        return value;
+    }
+
+    public static boolean readSpacebarLanguageChevronsEnabled(Context context) {
+        return GboardPatchesSettings.readRuntimeSetting(
+                context,
+                GboardSpacebarGestureSettings::readSpacebarLanguageChevronsEnabled,
+                DEFAULT_SPACEBAR_LANGUAGE_CHEVRONS_ENABLED);
+    }
+
+    public static boolean readSpacebarLanguageChevronsEnabled(SharedPreferences preferences) {
+        return readBoolean(preferences, PREF_KEY_SPACEBAR_LANGUAGE_CHEVRONS_ENABLED,
+                DEFAULT_SPACEBAR_LANGUAGE_CHEVRONS_ENABLED);
+    }
+
+    public static boolean writeSpacebarLanguageChevronsEnabled(Context context, boolean enabled) {
+        boolean saved = writeBoolean(context, PREF_KEY_SPACEBAR_LANGUAGE_CHEVRONS_ENABLED, enabled);
+        if (saved) {
+            cachedChevronsEnabled = enabled;
+            cachedChevronsTimestampMs = currentTimeMs();
+            GboardSpacebarChevronRuntime.onChevronsPreferenceChanged(enabled);
+        }
+        return saved;
+    }
+
     public static boolean isHideLanguageSwitchKeyEnabled(Context context) {
         long now = currentTimeMs();
         long cachedAt = cachedHideGlobeTimestampMs;
@@ -104,8 +144,10 @@ public final class GboardSpacebarGestureSettings {
 
     public static void invalidateCache() {
         cachedSwipeTimestampMs = -1L;
+        cachedChevronsTimestampMs = -1L;
         cachedHideGlobeTimestampMs = -1L;
         cachedSwipeEnabled = DEFAULT_SPACEBAR_LANGUAGE_SWIPE_ENABLED;
+        cachedChevronsEnabled = DEFAULT_SPACEBAR_LANGUAGE_CHEVRONS_ENABLED;
         cachedHideGlobeKey = DEFAULT_HIDE_LANGUAGE_SWITCH_KEY;
     }
 

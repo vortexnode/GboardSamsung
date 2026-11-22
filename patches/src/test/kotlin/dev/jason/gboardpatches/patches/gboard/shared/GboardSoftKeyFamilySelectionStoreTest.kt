@@ -1,5 +1,6 @@
 package dev.jason.gboardpatches.patches.gboard.shared
 
+import dev.jason.gboardpatches.patches.gboard.shared.runtimeabi.RuntimeCallId
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -22,5 +23,24 @@ class GboardSoftKeyFamilySelectionStoreTest {
             store.take(context).toSet(),
         )
         assertTrue(store.take(context).isEmpty())
+    }
+
+    @Test
+    fun spacebarAfterStockDelegateInvokesGlobeAndChevronsIndependently() {
+        val feature = GboardSoftKeyFamilyFeature.SAMSUNG_SPACEBAR_GESTURES
+        assertEquals(
+            listOf(
+                RuntimeCallId.SPACEBAR_GESTURE_RUNTIME_AFTER_SOFT_KEY_BIND,
+                RuntimeCallId.SPACEBAR_CHEVRON_RUNTIME_AFTER_SOFT_KEY_BIND,
+            ),
+            feature.afterRuntimeCalls,
+        )
+
+        val delegate = feature.afterDelegate()
+        val globeCall = delegate.indexOf("GboardSpacebarGlobeKeyRuntime;->afterSoftKeyBind")
+        val chevronCall = delegate.indexOf("GboardSpacebarChevronRuntime;->afterSoftKeyBind")
+        assertTrue("Globe runtime call is missing", globeCall >= 0)
+        assertTrue("Chevron runtime call is missing", chevronCall > globeCall)
+        assertEquals(2, delegate.lineSequence().count { it.contains("invoke-static") })
     }
 }
