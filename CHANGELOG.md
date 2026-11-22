@@ -1,3 +1,9 @@
+## [4.7.0](https://github.com/vortexnode/GboardSamsung/compare/v4.6.1...v4.7.0) (2026-11-22)
+
+### ✨ New Features
+
+* render spacebar language chevrons with ViewOverlay ([7bfe7ca](https://github.com/vortexnode/GboardSamsung/commit/7bfe7ca9a08f3a0e4e84f951bc2e901f5fe8f68f))
+
 ## [4.6.1](https://github.com/vortexnode/GboardSamsung/compare/v4.6.0...v4.6.1) (2026-11-22)
 
 ### 🐛 Bug Fixes
