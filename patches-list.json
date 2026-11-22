@@ -414,6 +414,18 @@
       "options": []
     },
     {
+      "name": "Toolbar Round Chips",
+      "description": "Add adaptive circular backgrounds behind eligible icons in Gboard's top toolbar.\nДобавляет адаптивные круглые подложки под подходящими значками верхней панели Gboard.",
+      "use": true,
+      "dependencies": [],
+      "compatiblePackages": {
+        "com.google.android.inputmethod.latin": [
+          "18.5.4.993608717-release-arm64-v8a"
+        ]
+      },
+      "options": []
+    },
+    {
       "name": "Top Toolbar Item Count",
       "description": "Customize the Gboard top toolbar item count.\nПозволяет настроить количество значков на верхней панели инструментов Gboard.",
       "use": true,
