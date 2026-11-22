@@ -1,3 +1,13 @@
+## [4.6.0](https://github.com/vortexnode/GboardSamsung/compare/v4.5.1...v4.6.0) (2026-11-22)
+
+### ✨ New Features
+
+* add optional spacebar language chevrons ([e88e55b](https://github.com/vortexnode/GboardSamsung/commit/e88e55b345aae28eafb3520de2ed73523e1f5b98))
+
+### 🐛 Bug Fixes
+
+* register independent spacebar chevron runtime contract ([2345ce1](https://github.com/vortexnode/GboardSamsung/commit/2345ce1db9ecf5e471ee138e6188cd8fcd49852f))
+
 ## [4.5.1](https://github.com/vortexnode/GboardSamsung/compare/v4.5.0...v4.5.1) (2026-11-22)
 
 ### 🐛 Bug Fixes
