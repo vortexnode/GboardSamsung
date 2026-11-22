@@ -101,7 +101,7 @@ public final class GboardSpacebarChevronRuntimeTest {
 
     @Test public void labelPaddingIsIncludedInAvailableWidth() {
         KeycapPair pair = createKeycap("English (United Kingdom)", 480, 80, Color.BLACK);
-        pair.label.setPadding(180, 0, 180, 0);
+        pair.label.setPadding(235, 0, 235, 0);
         GboardSpacebarChevronRuntime.applyToSoftKeyView(pair.container, true, true);
         Assert.assertNull(pair.label.getCompoundDrawables()[0]);
         Assert.assertNull(pair.label.getCompoundDrawables()[2]);
