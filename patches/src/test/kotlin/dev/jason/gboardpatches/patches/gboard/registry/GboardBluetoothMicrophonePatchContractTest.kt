@@ -68,9 +68,9 @@ class GboardBluetoothMicrophonePatchContractTest {
         )
 
         val voiceFeaturesSection = readme
-            .substringAfter("### Active patch catalog (34 patches)")
-            .substringAfter("Language, AI, suggestions & voice")
-            .substringBefore("\n### ")
+            .substringAfter("## Active Patch Catalog (35 patches)")
+            .substringAfter("Language, AI, Suggestions")
+            .substringBefore("</details>")
 
         assertTrue(voiceFeaturesSection.contains("`Use Bluetooth Microphone`"))
     }

@@ -124,7 +124,7 @@ Built as a focused downstream fork of [jasonwu1994/Gboard-patches](https://githu
 - **Enable Inline Autofill Suggestions** — Enable inline autofill suggestions.
 - **Grammar Checker** — Enable Text correction → Grammar check.
 - **Inline Suggestions** — Enable Text correction → Smart Compose.
-- **Use Bluetooth Microphone** — Enable Voice typing → Use Bluetooth microphone.
+- **`Use Bluetooth Microphone`** — Enable Voice typing → Use Bluetooth microphone.
 
 </details>
 
