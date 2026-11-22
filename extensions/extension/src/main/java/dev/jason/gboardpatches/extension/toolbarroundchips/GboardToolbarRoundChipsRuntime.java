@@ -1,7 +1,6 @@
 package dev.jason.gboardpatches.extension.toolbarroundchips;
 
 import android.content.Context;
-import android.content.SharedPreferences;
 import android.content.res.ColorStateList;
 import android.content.res.Configuration;
 import android.content.res.Resources;
@@ -20,6 +19,8 @@ import android.view.ViewOverlay;
 import android.view.ViewParent;
 import android.widget.ImageView;
 import android.widget.TextView;
+
+import dev.jason.gboardpatches.extension.settings.GboardPatchesSettings;
 
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
@@ -333,22 +334,8 @@ public final class GboardToolbarRoundChipsRuntime {
     }
 
     private static String readActiveThemeSpec(Context context) {
-        if (context == null) return null;
-        String prefsName = context.getPackageName() + "_preferences";
-        try {
-            Context storage = context.createDeviceProtectedStorageContext();
-            SharedPreferences prefs = storage.getSharedPreferences(prefsName, Context.MODE_PRIVATE);
-            String value = prefs.getString(GBOARD_THEME_PREF_KEY, null);
-            if (value != null) return value;
-        } catch (Throwable ignored) {
-            // Fall through to credential-protected storage fallback.
-        }
-        try {
-            SharedPreferences prefs = context.getSharedPreferences(prefsName, Context.MODE_PRIVATE);
-            return prefs.getString(GBOARD_THEME_PREF_KEY, null);
-        } catch (Throwable ignored) {
-            return null;
-        }
+        return GboardPatchesSettings.readGboardPreferenceString(
+                context, GBOARD_THEME_PREF_KEY, null);
     }
 
     private static int resolveIconColor(View softKeyView) {
