@@ -1,3 +1,9 @@
+## [4.5.1](https://github.com/vortexnode/GboardSamsung/compare/v4.5.0...v4.5.1) (2026-11-22)
+
+### 🐛 Bug Fixes
+
+* correct Gradle credentials ignore guidance ([455b522](https://github.com/vortexnode/GboardSamsung/commit/455b5220b388eb4a2d0ab313f52ec50cd8c99693))
+
 ## [4.5.0](https://github.com/vortexnode/GboardSamsung/compare/v4.4.5...v4.5.0) (2026-11-22)
 
 ### ✨ New Features
