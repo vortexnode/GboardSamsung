@@ -1,3 +1,9 @@
+## [4.9.2](https://github.com/vortexnode/GboardSamsung/compare/v4.9.1...v4.9.2) (2026-11-22)
+
+### 🐛 Bug Fixes
+
+* распознавать дефолтную динамическую тему Gboard на Android 12+ ([#18](https://github.com/vortexnode/GboardSamsung/issues/18)) ([55704ea](https://github.com/vortexnode/GboardSamsung/commit/55704eafadc81f0b3e1b54b2ec4735dc1a5012c9))
+
 ## [4.9.1](https://github.com/vortexnode/GboardSamsung/compare/v4.9.0...v4.9.1) (2026-11-22)
 
 ### 🐛 Bug Fixes
