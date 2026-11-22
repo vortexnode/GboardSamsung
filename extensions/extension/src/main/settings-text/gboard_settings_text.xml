@@ -323,8 +323,8 @@
         <translation locale="ru">Язык</translation>
     </string>
     <string name="gboard_patches_language_settings_summary">
-        <translation locale="en">Spacebar language swipe and language switch key visibility.</translation>
-        <translation locale="ru">Переключение языка свайпом по пробелу и видимость клавиши переключения языка.</translation>
+        <translation locale="en">Spacebar language swipe, spacebar chevrons, and language switch key visibility.</translation>
+        <translation locale="ru">Свайп по пробелу, шевроны на пробеле и видимость клавиши переключения языка.</translation>
     </string>
     <string name="gboard_patches_language_settings_section">
         <translation locale="en">Language switching</translation>
@@ -337,6 +337,14 @@
     <string name="gboard_patches_spacebar_language_swipe_summary">
         <translation locale="en">Swipe left or right on the spacebar to switch Gboard languages. Short tap still inserts a space and holding moves the cursor.</translation>
         <translation locale="ru">Свайп влево или вправо по пробелу переключает языки Gboard. Короткое нажатие по-прежнему вводит пробел, а удержание перемещает курсор.</translation>
+    </string>
+    <string name="gboard_patches_spacebar_language_chevrons_title">
+        <translation locale="en">Spacebar language switch chevrons</translation>
+        <translation locale="ru">Шевроны переключения языка на пробеле</translation>
+    </string>
+    <string name="gboard_patches_spacebar_language_chevrons_summary">
+        <translation locale="en">Show passive ‹ › chevrons on both sides of the active language label on the spacebar. Visual only; works independently of spacebar swipe and adapts to the active theme.</translation>
+        <translation locale="ru">Показывает пассивные шевроны ‹ › по бокам от названия активного языка на пробеле. Только визуальный индикатор: работает независимо от свайпа и подстраивается под тему.</translation>
     </string>
     <string name="gboard_patches_hide_language_switch_key_title">
         <translation locale="en">Hide language switch key</translation>

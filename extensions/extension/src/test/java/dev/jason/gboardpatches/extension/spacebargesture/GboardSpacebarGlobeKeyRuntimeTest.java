@@ -43,11 +43,29 @@ public final class GboardSpacebarGlobeKeyRuntimeTest {
     }
 
     @Test
-    public void spacebarSwipeAndHideGlobeSettingsAreDistinctAndIndependent() {
+    public void spacebarSwipeChevronsAndHideGlobeSettingsAreDistinctAndIndependent() {
         Assert.assertNotEquals(
                 GboardSpacebarGestureSettings.PREF_KEY_SPACEBAR_LANGUAGE_SWIPE_ENABLED,
                 GboardSpacebarGestureSettings.PREF_KEY_HIDE_LANGUAGE_SWITCH_KEY);
+        Assert.assertNotEquals(
+                GboardSpacebarGestureSettings.PREF_KEY_SPACEBAR_LANGUAGE_SWIPE_ENABLED,
+                GboardSpacebarGestureSettings.PREF_KEY_SPACEBAR_LANGUAGE_CHEVRONS_ENABLED);
+        Assert.assertNotEquals(
+                GboardSpacebarGestureSettings.PREF_KEY_HIDE_LANGUAGE_SWITCH_KEY,
+                GboardSpacebarGestureSettings.PREF_KEY_SPACEBAR_LANGUAGE_CHEVRONS_ENABLED);
         Assert.assertTrue(GboardSpacebarGestureSettings.DEFAULT_SPACEBAR_LANGUAGE_SWIPE_ENABLED);
         Assert.assertFalse(GboardSpacebarGestureSettings.DEFAULT_HIDE_LANGUAGE_SWITCH_KEY);
+        Assert.assertFalse(
+                GboardSpacebarGestureSettings.DEFAULT_SPACEBAR_LANGUAGE_CHEVRONS_ENABLED);
+    }
+
+    @Test
+    public void spaceBarTagMatcherRecognizesExactAndPrefixedSpaceBarTagsOnly() {
+        Assert.assertTrue(GboardSpacebarChevronRuntime.isSpaceBarTag(".space_bar"));
+        Assert.assertTrue(GboardSpacebarChevronRuntime.isSpaceBarTag(".space_bar.for-pill"));
+        Assert.assertFalse(GboardSpacebarChevronRuntime.isSpaceBarTag(".keytop"));
+        Assert.assertFalse(GboardSpacebarChevronRuntime.isSpaceBarTag(".space_bar_extra"));
+        Assert.assertFalse(GboardSpacebarChevronRuntime.isSpaceBarTag(null));
+        Assert.assertFalse(GboardSpacebarChevronRuntime.isSpaceBarTag(Integer.valueOf(1)));
     }
 }
