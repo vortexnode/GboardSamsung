@@ -1,3 +1,9 @@
+## [4.9.0](https://github.com/vortexnode/GboardSamsung/compare/v4.8.1...v4.9.0) (2026-11-22)
+
+### ✨ New Features
+
+* адаптировать цвет подложек тулбара под динамическую и стандартные темы ([#16](https://github.com/vortexnode/GboardSamsung/issues/16)) ([5dade1f](https://github.com/vortexnode/GboardSamsung/commit/5dade1f5c19aadc945b1214d16786a724aeff6f8))
+
 ## [4.8.1](https://github.com/vortexnode/GboardSamsung/compare/v4.8.0...v4.8.1) (2026-11-22)
 
 ### 🐛 Bug Fixes
