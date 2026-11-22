@@ -1,8 +1,40 @@
 # GboardSamsung
 
+**[English](README.md) | [Русский](README.ru.md)**
+
 **GboardSamsung** is a downstream Morphe patch project maintained by **Vortex Node**, derived from Jason Wu's [Gboard Patches](https://github.com/jasonwu1994/Gboard-patches) (`GPL-3.0`). It focuses on bringing a Samsung Keyboard-style typing experience (including bidirectional spacebar language switching while preserving tap-to-space and long-press cursor control) to the real Gboard app while retaining Gboard's own typing engine, predictions, dictionaries, voice typing, clipboard, and core capabilities.
 
 > **Important:** This repository contains Morphe patches for a user-provided Gboard APK. It is **not** a standalone keyboard app and does **not** contain Google's proprietary Gboard source code or APK binaries.
+
+## Supported target
+
+- **Target Gboard build:** `18.5.4.993608717-release-arm64-v8a` (`18.5.4`)
+- **Primary test device:** Samsung Galaxy S22 5G (`SM-S901U1`), Android 16 / One UI 8
+
+## Installation (Morphe Manager)
+
+GboardSamsung is distributed as Morphe patches rather than a pre-built APK. You patch your own copy of Gboard directly on your phone using **Morphe Manager**:
+
+### 1. Add the patch source
+- **One-tap:** [Add GboardSamsung to Morphe Manager](https://morphe.software/add-source?github=vortexnode/GboardSamsung)
+- **Manual:** Open Morphe Manager → **Patch sources → + → Remote**, then paste:
+  ```text
+  https://github.com/vortexnode/GboardSamsung
+  ```
+
+### 2. Get the supported Gboard APK
+- Download a clean standalone **arm64-v8a** APK of Gboard **`18.5.4.993608717-release-arm64-v8a`** (e.g., from APKMirror — choose the full APK, not a split `.apkm` bundle unless your manager unsplit-converts it automatically).
+
+### 3. Patch & install
+1. In Morphe Manager, select the downloaded Gboard `18.5.4` APK.
+2. Review and select the patches you want (by default, `Package Rename` sets the package ID to `gboardsamsung.com.google.android.inputmethod.latin` and the display name to `GboardSamsung`, so you can install it alongside stock Gboard without conflicts).
+3. Run the patcher and install the resulting APK.
+
+### 4. Enable the keyboard
+- **Samsung (One UI):** *Settings → General management → Keyboard list and default* → enable **GboardSamsung** and set it as default.
+- **Other Android devices:** *Settings → System → Keyboard → On-screen keyboard* → enable **GboardSamsung**.
+
+> **Updates:** Once the remote source is added, Morphe Manager automatically checks this repository for new patch bundle releases.
 
 ## Upstream attribution & provenance
 
@@ -11,11 +43,6 @@
 - **Imported upstream baseline:** `463269a0f315ef9cee749e10d155af1aedaa49ad` (`2026-11-12`, recorded in `UPSTREAM_COMMIT.txt`; original upstream README archived in `UPSTREAM_README.md`)
 - **Patch framework:** Morphe (`app.morphe.patches`)
 - **License:** GNU General Public License v3.0 (`LICENSE`, `NOTICE`)
-
-## Supported target
-
-- **Target Gboard build:** `18.5.4.993608717-release-arm64-v8a` (`18.5.4`)
-- **Primary test device:** Samsung Galaxy S22 5G (`SM-S901U1`), Android 16 / One UI 8
 
 ## Active patch catalog (34 patches)
 
@@ -58,17 +85,7 @@ This project builds Morphe patch bundles (`.mpp`) and patch catalog metadata (`p
 - Run unit tests: `./gradlew test`
 - Morphe GitHub Packages authentication requires `gpr.user` / `gpr.key` (or `GITHUB_ACTOR` / `GITHUB_TOKEN`). Never commit credentials, tokens, or proprietary Gboard APKs.
 
-## Morphe Manager remote source
-
-Add this repository once in Morphe Manager under **Patch sources → + → Remote**:
-
-`https://github.com/vortexnode/GboardSamsung`
-
-Or use the one-tap link:
-
-[Add GboardSamsung to Morphe Manager](https://morphe.software/add-source?github=vortexnode/GboardSamsung)
-
-After setup, Morphe Manager can check this source for updates automatically. Successful changes merged into `main` are tested first; conventional `fix:`, `feat:`, `bump:`, `perf:`, and `build(morphe-source):` commits trigger a versioned Morphe release. The release contains the MPP bundle and refreshed source metadata. Test-only and documentation-only commits do not publish a new bundle.
+Successful changes merged into `main` are tested first; conventional `fix:`, `feat:`, `bump:`, `perf:`, and `build(morphe-source):` commits trigger a versioned Morphe release containing the `.mpp` bundle and refreshed source metadata. Test-only and documentation-only commits do not publish a new bundle.
 
 ## Documentation
 
