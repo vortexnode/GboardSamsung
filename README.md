@@ -14,6 +14,8 @@ Morphe patches that bring Samsung One UI ergonomics and polish to Gboard — wit
 
 [English](README.md) · [Русский](README.ru.md)
 
+[![Add to Morphe](https://img.shields.io/badge/Add%20to%20Morphe-1--tap%20install-1a73e8?style=for-the-badge&logo=android&logoColor=white)](https://morphe.software/add-source?github=vortexnode/GboardSamsung)
+
 [![Latest Release](https://img.shields.io/github/v/release/vortexnode/GboardSamsung?style=flat-square&label=release)](https://github.com/vortexnode/GboardSamsung/releases/latest)
 [![CI](https://github.com/vortexnode/GboardSamsung/actions/workflows/ci.yml/badge.svg)](https://github.com/vortexnode/GboardSamsung/actions/workflows/ci.yml)
 ![Patches](https://img.shields.io/badge/patches-36-blue?style=flat-square)
@@ -64,7 +66,7 @@ Morphe patches that bring Samsung One UI ergonomics and polish to Gboard — wit
 
 ## What makes GboardSamsung different
 
-Built as a focused downstream fork of [jasonwu1994/Gboard-patches](https://github.com/jasonwu1994/Gboard-patches), GboardSamsung adds dedicated Samsung One UI 8 UX upgrades and strips out unused Taiwan/legacy patches:
+Built as a focused downstream fork of [jasonwu1994/Gboard-patches](https://github.com/jasonwu1994/Gboard-patches), GboardSamsung adds dedicated Samsung One UI UX upgrades and strips out unused Taiwan/legacy patches:
 
 | Feature | What it does |
 | --- | --- |
@@ -77,9 +79,9 @@ Built as a focused downstream fork of [jasonwu1994/Gboard-patches](https://githu
 
 ## Quick Install (Morphe Manager)
 
-1. Open [Morphe Manager](https://github.com/MorpheApp/morphe-manager) → **Sources** → **Add source** and paste:
+1. **[Tap here to add GboardSamsung to Morphe in one tap](https://morphe.software/add-source?github=vortexnode/GboardSamsung)** — or open [Morphe Manager](https://github.com/MorpheApp/morphe-manager) → **Sources** → **Add source** and paste:
    ```text
-   https://raw.githubusercontent.com/vortexnode/GboardSamsung/main/patches-bundle.json
+   https://github.com/vortexnode/GboardSamsung
    ```
 2. Select a compatible stock **Gboard `18.5.4`** APK (`arm64-v8a` recommended).
 3. Choose the patches you want (enable **Package Rename** if you want to keep stock Gboard installed) and tap **Patch**.
@@ -89,7 +91,7 @@ Built as a focused downstream fork of [jasonwu1994/Gboard-patches](https://githu
 
 ## Compatibility
 
-- **Recommended target:** Gboard `18.5.4` (`arm64-v8a`, tested on Samsung Galaxy S22 / Android 16 / One UI 8).
+- **Recommended target:** Gboard `18.5.4` (`arm64-v8a`, tested on Samsung Galaxy S22 / Android 16 / One UI).
 - **Root:** Not required.
 - **Updates:** New releases automatically publish `.mpp` bundles and update `patches-bundle.json` for Morphe Manager.
 
