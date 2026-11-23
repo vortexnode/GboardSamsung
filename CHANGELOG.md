@@ -1,3 +1,9 @@
+## [4.12.0](https://github.com/vortexnode/GboardSamsung/compare/v4.11.0...v4.12.0) (2026-11-23)
+
+### ✨ New Features
+
+* добавить «Буфер обмена Samsung», поправить иконки приложения и логотип в README ([#25](https://github.com/vortexnode/GboardSamsung/issues/25)) ([c758ace](https://github.com/vortexnode/GboardSamsung/commit/c758acef8ef076b9b168c530a4b7681835cfa624))
+
 ## [4.11.0](https://github.com/vortexnode/GboardSamsung/compare/v4.10.0...v4.11.0) (2026-11-23)
 
 ### ✨ New Features
