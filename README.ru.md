@@ -17,6 +17,7 @@ Morphe-патчи, которые переносят эргономику и э�
 [![Добавить в Morphe](https://img.shields.io/badge/%D0%94%D0%BE%D0%B1%D0%B0%D0%B2%D0%B8%D1%82%D1%8C%20%D0%B2%20Morphe-%D0%B2%201%20%D1%82%D0%B0%D0%BF-1a73e8?style=for-the-badge&logo=android&logoColor=white)](https://morphe.software/add-source?github=vortexnode/GboardSamsung)
 
 [![Последний релиз](https://img.shields.io/github/v/release/vortexnode/GboardSamsung?style=flat-square&label=release)](https://github.com/vortexnode/GboardSamsung/releases/latest)
+[![Скачивания](https://img.shields.io/github/downloads/vortexnode/GboardSamsung/total?style=flat-square&label=downloads&color=brightgreen)](https://github.com/vortexnode/GboardSamsung/releases)
 [![CI](https://github.com/vortexnode/GboardSamsung/actions/workflows/ci.yml/badge.svg)](https://github.com/vortexnode/GboardSamsung/actions/workflows/ci.yml)
 ![Патчи](https://img.shields.io/badge/patches-36-blue?style=flat-square)
 ![Целевой Gboard](https://img.shields.io/badge/Gboard-18.5.4-informational?style=flat-square)
