@@ -1,10 +1,16 @@
 <div align="center">
 
-<img src="docs/assets/logo.png" alt="GboardSamsung logo" width="128"/>
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/logo-dark.png">
+  <source media="(prefers-color-scheme: light)" srcset="docs/assets/logo.png">
+  <img src="docs/assets/logo.png" alt="GboardSamsung logo" width="128"/>
+</picture>
 
 # GboardSamsung
 
-**Morphe-патчи для Gboard в стиле Samsung One UI 8**
+**Лучшее от Google. Комфорт от Samsung.**
+
+*Morphe-патчи для Gboard в стиле Samsung One UI 8*
 
 Сохраняет движок ввода, подсказки, буфер обмена и оригинальные иконки Google — добавляя жесты пробела в стиле Samsung, шевроны языка, адаптивные круглые подложки тулбара и полную русскую локализацию настроек.
 
