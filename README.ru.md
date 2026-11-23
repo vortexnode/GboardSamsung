@@ -47,6 +47,21 @@ Morphe-патчи, которые переносят эргономику и э�
   </tr>
 </table>
 
+### Буфер обмена Samsung vs. стандартный Gboard
+
+<table>
+  <tr>
+    <td align="center" valign="top" width="50%">
+      <img src="docs/assets/preview-clipboard-google.jpg" alt="Стандартный буфер Gboard" width="420"/><br/>
+      <sub><b>Стандартный Gboard</b> — дробит один скопированный текст на 4 отдельные карточки (текст, дата, число, место)</sub>
+    </td>
+    <td align="center" valign="top" width="50%">
+      <img src="docs/assets/preview-clipboard-samsung.jpg" alt="Буфер обмена Samsung" width="420"/><br/>
+      <sub><b>Буфер обмена Samsung</b> — сохраняет тот же текст одним цельным блоком</sub>
+    </td>
+  </tr>
+</table>
+
 ## Чем GboardSamsung отличается от оригинала и upstream
 
 Проект развивается как сфокусированный форк [jasonwu1994/Gboard-patches](https://github.com/jasonwu1994/Gboard-patches) с собственными визуальными и UX-доработками под Samsung One UI 8 и без лишних тайваньских/неиспользуемых патчей:
