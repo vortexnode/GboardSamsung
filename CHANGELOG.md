@@ -1,3 +1,9 @@
+## [4.15.0](https://github.com/vortexnode/GboardSamsung/compare/v4.14.0...v4.15.0) (2026-11-23)
+
+### ✨ New Features
+
+* добавить 3 режима свайпа по пробелу (Samsung One UI, Gboard, Свободное переключение) с превью и исправить порядок при 4+ языках ([#31](https://github.com/vortexnode/GboardSamsung/issues/31)) ([26c95ca](https://github.com/vortexnode/GboardSamsung/commit/26c95ca6568afac3b17cabdf3bd8c959d51b2cec))
+
 ## [4.14.0](https://github.com/vortexnode/GboardSamsung/compare/v4.13.0...v4.14.0) (2026-11-23)
 
 ### ✨ New Features
