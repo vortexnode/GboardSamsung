@@ -17,6 +17,7 @@ Morphe patches that bring Samsung One UI ergonomics and polish to Gboard — wit
 [![Add to Morphe](https://img.shields.io/badge/Add%20to%20Morphe-1--tap%20install-1a73e8?style=for-the-badge&logo=android&logoColor=white)](https://morphe.software/add-source?github=vortexnode/GboardSamsung)
 
 [![Latest Release](https://img.shields.io/github/v/release/vortexnode/GboardSamsung?style=flat-square&label=release)](https://github.com/vortexnode/GboardSamsung/releases/latest)
+[![Downloads](https://img.shields.io/github/downloads/vortexnode/GboardSamsung/total?style=flat-square&label=downloads&color=brightgreen)](https://github.com/vortexnode/GboardSamsung/releases)
 [![CI](https://github.com/vortexnode/GboardSamsung/actions/workflows/ci.yml/badge.svg)](https://github.com/vortexnode/GboardSamsung/actions/workflows/ci.yml)
 ![Patches](https://img.shields.io/badge/patches-36-blue?style=flat-square)
 ![Target Gboard](https://img.shields.io/badge/Gboard-18.5.4-informational?style=flat-square)
