@@ -47,6 +47,21 @@ Morphe patches that bring Samsung One UI ergonomics and polish to Gboard — wit
   </tr>
 </table>
 
+### Samsung Clipboard vs. Stock Gboard
+
+<table>
+  <tr>
+    <td align="center" valign="top" width="50%">
+      <img src="docs/assets/preview-clipboard-google.jpg" alt="Stock Gboard Clipboard" width="420"/><br/>
+      <sub><b>Stock Gboard</b> — splits one copied text into 4 separate cards (full text, date, number, location)</sub>
+    </td>
+    <td align="center" valign="top" width="50%">
+      <img src="docs/assets/preview-clipboard-samsung.jpg" alt="Samsung Clipboard" width="420"/><br/>
+      <sub><b>Samsung Clipboard</b> — keeps the same copied text as one clean whole block</sub>
+    </td>
+  </tr>
+</table>
+
 ## What makes GboardSamsung different
 
 Built as a focused downstream fork of [jasonwu1994/Gboard-patches](https://github.com/jasonwu1994/Gboard-patches), GboardSamsung adds dedicated Samsung One UI 8 UX upgrades and strips out unused Taiwan/legacy patches:
