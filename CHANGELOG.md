@@ -1,3 +1,9 @@
+## [4.15.1](https://github.com/vortexnode/GboardSamsung/compare/v4.15.0...v4.15.1) (2026-11-23)
+
+### 🐛 Bug Fixes
+
+* исправить показ Toast-уведомления в настройках языка и очистить репозиторий от временных файлов ([#32](https://github.com/vortexnode/GboardSamsung/issues/32)) ([d24255f](https://github.com/vortexnode/GboardSamsung/commit/d24255fc238d33f3e4835626c49661a93a1c3614))
+
 ## [4.15.0](https://github.com/vortexnode/GboardSamsung/compare/v4.14.0...v4.15.0) (2026-11-23)
 
 ### ✨ New Features
