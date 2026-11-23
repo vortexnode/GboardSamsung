@@ -10,9 +10,7 @@
 
 **The best of Google. The feel of Samsung.**
 
-*Samsung One UI 8-inspired UX & visual Morphe patches for Gboard*
-
-Keep Gboard's typing engine, predictions, clipboard, and original Google icons — with Samsung-style spacebar gestures, language chevrons, adaptive round toolbar chips, and full RU/EN settings.
+Morphe patches that bring Samsung One UI ergonomics and polish to Gboard — without giving up Google's typing engine, predictions, or original icons.
 
 [English](README.md) · [Русский](README.ru.md)
 
@@ -28,21 +26,21 @@ Keep Gboard's typing engine, predictions, clipboard, and original Google icons �
 
 <table>
   <tr>
-    <td align="center">
+    <td align="center" valign="top" width="50%">
       <img src="docs/assets/preview-material-you-dark.jpg" alt="Material You Dark" width="420"/><br/>
       <sub><b>Material You Dark</b> — dynamic toolbar chips + fixed ⊞ &amp; mic</sub>
     </td>
-    <td align="center">
+    <td align="center" valign="top" width="50%">
       <img src="docs/assets/preview-material-you-light.jpg" alt="Material You Light" width="420"/><br/>
       <sub><b>Material You Light</b> — dynamic pastel chips + white ⊞ &amp; mic</sub>
     </td>
   </tr>
   <tr>
-    <td align="center">
+    <td align="center" valign="top" width="50%">
       <img src="docs/assets/preview-system-dark.jpg" alt="System Dark" width="420"/><br/>
-      <sub><b>System Dark</b> — unified neutral dark circular chips</sub>
+      <sub><b>System Dark</b> — neutral dark chips matching the mic button</sub>
     </td>
-    <td align="center">
+    <td align="center" valign="top" width="50%">
       <img src="docs/assets/preview-system-light.jpg" alt="System Light" width="420"/><br/>
       <sub><b>System Light</b> — crisp white chips matching the mic button</sub>
     </td>

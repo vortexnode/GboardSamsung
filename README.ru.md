@@ -10,9 +10,7 @@
 
 **Лучшее от Google. Комфорт от Samsung.**
 
-*Morphe-патчи для Gboard в стиле Samsung One UI 8*
-
-Сохраняет движок ввода, подсказки, буфер обмена и оригинальные иконки Google — добавляя жесты пробела в стиле Samsung, шевроны языка, адаптивные круглые подложки тулбара и полную русскую локализацию настроек.
+Morphe-патчи, которые переносят эргономику и эстетику Samsung One UI в Gboard — сохраняя точность ввода, подсказки и оригинальные иконки Google.
 
 [English](README.md) · [Русский](README.ru.md)
 
@@ -28,21 +26,21 @@
 
 <table>
   <tr>
-    <td align="center">
-      <img src="docs/assets/preview-material-you-dark.jpg" alt="Material You Тёмная" width="420"/><br/>
+    <td align="center" valign="top" width="50%">
+      <img src="docs/assets/preview-material-you-dark.jpg" alt="Динамическая тёмная" width="420"/><br/>
       <sub><b>Динамическая тёмная</b> — цветные круги тулбара + фиксированные ⊞ и микрофон</sub>
     </td>
-    <td align="center">
-      <img src="docs/assets/preview-material-you-light.jpg" alt="Material You Светлая" width="420"/><br/>
+    <td align="center" valign="top" width="50%">
+      <img src="docs/assets/preview-material-you-light.jpg" alt="Динамическая светлая" width="420"/><br/>
       <sub><b>Динамическая светлая</b> — пастельные круги + белые ⊞ и микрофон</sub>
     </td>
   </tr>
   <tr>
-    <td align="center">
+    <td align="center" valign="top" width="50%">
       <img src="docs/assets/preview-system-dark.jpg" alt="Системная тёмная" width="420"/><br/>
-      <sub><b>Системная тёмная</b> — единые нейтральные тёмные подложки</sub>
+      <sub><b>Системная тёмная</b> — нейтральные тёмные подложки в стиль микрофона</sub>
     </td>
-    <td align="center">
+    <td align="center" valign="top" width="50%">
       <img src="docs/assets/preview-system-light.jpg" alt="Системная светлая" width="420"/><br/>
       <sub><b>Системная светлая</b> — чистые белые подложки в стиль микрофона</sub>
     </td>
