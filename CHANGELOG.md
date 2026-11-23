@@ -1,3 +1,9 @@
+## [4.13.0](https://github.com/vortexnode/GboardSamsung/compare/v4.12.0...v4.13.0) (2026-11-23)
+
+### ✨ New Features
+
+* локализовать пункт «Патчи» в главном меню настроек Gboard (RU/EN) ([#29](https://github.com/vortexnode/GboardSamsung/issues/29)) ([78ae20a](https://github.com/vortexnode/GboardSamsung/commit/78ae20ad356a5d91724c1c6fa6b186187f4cb65a))
+
 ## [4.12.0](https://github.com/vortexnode/GboardSamsung/compare/v4.11.0...v4.12.0) (2026-11-23)
 
 ### ✨ New Features
