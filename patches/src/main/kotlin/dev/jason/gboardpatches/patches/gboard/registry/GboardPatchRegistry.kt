@@ -263,11 +263,16 @@ val gboardCustomAppIconPatch = gboardPublicResourcePatch(
     name = "Custom App Icon",
     description = "Replace Gboard's launcher icon with the GboardSamsung Light/Dark adaptive icon.\n" +
         "Заменяет иконку приложения на фирменную адаптивную иконку GboardSamsung (светлая и тёмная темы).",
-    dependencies = listOf(
-        gboardCustomAppIconResourcePatch,
-    ),
-)
+    default = true,
+) {
+    compatibleWith(COMPATIBILITY_GBOARD)
 
+    dependsOn(
+        gboardCustomAppIconResourcePatch,
+    )
+}
+
+@Suppress("unused")
 val gboardToolbarRoundChipsPatch = gboardPublicResourcePatch(
     featureId = "toolbar_round_chips",
     name = "Toolbar Round Chips",
