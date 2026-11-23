@@ -1,3 +1,9 @@
+## [4.11.0](https://github.com/vortexnode/GboardSamsung/compare/v4.10.0...v4.11.0) (2026-11-23)
+
+### ✨ New Features
+
+* добавить патч Custom App Icon со светлой и тёмной адаптивной иконкой GboardSamsung ([#23](https://github.com/vortexnode/GboardSamsung/issues/23)) ([934eb46](https://github.com/vortexnode/GboardSamsung/commit/934eb467d975d3ca2302d19ed251d678e31144dc))
+
 ## [4.10.0](https://github.com/vortexnode/GboardSamsung/compare/v4.9.2...v4.10.0) (2026-11-22)
 
 ### ✨ New Features
