@@ -3,7 +3,7 @@
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/assets/logo-dark.png">
   <source media="(prefers-color-scheme: light)" srcset="docs/assets/logo.png">
-  <img src="docs/assets/logo.png" alt="GboardSamsung logo" width="128"/>
+  <img src="docs/assets/logo.png" alt="GboardSamsung logo" width="84"/>
 </picture>
 
 # GboardSamsung
@@ -16,7 +16,7 @@ Morphe-патчи, которые переносят эргономику и э�
 
 [![Последний релиз](https://img.shields.io/github/v/release/vortexnode/GboardSamsung?style=flat-square&label=release)](https://github.com/vortexnode/GboardSamsung/releases/latest)
 [![CI](https://github.com/vortexnode/GboardSamsung/actions/workflows/ci.yml/badge.svg)](https://github.com/vortexnode/GboardSamsung/actions/workflows/ci.yml)
-![Патчи](https://img.shields.io/badge/patches-35-blue?style=flat-square)
+![Патчи](https://img.shields.io/badge/patches-36-blue?style=flat-square)
 ![Целевой Gboard](https://img.shields.io/badge/Gboard-18.5.4-informational?style=flat-square)
 [![Лицензия: GPL-3.0](https://img.shields.io/badge/license-GPL--3.0-green?style=flat-square)](LICENSE)
 
@@ -55,6 +55,8 @@ Morphe-патчи, которые переносят эргономику и э�
 | --- | --- |
 | **Жесты пробела Samsung** | Свайп влево/вправо по пробелу переключает языки, долгое нажатие переводит пробел в управление курсором, плюс отключаемые шевроны языка `< Русский >` через пассивный `ViewOverlay`. |
 | **Круглые подложки тулбара** | Адаптивные круглые подложки под 3–8 иконками верхнего тулбара (оригинальные иконки Google сохраняются): в теме «Динамический цвет» подхватывают тон больших клавиш Material You, в стандартных темах повторяют стиль микрофона Rambler. Отдельным тумблером включается фиксированная круглая подложка `38dp` под кнопкой меню `⊞` (при раскрытии в `✕` сохраняется родной круг Gboard). |
+| **Буфер обмена Samsung** | Переключатель в **Буфер обмена → Основные**, сохраняющий скопированный текст одним цельным блоком, как в клавиатуре Samsung — без разбивки на отдельные карточки со ссылками, телефонами, адресами и почтой, не затрагивая картинки, закрепление, сроки хранения и остальные функции. |
+| **Фирменная иконка приложения** | Адаптивная светлая и тёмная иконка GboardSamsung с точной посадкой в безопасную зону маски One UI. |
 | **Полная локализация RU / EN** | Русский и английский интерфейс всех разделов «Патчи», встроенный поиск по настройкам и русские описания релизов в Morphe Manager. |
 | **Отдельный пакет (`Package Rename`)** | Устанавливается параллельно с обычным Gboard (`gboardsamsung.com.google.android.inputmethod.latin`) без root-прав. |
 
@@ -76,13 +78,14 @@ Morphe-патчи, которые переносят эргономику и э�
 - **Root-права:** не требуются.
 - **Автообновления:** каждый релиз автоматически собирает `.mpp` и обновляет `patches-bundle.json` для Morphe Manager.
 
-## Каталог активных патчей (35)
+## Каталог активных патчей (36)
 
-**2 собственных патча GboardSamsung** + **33 отобранных патча из upstream**. Нажмите на нужную категорию, чтобы раскрыть список:
+**3 собственных патча GboardSamsung** + **33 отобранных патча из upstream**. Нажмите на нужную категорию, чтобы раскрыть список:
 
 <details>
-<summary><b>Фишки Samsung One UI (2 собственных патча)</b></summary>
+<summary><b>Фишки Samsung One UI (3 собственных патча)</b></summary>
 
+- **Custom App Icon** — адаптивная светлая и тёмная иконка GboardSamsung.
 - **Samsung Spacebar Gestures** — свайп по пробелу для смены языка, долгое нажатие для курсора и отключаемые шевроны `< Русский >`.
 - **Toolbar Round Chips** — адаптивные круглые подложки под 3–8 кнопками тулбара (Material You + стандартные темы) и отдельный тумблер для кнопки меню `⊞`.
 
@@ -110,7 +113,7 @@ Morphe-патчи, которые переносят эргономику и э�
 <summary><b>Ввод, редактирование и инструменты (9 патчей)</b></summary>
 
 - **Clipboard Custom Character Limit** — настройка максимальной длины записей буфера обмена.
-- **Clipboard Enhancements** — увеличенное время хранения, лимит записей, строки предпросмотра и отметки времени.
+- **Clipboard Enhancements** — включает режим **«Буфер обмена Samsung»** (сохранение текста цельным блоком без разбивки), а также увеличенное время хранения, лимит записей, строки предпросмотра и отметки времени.
 - **Close Proactive Suggestions** — кнопка закрытия проактивных подсказок.
 - **Custom Symbols** — отдельная вкладка пользовательских символов по долгому нажатию запятой.
 - **Floating Web Search** — плавающее окно веб-поиска прямо из клавиатуры.
