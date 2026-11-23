@@ -615,7 +615,7 @@
         <translation locale="ru">Буфер обмена Samsung</translation>
     </string>
     <string name="gboard_patches_clipboard_samsung_mode_summary">
-        <translation locale="en">Save copied text as a single whole block, like Samsung Keyboard. Unlike Google's stock clipboard, Gboard won't split copied text into separate cards for links, phone numbers, addresses, or emails.</translation>
+        <translation locale="en">Save copied text as a single whole block, like Samsung Keyboard. Unlike the stock Google clipboard, Gboard will not split copied text into separate cards for links, phone numbers, addresses, or emails.</translation>
         <translation locale="ru">Сохранять скопированный текст одним цельным блоком, как в клавиатуре Samsung. В отличие от стандартного буфера Google, Gboard не будет разбивать текст на отдельные карточки со ссылками, телефонами, адресами и почтой.</translation>
     </string>
     <string name="gboard_patches_clipboard_show_sensitive_content_title">
