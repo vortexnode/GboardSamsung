@@ -110,6 +110,18 @@
       "options": []
     },
     {
+      "name": "Custom App Icon",
+      "description": "Replace Gboard's launcher icon with the GboardSamsung Light/Dark adaptive icon.\nЗаменяет иконку приложения на фирменную адаптивную иконку GboardSamsung (светлая и тёмная темы).",
+      "use": true,
+      "dependencies": [],
+      "compatiblePackages": {
+        "com.google.android.inputmethod.latin": [
+          "18.5.4.993608717-release-arm64-v8a"
+        ]
+      },
+      "options": []
+    },
+    {
       "name": "Custom Symbols",
       "description": "Add a dedicated custom symbols tab and replace the long-press comma entry with a heart shortcut.\nДобавляет отдельную вкладку специальных символов и заменяет долгое нажатие запятой на быстрый переход к символам.",
       "use": true,

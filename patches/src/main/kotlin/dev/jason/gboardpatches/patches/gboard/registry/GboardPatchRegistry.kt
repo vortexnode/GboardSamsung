@@ -56,6 +56,7 @@ import dev.jason.gboardpatches.patches.gboard.features.manualincognito.gboardMan
 import dev.jason.gboardpatches.patches.gboard.features.packagerename.GboardPackageRenameTarget
 import dev.jason.gboardpatches.patches.gboard.features.packagerename.applyGboardApplicationDisplayName
 import dev.jason.gboardpatches.patches.gboard.features.packagerename.gboardPackageRenameResourcePatch
+import dev.jason.gboardpatches.patches.gboard.features.appicon.gboardCustomAppIconResourcePatch
 import dev.jason.gboardpatches.patches.gboard.features.packagerename.isValidGboardAppDisplayName
 import dev.jason.gboardpatches.patches.gboard.features.packagerename.isValidGboardTargetPackageName
 import dev.jason.gboardpatches.patches.gboard.features.quickinsert.gboardQuickInsertFeatureMarkerPatch
@@ -253,6 +254,21 @@ val gboardSamsungSpacebarGesturesPatch = gboardPublicResourcePatch(
         gboardPatchesSettingsPatch,
         gboardSpacebarGestureFeatureMarkerPatch,
         gboardSpacebarGestureResourcePatch,
+    )
+}
+
+@Suppress("unused")
+val gboardCustomAppIconPatch = gboardPublicResourcePatch(
+    featureId = "custom_app_icon",
+    name = "Custom App Icon",
+    description = "Replace Gboard's launcher icon with the GboardSamsung Light/Dark adaptive icon.\n" +
+        "Заменяет иконку приложения на фирменную адаптивную иконку GboardSamsung (светлая и тёмная темы).",
+    default = true,
+) {
+    compatibleWith(COMPATIBILITY_GBOARD)
+
+    dependsOn(
+        gboardCustomAppIconResourcePatch,
     )
 }
 
@@ -755,6 +771,7 @@ object GboardPublishedPatchCatalog {
         gboardSwipeDismissPatch,
         gboardSamsungSpacebarGesturesPatch,
         gboardToolbarRoundChipsPatch,
+        gboardCustomAppIconPatch,
         gboardAdvancedVoiceTypingPatch,
         gboardBluetoothMicrophonePatch,
         gboardEmojiSizePatch,
