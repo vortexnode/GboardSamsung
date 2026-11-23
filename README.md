@@ -71,7 +71,7 @@ Built as a focused downstream fork of [jasonwu1994/Gboard-patches](https://githu
 
 | Feature | What it does |
 | --- | --- |
-| **Samsung Spacebar Gestures** | Swipe left/right on the spacebar to switch languages, long-press to move the cursor, and show optional `< Русский >` / `< English >` language chevrons via passive `ViewOverlay`. |
+| **Samsung Spacebar Gestures** | Swipe left/right on the spacebar to switch languages with 3 mutually exclusive modes (**Samsung One UI** fixed cycle `1→2→3→4`, **Gboard** recent-first MRU, and **Free direction** with 5-second rollback memory — each with visual preview diagrams), long-press for cursor control, and optional `< Русский >` / `< English >` chevrons via passive `ViewOverlay`. |
 | **Toolbar Round Chips** | Adaptive circular backgrounds behind 3–8 top toolbar icons (preserving original Google icons): matches Material You functional keys in Dynamic Color, and crisp white/neutral dark in standard themes. Includes an independent toggle for a fixed `38dp` Rambler-style circle behind the `⊞` menu button (preserving the native circle when expanded to `✕`). |
 | **Samsung Clipboard** | Optional toggle inside **Clipboard → General** that saves copied text as one single whole block like Samsung Keyboard — preventing Gboard from splitting copied text into separate URL, phone, email, and address cards while keeping images, pinning, retention, and all other clipboard features intact. |
 | **Custom App Icon** | Adaptive Light/Dark GboardSamsung launcher icon fitted cleanly inside One UI's squircle safe zone. |
@@ -104,7 +104,7 @@ Built as a focused downstream fork of [jasonwu1994/Gboard-patches](https://githu
 <summary><b>Samsung One UI Experience (3 exclusive patches)</b></summary>
 
 - **Custom App Icon** — Adaptive Light/Dark GboardSamsung launcher icon.
-- **Samsung Spacebar Gestures** — Swipe spacebar to switch languages, long-press for cursor control, and optional `< Language >` chevrons.
+- **Samsung Spacebar Gestures** — Swipe spacebar to switch languages with 3 selectable modes (Samsung One UI fixed order, Gboard recent-first, Free direction), long-press for cursor control, and optional `< Language >` chevrons.
 - **Toolbar Round Chips** — Adaptive circular backgrounds for 3–8 toolbar icons (Dynamic Material You & standard themes) + separate toggle for the `⊞` menu button.
 
 </details>
