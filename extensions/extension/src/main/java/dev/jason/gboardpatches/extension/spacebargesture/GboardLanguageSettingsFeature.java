@@ -2,7 +2,6 @@ package dev.jason.gboardpatches.extension.spacebargesture;
 
 import android.content.Context;
 import android.util.Log;
-import android.widget.Toast;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -146,7 +145,7 @@ public final class GboardLanguageSettingsFeature
                                     .equals(targetMode)
                                     ? swipeModeKeepSamsungNotice
                                     : swipeModeFallbackSamsungNotice;
-                            showModeNotice(context, notice);
+                            GboardPatchesSettingsContract.showMessage(host, notice);
                         }
                         GboardPatchesSettingsContract.refresh(host);
                     },
@@ -246,22 +245,6 @@ public final class GboardLanguageSettingsFeature
                                         true,
                                         hideGlobeKeyEnabled,
                                         hideGlobeKeyAction)))));
-    }
-
-    private static void showModeNotice(Context context, String message) {
-        if (context == null || message == null || message.isEmpty()) {
-            return;
-        }
-        try {
-            Context appContext = context.getApplicationContext();
-            Toast toast = Toast.makeText(
-                    appContext != null ? appContext : context,
-                    message,
-                    Toast.LENGTH_LONG);
-            toast.show();
-        } catch (Throwable ignored) {
-            // Never disrupt settings interaction if Toast is unavailable.
-        }
     }
 
     private GboardPatchesSettingsContract.PreviewSpec buildPreview(
