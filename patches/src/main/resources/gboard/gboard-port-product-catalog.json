@@ -659,6 +659,27 @@
       ]
     },
     {
+      "feature_id": "custom_app_icon",
+      "public_patch_name": "Custom App Icon",
+      "feature_marker": null,
+      "target_family_ids": [],
+      "migration_scope": "generic",
+      "consumer_files": [
+        "patches/src/main/kotlin/dev/jason/gboardpatches/patches/gboard/features/appicon/GboardCustomAppIconResourcePatch.kt",
+        "patches/src/main/kotlin/dev/jason/gboardpatches/patches/gboard/registry/GboardPatchRegistry.kt"
+      ],
+      "contributions": [
+        {
+          "contribution_id": "custom_app_icon.resources",
+          "anchor_family_id": "resource_only",
+          "phase": "resource",
+          "order": 210,
+          "required_bindings": [],
+          "runtime_calls": []
+        }
+      ]
+    },
+    {
       "feature_id": "custom_symbols",
       "public_patch_name": "Custom Symbols",
       "feature_marker": "dev.jason.gboardpatches.feature.custom_symbols",
