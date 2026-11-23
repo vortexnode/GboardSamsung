@@ -1,10 +1,16 @@
 <div align="center">
 
-<img src="docs/assets/logo.png" alt="GboardSamsung logo" width="128"/>
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/logo-dark.png">
+  <source media="(prefers-color-scheme: light)" srcset="docs/assets/logo.png">
+  <img src="docs/assets/logo.png" alt="GboardSamsung logo" width="128"/>
+</picture>
 
 # GboardSamsung
 
-**Samsung One UI 8-inspired UX & visual Morphe patches for Gboard**
+**The best of Google. The feel of Samsung.**
+
+*Samsung One UI 8-inspired UX & visual Morphe patches for Gboard*
 
 Keep Gboard's typing engine, predictions, clipboard, and original Google icons — with Samsung-style spacebar gestures, language chevrons, adaptive round toolbar chips, and full RU/EN settings.
 
