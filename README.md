@@ -1,5 +1,7 @@
 <div align="center">
 
+<img src="docs/assets/logo.png" alt="GboardSamsung logo" width="128"/>
+
 # GboardSamsung
 
 **Samsung One UI 8-inspired UX & visual Morphe patches for Gboard**
