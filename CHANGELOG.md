@@ -1,3 +1,9 @@
+## [4.14.0](https://github.com/vortexnode/GboardSamsung/compare/v4.13.0...v4.14.0) (2026-11-23)
+
+### ✨ New Features
+
+* перевести экран «Для разработчиков» на русский язык (RU/EN) ([#30](https://github.com/vortexnode/GboardSamsung/issues/30)) ([e09aaf8](https://github.com/vortexnode/GboardSamsung/commit/e09aaf8d6c5d7748bb7ae34123cee95c916987f6))
+
 ## [4.13.0](https://github.com/vortexnode/GboardSamsung/compare/v4.12.0...v4.13.0) (2026-11-23)
 
 ### ✨ New Features
