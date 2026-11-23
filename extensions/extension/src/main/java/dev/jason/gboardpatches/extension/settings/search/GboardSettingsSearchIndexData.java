@@ -170,6 +170,7 @@ final class GboardSettingsSearchIndexData {
             {27, R.string.gboard_patches_frosted_glass_faq_not_working_title, 0, 0},
             {27, R.string.gboard_patches_frosted_glass_faq_flickering_title, 0, 0},
             {28, R.string.gboard_patches_clipboard_title, R.string.gboard_patches_clipboard_summary, 1},
+            {28, R.string.gboard_patches_clipboard_samsung_mode_title, R.string.gboard_patches_clipboard_samsung_mode_summary, 0},
             {28, R.string.gboard_patches_clipboard_show_sensitive_content_title, R.string.gboard_patches_clipboard_show_sensitive_content_summary, 0},
             {28, R.string.gboard_patches_clipboard_card_preview_limit_title, R.string.gboard_patches_clipboard_card_preview_limit_summary, 0},
             {28, R.string.gboard_patches_pref_show_expiry_countdown, R.string.gboard_patches_pref_show_expiry_countdown_summary, 0},
