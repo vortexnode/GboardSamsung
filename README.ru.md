@@ -14,6 +14,8 @@ Morphe-патчи, которые переносят эргономику и э�
 
 [English](README.md) · [Русский](README.ru.md)
 
+[![Добавить в Morphe](https://img.shields.io/badge/%D0%94%D0%BE%D0%B1%D0%B0%D0%B2%D0%B8%D1%82%D1%8C%20%D0%B2%20Morphe-%D0%B2%201%20%D1%82%D0%B0%D0%BF-1a73e8?style=for-the-badge&logo=android&logoColor=white)](https://morphe.software/add-source?github=vortexnode/GboardSamsung)
+
 [![Последний релиз](https://img.shields.io/github/v/release/vortexnode/GboardSamsung?style=flat-square&label=release)](https://github.com/vortexnode/GboardSamsung/releases/latest)
 [![CI](https://github.com/vortexnode/GboardSamsung/actions/workflows/ci.yml/badge.svg)](https://github.com/vortexnode/GboardSamsung/actions/workflows/ci.yml)
 ![Патчи](https://img.shields.io/badge/patches-36-blue?style=flat-square)
@@ -64,7 +66,7 @@ Morphe-патчи, которые переносят эргономику и э�
 
 ## Чем GboardSamsung отличается от оригинала и upstream
 
-Проект развивается как сфокусированный форк [jasonwu1994/Gboard-patches](https://github.com/jasonwu1994/Gboard-patches) с собственными визуальными и UX-доработками под Samsung One UI 8 и без лишних тайваньских/неиспользуемых патчей:
+Проект развивается как сфокусированный форк [jasonwu1994/Gboard-patches](https://github.com/jasonwu1994/Gboard-patches) с собственными визуальными и UX-доработками под Samsung One UI и без лишних тайваньских/неиспользуемых патчей:
 
 | Возможность | Что делает |
 | --- | --- |
@@ -77,9 +79,9 @@ Morphe-патчи, которые переносят эргономику и э�
 
 ## Быстрая установка через Morphe Manager
 
-1. Откройте [Morphe Manager](https://github.com/MorpheApp/morphe-manager) → **Источники** → **Добавить источник** и вставьте ссылку:
+1. **[Нажмите здесь, чтобы добавить GboardSamsung в Morphe в 1 тап](https://morphe.software/add-source?github=vortexnode/GboardSamsung)** — или откройте [Morphe Manager](https://github.com/MorpheApp/morphe-manager) → **Источники** → **Добавить источник** и вставьте ссылку:
    ```text
-   https://raw.githubusercontent.com/vortexnode/GboardSamsung/main/patches-bundle.json
+   https://github.com/vortexnode/GboardSamsung
    ```
 2. Выберите совместимый оригинальный APK **Gboard `18.5.4`** (рекомендуется `arm64-v8a`).
 3. Отметьте нужные патчи (оставьте **Package Rename**, если хотите не заменять стоковый Gboard) и нажмите **Патчить**.
@@ -89,7 +91,7 @@ Morphe-патчи, которые переносят эргономику и э�
 
 ## Совместимость
 
-- **Рекомендуемая версия:** Gboard `18.5.4` (`arm64-v8a`, проверено на Samsung Galaxy S22 / Android 16 / One UI 8).
+- **Рекомендуемая версия:** Gboard `18.5.4` (`arm64-v8a`, проверено на Samsung Galaxy S22 / Android 16 / One UI).
 - **Root-права:** не требуются.
 - **Автообновления:** каждый релиз автоматически собирает `.mpp` и обновляет `patches-bundle.json` для Morphe Manager.
 
