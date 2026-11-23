@@ -132,7 +132,7 @@ public final class GboardLanguageSettingsFeature
                     value -> {
                         GboardSpacebarGestureSettings.writeSpacebarLanguageSwipeEnabled(
                                 context, value);
-                        host.refresh();
+                        GboardPatchesSettingsContract.refresh(host);
                     },
                     swipeMode,
                     (targetMode, enabled) -> {
@@ -148,7 +148,7 @@ public final class GboardLanguageSettingsFeature
                                     : swipeModeFallbackSamsungNotice;
                             showModeNotice(context, notice);
                         }
-                        host.refresh();
+                        GboardPatchesSettingsContract.refresh(host);
                     },
                     spacebarChevronsEnabled,
                     value -> GboardSpacebarGestureSettings.writeSpacebarLanguageChevronsEnabled(
