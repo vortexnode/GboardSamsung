@@ -162,7 +162,7 @@ public final class GboardClipboardSettingsFeature
                                 });
                 if (GboardNewSettingsHighlight.isItemHighlighted(
                         context, GboardNewSettingsHighlight.ITEM_CLIPBOARD_CLEAR_ALL)) {
-                    clearAllRow.setHighlightDot(true);
+                    clearAllRow.setDecoration(new GboardPatchesSettingsContract.RowDecoration().highlightDot(true));
                 }
                 generalRows.add(clearAllRow);
                 generalRows.add(new GboardPatchesSettingsContract.ToggleRow(

@@ -174,7 +174,7 @@ public final class GboardFrostedGlassSettingsFeature
                             });
             if (GboardNewSettingsHighlight.isItemHighlighted(
                     context, GboardNewSettingsHighlight.ITEM_AMOLED_BLACK)) {
-                amoledBlackRow.setHighlightDot(true);
+                amoledBlackRow.setDecoration(new GboardPatchesSettingsContract.RowDecoration().highlightDot(true));
             }
             rows.add(amoledBlackRow);
             return new GboardPatchesSettingsContract.Screen(

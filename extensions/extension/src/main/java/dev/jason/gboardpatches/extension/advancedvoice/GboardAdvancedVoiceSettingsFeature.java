@@ -259,7 +259,7 @@ public final class GboardAdvancedVoiceSettingsFeature
                             });
             if (GboardNewSettingsHighlight.isItemHighlighted(
                     context, GboardNewSettingsHighlight.ITEM_DISABLE_VOICE_BEEP)) {
-                disableVoiceBeepRow.setHighlightDot(true);
+                disableVoiceBeepRow.setDecoration(new GboardPatchesSettingsContract.RowDecoration().highlightDot(true));
             }
             behaviorRows.add(disableVoiceBeepRow);
 

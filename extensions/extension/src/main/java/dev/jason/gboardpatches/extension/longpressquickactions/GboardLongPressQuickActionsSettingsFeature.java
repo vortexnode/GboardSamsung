@@ -214,7 +214,7 @@ public final class GboardLongPressQuickActionsSettingsFeature
                         disableEnterOneHanded,
                         disableEnterOneHandedToggleAction);
         if (highlightDisableEnterOneHanded) {
-            disableEnterOneHandedRow.setHighlightDot(true);
+            disableEnterOneHandedRow.setDecoration(new GboardPatchesSettingsContract.RowDecoration().highlightDot(true));
         }
         return new GboardPatchesSettingsContract.Screen(
                 entryTitle,
