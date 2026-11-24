@@ -18,6 +18,11 @@ import android.view.WindowManager;
 
 import androidx.annotation.RequiresApi;
 
+import java.lang.ref.WeakReference;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.util.IdentityHashMap;
 import java.util.Map;
 import java.util.WeakHashMap;
@@ -27,7 +32,8 @@ import dev.jason.gboardpatches.extension.flagsettings.GboardFlagRuntimeContext;
 /**
  * Applies a true AMOLED pure-black (#000000) keyboard/header/nav-bar background with subtle
  * charcoal keycaps (#141414) while preserving Material You action-key accents.
- * Active only in Night Mode when enabled, user is unlocked (Direct Boot safe), and Frosted Glass is off.
+ * Supports both Android 12–15 Window navigation bar AND Android 16 (SDK 36) Gboard-painted
+ * InputView navigation strip via rra.f(Window, rqz) interception.
  */
 @RequiresApi(Build.VERSION_CODES.S)
 public final class GboardAmoledBlackRuntime {
@@ -35,7 +41,9 @@ public final class GboardAmoledBlackRuntime {
     static final int AMOLED_KEY_COLOR = 0xFF141414;
 
     private static final Map<Window, State> STATES = new WeakHashMap<>();
+    private static final ThreadLocal<Boolean> REPLAYING = ThreadLocal.withInitial(() -> false);
     private static volatile PorterDuffColorFilter keyColorFilter;
+    private static volatile NavParams cachedNavParams;
 
     private GboardAmoledBlackRuntime() {
     }
@@ -135,11 +143,38 @@ public final class GboardAmoledBlackRuntime {
         }
     }
 
-    static void onApplyNavBarExit(Window window) {
+    /**
+     * Intercepts Gboard's rra.f(Window, rqz) entry so Android 16's InputView nav strip and
+     * Window navigation bar are natively painted pure #000000 with light icons.
+     */
+    static Object onApplyNavBarEntry(Window window, Object owner, Object params) {
+        if (REPLAYING.get() || window == null || params == null) {
+            return params;
+        }
         try {
-            if (window == null) {
-                return;
+            Context context = window.getContext();
+            if (!GboardFlagRuntimeContext.isUserUnlocked(context)) {
+                return params;
             }
+            State state = stateFor(window);
+            state.navOwner = new WeakReference<>(owner);
+            state.navMethod = resolveApplyMethod(owner, params);
+            state.navOriginalParams = params;
+            if (!shouldApply(context)) {
+                return params;
+            }
+            state.navRewritten = true;
+            return rewriteNavBarParams(params);
+        } catch (Throwable ignored) {
+            return params;
+        }
+    }
+
+    static void onApplyNavBarExit(Window window) {
+        if (REPLAYING.get() || window == null) {
+            return;
+        }
+        try {
             if (!GboardFlagRuntimeContext.isUserUnlocked(window.getContext())) {
                 return;
             }
@@ -152,12 +187,32 @@ public final class GboardAmoledBlackRuntime {
         }
     }
 
+    static Object rewriteNavBarParams(Object original) throws ReflectiveOperationException {
+        if (original == null) {
+            return null;
+        }
+        NavParams fields = navParamsFor(original.getClass());
+        int nav = fields.nav.getInt(original);
+        int divider = fields.divider.getInt(original);
+        boolean light = fields.light.getBoolean(original);
+        if (nav == AMOLED_BACKGROUND_COLOR && divider == AMOLED_BACKGROUND_COLOR && !light) {
+            return original;
+        }
+        return fields.constructor.newInstance(
+                AMOLED_BACKGROUND_COLOR,
+                AMOLED_BACKGROUND_COLOR,
+                fields.body.get(original),
+                fields.header.get(original),
+                false);
+    }
+
     private static void apply(Window window) {
         State state = stateFor(window);
         View decor = window.getDecorView();
         if (decor == null) {
             return;
         }
+        replayNavBarIfCaptured(window, state, true);
         applyNavBarBlack(window, state);
         applyToHierarchy(decor, state);
         if (state.layoutListener == null) {
@@ -177,6 +232,33 @@ public final class GboardAmoledBlackRuntime {
             state.layoutListener = listener;
             state.observedDecor = decor;
             decor.addOnLayoutChangeListener(listener);
+        }
+    }
+
+    private static void replayNavBarIfCaptured(Window window, State state, boolean toAmoled) {
+        if (state.navOriginalParams == null || state.navMethod == null) {
+            return;
+        }
+        if (toAmoled && state.navRewritten) {
+            return;
+        }
+        Object owner = state.navOwner == null ? null : state.navOwner.get();
+        if (owner == null) {
+            return;
+        }
+        try {
+            Object targetParams = toAmoled
+                    ? rewriteNavBarParams(state.navOriginalParams)
+                    : state.navOriginalParams;
+            REPLAYING.set(true);
+            try {
+                state.navMethod.invoke(owner, window, targetParams);
+                state.navRewritten = toAmoled;
+            } finally {
+                REPLAYING.remove();
+            }
+        } catch (Throwable ignored) {
+            // Best-effort nav strip replay.
         }
     }
 
@@ -211,6 +293,10 @@ public final class GboardAmoledBlackRuntime {
         if (view.getTag() instanceof String tag) {
             if (isAmoledSurfaceTag(tag)) {
                 applyBlackSurface(view, state);
+                if (tag.equals(".keyboard-base-area")
+                        || tag.equals(".keyboard-base-area.keyboard-outline")) {
+                    applyBlackNavStripAncestors(view, state);
+                }
             } else if (isAmoledKeyTag(tag)) {
                 applyCharcoalKey(view, state);
             }
@@ -219,6 +305,23 @@ public final class GboardAmoledBlackRuntime {
             for (int i = 0; i < group.getChildCount(); i++) {
                 applyToHierarchy(group.getChildAt(i), state);
             }
+        }
+    }
+
+    /**
+     * On Android 16 (SDK 36), Gboard's InputView ancestor holds bottom navigation-bar padding and
+     * paints the strip behind the system nav buttons. Ensure that ancestor is also pure #000000.
+     */
+    private static void applyBlackNavStripAncestors(View keyboardRoot, State state) {
+        View current = keyboardRoot;
+        for (int depth = 0; depth < 6 && current != null; depth++) {
+            if (!(current.getParent() instanceof View parent)) {
+                break;
+            }
+            if (parent.getPaddingBottom() > 0 && parent.getBackground() != null) {
+                applyBlackSurface(parent, state);
+            }
+            current = parent;
         }
     }
 
@@ -278,6 +381,9 @@ public final class GboardAmoledBlackRuntime {
         if (state.observedDecor != null && state.layoutListener != null) {
             state.observedDecor.removeOnLayoutChangeListener(state.layoutListener);
         }
+        if (state.navRewritten) {
+            replayNavBarIfCaptured(window, state, false);
+        }
         for (Map.Entry<View, Drawable> entry : state.originalSurfaceBackgrounds.entrySet()) {
             View view = entry.getKey();
             if (view != null && view.getBackground() instanceof AmoledBlackDrawable) {
@@ -300,6 +406,41 @@ public final class GboardAmoledBlackRuntime {
                 // Best-effort nav bar restore.
             }
         }
+    }
+
+    private static Method resolveApplyMethod(Object owner, Object params) {
+        if (owner == null || params == null) {
+            return null;
+        }
+        Method found = null;
+        for (Method method : owner.getClass().getDeclaredMethods()) {
+            Class<?>[] types = method.getParameterTypes();
+            if (Modifier.isStatic(method.getModifiers())
+                    || method.getReturnType() != void.class
+                    || types.length != 2
+                    || types[0] != Window.class
+                    || types[1] != params.getClass()) {
+                continue;
+            }
+            if (found != null) {
+                return null;
+            }
+            found = method;
+        }
+        if (found != null) {
+            found.setAccessible(true);
+        }
+        return found;
+    }
+
+    private static NavParams navParamsFor(Class<?> type) throws ReflectiveOperationException {
+        NavParams cached = cachedNavParams;
+        if (cached != null && cached.type == type) {
+            return cached;
+        }
+        NavParams created = new NavParams(type);
+        cachedNavParams = created;
+        return created;
     }
 
     private static Drawable unwrapDrawable(Drawable drawable) {
@@ -326,6 +467,44 @@ public final class GboardAmoledBlackRuntime {
         }
     }
 
+    private static final class NavParams {
+        final Class<?> type;
+        final Field nav;
+        final Field divider;
+        final Field body;
+        final Field header;
+        final Field light;
+        final Constructor<?> constructor;
+
+        NavParams(Class<?> type) throws ReflectiveOperationException {
+            this.type = type;
+            nav = declaredFinalField(type, "a", int.class);
+            divider = declaredFinalField(type, "b", int.class);
+            body = type.getDeclaredField("c");
+            if (!Modifier.isFinal(body.getModifiers()) || Modifier.isStatic(body.getModifiers())) {
+                throw new NoSuchFieldException("c");
+            }
+            body.setAccessible(true);
+            header = declaredFinalField(type, "d", body.getType());
+            light = declaredFinalField(type, "e", boolean.class);
+            constructor = type.getDeclaredConstructor(
+                    int.class, int.class, body.getType(), body.getType(), boolean.class);
+            constructor.setAccessible(true);
+        }
+
+        private static Field declaredFinalField(Class<?> type, String name, Class<?> expectedType)
+                throws ReflectiveOperationException {
+            Field field = type.getDeclaredField(name);
+            if (field.getType() != expectedType
+                    || Modifier.isStatic(field.getModifiers())
+                    || !Modifier.isFinal(field.getModifiers())) {
+                throw new NoSuchFieldException(name);
+            }
+            field.setAccessible(true);
+            return field;
+        }
+    }
+
     static final class State {
         final Map<View, Drawable> originalSurfaceBackgrounds = new WeakHashMap<>();
         final Map<Drawable, Boolean> tintedKeyDrawables = new IdentityHashMap<>();
@@ -335,5 +514,9 @@ public final class GboardAmoledBlackRuntime {
         int originalNavColor;
         int originalNavDividerColor;
         boolean originalNavContrast;
+        WeakReference<Object> navOwner;
+        Method navMethod;
+        Object navOriginalParams;
+        boolean navRewritten;
     }
 }
