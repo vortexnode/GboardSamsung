@@ -3,7 +3,6 @@ package dev.jason.gboardpatches.extension.frostedglass;
 import android.app.Dialog;
 import android.content.Context;
 import android.content.res.Configuration;
-import android.graphics.Color;
 import android.graphics.PorterDuff;
 import android.graphics.PorterDuffColorFilter;
 import android.graphics.drawable.ColorDrawable;
@@ -23,25 +22,35 @@ import java.util.IdentityHashMap;
 import java.util.Map;
 import java.util.WeakHashMap;
 
+import dev.jason.gboardpatches.extension.flagsettings.GboardFlagRuntimeContext;
+
 /**
  * Applies a true AMOLED pure-black (#000000) keyboard/header/nav-bar background with subtle
  * charcoal keycaps (#141414) while preserving Material You action-key accents.
- * Active only in Night Mode when enabled and Frosted Glass blur is disabled.
+ * Active only in Night Mode when enabled, user is unlocked (Direct Boot safe), and Frosted Glass is off.
  */
 @RequiresApi(Build.VERSION_CODES.S)
 public final class GboardAmoledBlackRuntime {
-    static final int AMOLED_BACKGROUND_COLOR = Color.BLACK;
+    static final int AMOLED_BACKGROUND_COLOR = 0xFF000000;
     static final int AMOLED_KEY_COLOR = 0xFF141414;
 
-    private static final PorterDuffColorFilter KEY_COLOR_FILTER =
-            new PorterDuffColorFilter(AMOLED_KEY_COLOR, PorterDuff.Mode.SRC_IN);
     private static final Map<Window, State> STATES = new WeakHashMap<>();
+    private static volatile PorterDuffColorFilter keyColorFilter;
 
     private GboardAmoledBlackRuntime() {
     }
 
+    private static PorterDuffColorFilter keyColorFilter() {
+        PorterDuffColorFilter filter = keyColorFilter;
+        if (filter == null) {
+            filter = new PorterDuffColorFilter(AMOLED_KEY_COLOR, PorterDuff.Mode.SRC_IN);
+            keyColorFilter = filter;
+        }
+        return filter;
+    }
+
     static boolean shouldApply(Context context) {
-        if (context == null) {
+        if (context == null || !GboardFlagRuntimeContext.isUserUnlocked(context)) {
             return false;
         }
         return shouldApplyForState(
@@ -72,6 +81,9 @@ public final class GboardAmoledBlackRuntime {
                 return;
             }
             Context context = window.getContext();
+            if (!GboardFlagRuntimeContext.isUserUnlocked(context)) {
+                return;
+            }
             if (fullscreen || candidatesOnly || !shouldApply(context)) {
                 restore(window);
                 return;
@@ -85,6 +97,9 @@ public final class GboardAmoledBlackRuntime {
     static void onWindowShown(Object receiver) {
         try {
             if (!(receiver instanceof InputMethodService service)) {
+                return;
+            }
+            if (!GboardFlagRuntimeContext.isUserUnlocked(service)) {
                 return;
             }
             Dialog dialog = service.getWindow();
@@ -107,6 +122,9 @@ public final class GboardAmoledBlackRuntime {
             if (!(receiver instanceof InputMethodService service)) {
                 return;
             }
+            if (!GboardFlagRuntimeContext.isUserUnlocked(service)) {
+                return;
+            }
             Dialog dialog = service.getWindow();
             Window window = dialog == null ? null : dialog.getWindow();
             if (window != null && !shouldApply(service)) {
@@ -120,6 +138,9 @@ public final class GboardAmoledBlackRuntime {
     static void onApplyNavBarExit(Window window) {
         try {
             if (window == null) {
+                return;
+            }
+            if (!GboardFlagRuntimeContext.isUserUnlocked(window.getContext())) {
                 return;
             }
             if (!shouldApply(window.getContext())) {
@@ -243,7 +264,7 @@ public final class GboardAmoledBlackRuntime {
             target.mutate();
             state.tintedKeyDrawables.put(target, Boolean.TRUE);
         }
-        target.setColorFilter(KEY_COLOR_FILTER);
+        target.setColorFilter(keyColorFilter());
     }
 
     static void restore(Window window) {
