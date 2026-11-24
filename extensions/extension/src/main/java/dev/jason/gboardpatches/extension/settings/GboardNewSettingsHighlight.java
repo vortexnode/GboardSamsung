@@ -20,6 +20,10 @@ public final class GboardNewSettingsHighlight {
     static final long MILLIS_PER_DAY = 24L * 60L * 60L * 1000L;
 
     public static final String ITEM_HIGHLIGHT_NEW_SETTINGS = "highlight_new_settings_v416";
+    public static final String ITEM_DISABLE_VOICE_BEEP = "disable_voice_beep_v417";
+    public static final String ITEM_CLIPBOARD_CLEAR_ALL = "clipboard_clear_all_v417";
+    public static final String ITEM_AMOLED_BLACK = "amoled_black_v417";
+    public static final String ITEM_DISABLE_ENTER_ONE_HANDED = "disable_enter_one_handed_v417";
 
     public static final class Item {
         public final String id;
@@ -40,7 +44,27 @@ public final class GboardNewSettingsHighlight {
                     ITEM_HIGHLIGHT_NEW_SETTINGS,
                     GboardMoreSettingsGroupFeature.class.getName(),
                     "4.16.0",
-                    R.string.gboard_patches_highlight_new_settings_title)
+                    R.string.gboard_patches_highlight_new_settings_title),
+            new Item(
+                    ITEM_DISABLE_VOICE_BEEP,
+                    "dev.jason.gboardpatches.extension.advancedvoice.GboardAdvancedVoiceSettingsFeature",
+                    "4.17.0",
+                    R.string.gboard_patches_advanced_voice_disable_beep_title),
+            new Item(
+                    ITEM_CLIPBOARD_CLEAR_ALL,
+                    "dev.jason.gboardpatches.extension.clipboard.GboardClipboardSettingsFeature",
+                    "4.17.0",
+                    R.string.gboard_patches_clipboard_clear_all_button_title),
+            new Item(
+                    ITEM_AMOLED_BLACK,
+                    "dev.jason.gboardpatches.extension.frostedglass.GboardFrostedGlassSettingsFeature",
+                    "4.17.0",
+                    R.string.gboard_patches_amoled_black_title),
+            new Item(
+                    ITEM_DISABLE_ENTER_ONE_HANDED,
+                    "dev.jason.gboardpatches.extension.longpressquickactions.GboardLongPressQuickActionsSettingsFeature",
+                    "4.17.0",
+                    R.string.gboard_patches_long_press_quick_actions_disable_enter_one_handed_title)
     ));
 
     private GboardNewSettingsHighlight() {
