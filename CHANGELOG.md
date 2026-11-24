@@ -1,3 +1,9 @@
+## [4.16.1](https://github.com/vortexnode/GboardSamsung/compare/v4.16.0...v4.16.1) (2026-11-24)
+
+### 🐛 Bug Fixes
+
+* Приоритет скачивания APKM Bundle вместо обычного APK в Morphe для корректной работы расширенного голосового ввода ([#34](https://github.com/vortexnode/GboardSamsung/issues/34)) ([c74dcb4](https://github.com/vortexnode/GboardSamsung/commit/c74dcb45a133e72e5e2d514a7aaa499505bf129c))
+
 ## [4.16.0](https://github.com/vortexnode/GboardSamsung/compare/v4.15.1...v4.16.0) (2026-11-24)
 
 ### ✨ New Features
