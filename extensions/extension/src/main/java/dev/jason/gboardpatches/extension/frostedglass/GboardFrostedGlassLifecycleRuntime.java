@@ -43,10 +43,15 @@ public final class GboardFrostedGlassLifecycleRuntime {
     public static Object onApplyNavBarEntry(Window window, Object owner, Object params) {
         if (!supported()) return params;
         PENDING_AMOLED_WINDOW.set(window);
+        Object resolved = params;
         try {
-            return GboardSeamlessNavBarRuntime.onApplyNavBarEntry(window, owner, params);
+            resolved = GboardSeamlessNavBarRuntime.onApplyNavBarEntry(window, owner, resolved);
         } catch (Throwable ignored) {
-            return params;
+        }
+        try {
+            return GboardAmoledBlackRuntime.onApplyNavBarEntry(window, owner, resolved);
+        } catch (Throwable ignored) {
+            return resolved;
         }
     }
     /** Before each return of the nav-bar styling method. */
