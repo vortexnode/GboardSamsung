@@ -186,6 +186,8 @@ final class GboardSettingsSearchIndexData {
             {28, R.string.gboard_patches_pref_max_count, R.string.gboard_patches_pref_max_count_summary, 0},
             {28, R.string.gboard_patches_clipboard_content_limit_title, R.string.gboard_patches_clipboard_content_limit_summary, 0},
             {29, R.string.gboard_patches_group_more_title, R.string.gboard_patches_group_more_summary, 1},
+            {29, R.string.gboard_patches_highlight_new_settings_title, R.string.gboard_patches_highlight_new_settings_summary, 0},
+            {29, R.string.gboard_patches_mark_all_settings_viewed_title, R.string.gboard_patches_mark_all_settings_viewed_summary, 0},
             {30, R.string.gboard_patches_settings_homepage_title, R.string.gboard_patches_settings_homepage_summary, 1},
             {30, R.string.gboard_patches_settings_homepage_mode_title, R.string.gboard_patches_settings_homepage_mode_summary_auto, 0},
             {31, R.string.gboard_patches_backup_restore_title, R.string.gboard_patches_backup_restore_summary, 1},
