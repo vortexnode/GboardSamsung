@@ -1,3 +1,9 @@
+## [4.17.1](https://github.com/vortexnode/GboardSamsung/compare/v4.17.0...v4.17.1) (2026-11-24)
+
+### 🐛 Bug Fixes
+
+* AMOLED-чёрная тема теперь применяется и к нижней панели навигации ([#36](https://github.com/vortexnode/GboardSamsung/issues/36)) ([11fa688](https://github.com/vortexnode/GboardSamsung/commit/11fa688aacd8ad2033b9af68ae524644b4548094))
+
 ## [4.17.0](https://github.com/vortexnode/GboardSamsung/compare/v4.16.1...v4.17.0) (2026-11-24)
 
 ### ✨ New Features
