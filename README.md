@@ -10,7 +10,7 @@
 
 **The best of Google. The ergonomics of Samsung One UI.**
 
-*A curated, no-root Morphe patch suite for Gboard — pairing Google's typing engine and predictions with Samsung-grade gestures, true AMOLED black, whole-block clipboard, and quality-of-life upgrades you won't find upstream.*
+*A curated, no-root Morphe patch suite for Gboard — pairing Google's typing engine and predictions with Samsung-grade gestures, true AMOLED black, whole-block clipboard, and quality-of-life upgrades you won't find in stock Gboard.*
 
 [English](README.md) · [Русский](README.ru.md)
 
@@ -25,7 +25,7 @@
 
 <br/>
 
-[✨ Exclusives](#-exclusive-to-gboardsamsung) · [⚖️ Comparison](#%EF%B8%8F-gboardsamsung-vs-upstream--stock) · [📸 Preview](#-preview) · [⚡ Quick Install](#-quick-install-morphe-manager) · [🧩 Patch Catalog](#-active-patch-catalog-37-patches)
+[✨ Exclusives](#-exclusive-to-gboardsamsung) · [📸 Preview](#-preview) · [⚖️ Comparison](#%EF%B8%8F-gboardsamsung-vs-stock-gboard) · [⚡ Quick Install](#-quick-install-morphe-manager) · [🧩 Patch Catalog](#-active-patch-catalog-37-patches)
 
 </div>
 
@@ -39,11 +39,11 @@ Built as a focused downstream fork of [jasonwu1994/Gboard-patches](https://githu
   <tr>
     <td valign="top" width="50%">
       <h4>🖤 AMOLED Black Theme <code>NEW</code></h4>
-      Pure <code>#000000</code> keyboard, header, and navigation bar with subtle charcoal keycaps (<code>#141414</code>) in Dark Mode — preserving vibrant <b>Material You</b> accents on action keys. Works seamlessly when Frosted Glass is off.
+      Pure <code>#000000</code> keyboard, header, and bottom navigation bar with subtle charcoal keycaps (<code>#141414</code>) in Dark Mode — preserving vibrant <b>Material You</b> accents on action keys. Works seamlessly when Frosted Glass is off.
     </td>
     <td valign="top" width="50%">
-      <h4>🔇 Disable Microphone Beep <code>NEW</code></h4>
-      Completely silences Gboard's start/stop voice typing beep regardless of system volume or ringer mode — works for both Standard and Advanced Voice Typing.
+      <h4>🔇 Disable Rambler Microphone Beep <code>NEW</code></h4>
+      Completely silences the start/stop beep of the <b>Rambler</b> voice typing microphone regardless of system volume or ringer mode.
     </td>
   </tr>
   <tr>
@@ -90,28 +90,19 @@ Built as a focused downstream fork of [jasonwu1994/Gboard-patches](https://githu
 
 ---
 
-## ⚖️ GboardSamsung vs. Upstream & Stock
-
-| Capability | Stock Gboard | Upstream (`jasonwu1994`) | **GboardSamsung** |
-| :--- | :---: | :---: | :---: |
-| **Samsung Spacebar Swipe (3 modes) + 2D Cursor** | ❌ | ❌ | ✅ |
-| **AMOLED Pure `#000000` Theme (Material You safe)** | ❌ | ❌ | ✅ |
-| **Disable Microphone Start/Stop Beep** | ❌ | ❌ | ✅ |
-| **One-Tap Clear All Unpinned Clipboard Button** | ❌ | ❌ | ✅ |
-| **Disable Long-Press Enter → One-Handed Mode** | ❌ | ❌ | ✅ |
-| **Samsung Whole-Block Clipboard Mode** | ❌ | ❌ | ✅ |
-| **Adaptive Toolbar Round Chips + `⊞` Circle** | ❌ | ❌ | ✅ |
-| **Morphe-Style New Settings Highlight Dot** | ❌ | ❌ | ✅ |
-| **Disable Play Store Updates Patch** | ❌ | ❌ | ✅ |
-| **Full Russian + English Patches & Dev UI** | ❌ | ⚠️ Partial | ✅ |
-| **APKM-First Auto-Selection for Advanced Voice** | ⚠️ | ❌ | ✅ |
-| **Curated Upstream Features (AI, Frosted Glass, Calculator, Custom Themes, etc.)** | ❌ | ✅ | ✅ *(33 curated)* |
-
----
-
 ## 📸 Preview
 
 <table>
+  <tr>
+    <td align="center" valign="top" width="50%">
+      <img src="docs/assets/preview-amoled-black.jpg" alt="AMOLED Black Theme" width="420"/><br/>
+      <sub><b>AMOLED Black Theme</b> — pure <code>#000000</code> background extending seamlessly to the bottom navigation bar + charcoal keys &amp; Material You accents</sub>
+    </td>
+    <td align="center" valign="top" width="50%">
+      <img src="docs/assets/preview-clipboard-clear-all.jpg" alt="One-Tap Clear Clipboard Button" width="420"/><br/>
+      <sub><b>Clear Unpinned Clipboard Button</b> — native trash icon in the Clipboard header deletes all unpinned items in one tap while keeping pinned items</sub>
+    </td>
+  </tr>
   <tr>
     <td align="center" valign="top" width="50%">
       <img src="docs/assets/preview-material-you-dark.jpg" alt="Material You Dark" width="420"/><br/>
@@ -139,15 +130,34 @@ Built as a focused downstream fork of [jasonwu1994/Gboard-patches](https://githu
 <table>
   <tr>
     <td align="center" valign="top" width="50%">
-      <img src="docs/assets/preview-clipboard-google.jpg" alt="Stock Gboard Clipboard" width="420"/><br/>
-      <sub><b>Stock Gboard</b> — splits one copied text into 4 separate cards (full text, date, number, location)</sub>
-    </td>
-    <td align="center" valign="top" width="50%">
       <img src="docs/assets/preview-clipboard-samsung.jpg" alt="Samsung Clipboard" width="420"/><br/>
       <sub><b>Samsung Clipboard</b> — keeps the same copied text as one clean whole block</sub>
     </td>
+    <td align="center" valign="top" width="50%">
+      <img src="docs/assets/preview-clipboard-google.jpg" alt="Stock Gboard Clipboard" width="420"/><br/>
+      <sub><b>Stock Gboard</b> — splits one copied text into 4 separate cards (full text, date, number, location)</sub>
+    </td>
   </tr>
 </table>
+
+---
+
+## ⚖️ GboardSamsung vs. Stock Gboard
+
+| Capability | **GboardSamsung** | Stock Gboard |
+| :--- | :---: | :---: |
+| **Samsung Spacebar Swipe (3 modes) + 2D Cursor** | ✅ | ❌ |
+| **AMOLED Pure `#000000` Theme (incl. Nav Bar & Material You accents)** | ✅ | ❌ |
+| **Disable Rambler Microphone Start/Stop Beep** | ✅ | ❌ |
+| **One-Tap Clear All Unpinned Clipboard Button** | ✅ | ❌ |
+| **Disable Long-Press Enter → One-Handed Mode** | ✅ | ❌ |
+| **Samsung Whole-Block Clipboard Mode** | ✅ | ❌ |
+| **Adaptive Toolbar Round Chips + `⊞` Circle** | ✅ | ❌ |
+| **Morphe-Style New Settings Highlight Dot** | ✅ | ❌ |
+| **Disable Play Store Updates Patch** | ✅ | ❌ |
+| **Full Russian + English Patches & Dev UI** | ✅ | ❌ |
+| **APKM-First Auto-Selection for Advanced Voice** | ✅ | ⚠️ |
+| **Curated Power Features (AI, Frosted Glass, Calculator, Custom Themes, etc.)** | ✅ *(33 curated)* | ❌ |
 
 ---
 
@@ -190,7 +200,7 @@ Built as a focused downstream fork of [jasonwu1994/Gboard-patches](https://githu
 - **Custom Theme** — Import custom ZIP themes and themes from the Rboard repository.
 - **Emojis, stickers &amp; GIFs Tab Order** — Reorder bottom tabs with drag-and-drop.
 - **Enable split keyboard** — Enable split keyboard layout.
-- **Frosted Glass** — Live background blur, custom-theme opacity, seamless nav bar, and **AMOLED black theme** (`#000000` background + `#141414` keys preserving Material You accents in Dark Mode).
+- **Frosted Glass** — Live background blur, custom-theme opacity, seamless nav bar, and **AMOLED black theme** (`#000000` background extending to the bottom navigation bar + `#141414` keys preserving Material You accents in Dark Mode).
 - **Key Shape Selection** — Enable Key shape options (including rounded/rectangular keys) in Theme details.
 - **Keypress Vibration Intensity Control** — Control vibration intensity instead of duration.
 - **Rounded Keyboard Panel** — Customize rounded corners and radii of the keyboard panel.
@@ -219,7 +229,7 @@ Built as a focused downstream fork of [jasonwu1994/Gboard-patches](https://githu
 <summary><b>🎙️ Language, AI, Suggestions &amp; Voice (7 patches)</b></summary>
 
 - **AI Writing Tools** — Enable AI writing tools across all languages.
-- **Advanced Voice Typing** — Enable Advanced Voice Typing with auto-punctuation and **Disable microphone beep** (silences voice start/stop beep regardless of volume).
+- **Advanced Voice Typing** — Enable Advanced Voice Typing with auto-punctuation and **Disable Rambler microphone beep** (silences the Rambler voice start/stop beep regardless of volume).
 - **Dictionaries &amp; Predictions** — Choose resource versions (including Pixel Delight catalogs) and inspect loaded models.
 - **Enable Inline Autofill Suggestions** — Enable inline autofill suggestions.
 - **Grammar Checker** — Enable Text correction → Grammar check.
