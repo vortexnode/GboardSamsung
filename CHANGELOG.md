@@ -1,3 +1,9 @@
+## [4.17.0](https://github.com/vortexnode/GboardSamsung/compare/v4.16.1...v4.17.0) (2026-11-24)
+
+### ✨ New Features
+
+* AMOLED-чёрная тема, отключение звука микрофона, кнопка очистки буфера обмена и блокировка режима одной руки по удержанию Enter ([#35](https://github.com/vortexnode/GboardSamsung/issues/35)) ([2fd2365](https://github.com/vortexnode/GboardSamsung/commit/2fd236591957ac76930226af2ce903c286942309))
+
 ## [4.16.1](https://github.com/vortexnode/GboardSamsung/compare/v4.16.0...v4.16.1) (2026-11-24)
 
 ### 🐛 Bug Fixes
