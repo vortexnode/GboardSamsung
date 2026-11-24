@@ -1,3 +1,9 @@
+## [4.16.0](https://github.com/vortexnode/GboardSamsung/compare/v4.15.1...v4.16.0) (2026-11-24)
+
+### ✨ New Features
+
+* 2D-курсор пробелом (влево/вправо/вверх/вниз, логика Samsung и Gboard — точнее и без ложных срабатываний), подсветка новых настроек (0–10 дней) и патч Disable Play Store updates ([#33](https://github.com/vortexnode/GboardSamsung/issues/33)) ([ee8c65a](https://github.com/vortexnode/GboardSamsung/commit/ee8c65a10acbb1aef4d0d7965e4434023366d801))
+
 ## [4.15.1](https://github.com/vortexnode/GboardSamsung/compare/v4.15.0...v4.15.1) (2026-11-23)
 
 ### 🐛 Bug Fixes
