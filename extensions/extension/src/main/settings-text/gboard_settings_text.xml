@@ -2624,6 +2624,38 @@
         <translation locale="en">This build does not include any additional settings features.</translation>
         <translation locale="ru">В этой сборке отсутствуют дополнительные функции настроек.</translation>
     </string>
+    <string name="gboard_patches_highlight_new_settings_title">
+        <translation locale="en">Highlight new settings</translation>
+        <translation locale="ru">Подсвечивать новые настройки</translation>
+    </string>
+    <string name="gboard_patches_highlight_new_settings_summary">
+        <translation locale="en">Number of days a dot appears next to settings and options added in an update</translation>
+        <translation locale="ru">Количество дней, в течение которых точка отображается рядом с настройками и опциями, добавленными в обновлении</translation>
+    </string>
+    <string name="gboard_patches_highlight_new_settings_off">
+        <translation locale="en">Off</translation>
+        <translation locale="ru">Выключено</translation>
+    </string>
+    <string name="gboard_patches_highlight_new_settings_days_value">
+        <translation locale="en">%d d</translation>
+        <translation locale="ru">%d дн.</translation>
+    </string>
+    <string name="gboard_patches_mark_all_settings_viewed_title">
+        <translation locale="en">Mark all settings as viewed</translation>
+        <translation locale="ru">Отметить все настройки как просмотренные</translation>
+    </string>
+    <string name="gboard_patches_mark_all_settings_viewed_summary">
+        <translation locale="en">Remove the dot from all new settings and options</translation>
+        <translation locale="ru">Удалить точку из всех новых настроек и опций</translation>
+    </string>
+    <string name="gboard_patches_mark_all_settings_viewed_done">
+        <translation locale="en">All new settings marked as viewed</translation>
+        <translation locale="ru">Все новые настройки отмечены как просмотренные</translation>
+    </string>
+    <string name="gboard_patches_dialog_reset">
+        <translation locale="en">Reset</translation>
+        <translation locale="ru">Сбросить</translation>
+    </string>
     <string name="language_models_observation_title">
         <translation locale="en">Detect loaded models</translation>
         <translation locale="ru">Отслеживать загруженные модели</translation>
